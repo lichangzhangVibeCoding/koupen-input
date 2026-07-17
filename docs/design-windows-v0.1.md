@@ -1,6 +1,6 @@
 # Windows 版设计（v0.1）
 
-> 状态：**已落地（代码）**；正式 `.exe` 建议在 Windows 本机执行 `npm run dist:win`（原生模块交叉编译可能失败）。  
+> 状态：**已落地**；GitHub Actions 已能打出 NSIS `.exe`（仓库 `lichangzhangVibeCoding/koupen-input`）。  
 > 原则：**Mac 行为与文案逻辑不变**；Windows 用独立热键与系统能力实现。
 
 ---
