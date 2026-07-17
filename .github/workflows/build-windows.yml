@@ -17,8 +17,12 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    # windows-latest 现为 VS 2025，旧 node-gyp 认不出；用 2022
+    runs-on: windows-2022
     timeout-minutes: 45
+    env:
+      npm_config_msvs_version: '2022'
+      GYP_MSVS_VERSION: '2022'
     steps:
       - uses: actions/checkout@v4
 
