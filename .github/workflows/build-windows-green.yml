@@ -1,0 +1,45 @@
+# Windows 绿色版（免安装）— GitHub Actions
+name: Build Windows Green
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-green:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      npm_config_msvs_version: '2022'
+      GYP_MSVS_VERSION: '2022'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild native modules
+        run: npx electron-rebuild -f -w better-sqlite3,uiohook-napi,active-win
+
+      - name: Build portable + zip (green)
+        run: npm run dist:win:green
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload green package
+        uses: actions/upload-artifact@v4
+        with:
+          name: koupen-windows-green
+          path: |
+            release/*绿色版*.exe
+            release/*.zip
+            release/*.yml
+          if-no-files-found: error
+          retention-days: 14

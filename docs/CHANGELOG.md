@@ -9,6 +9,7 @@
 
 ### 文档
 
+- **Windows 绿色版**：`npm run dist:win:green` 出 portable 单文件 + zip 解压版；Actions 工作流 **Build Windows Green** → Artifact `koupen-windows-green`。
 - **Windows 版**：Mac 行为不动；Win 上 Alt 单击=我来口喷、Alt 双击=帮你口喷；截屏/粘贴走 Windows API；无 Windows 本机时用 GitHub Actions（`Build Windows`）出 NSIS。详见 `docs/design-windows-v0.1.md`。
 - **内测 UI 优化规划（已搁置）**：曾起草 Onboarding / 模型折叠 / 版本角标等方案，暂不实施。详见 `docs/design-ui-beta-v0.1.md`。
 - **帮你口喷默认触发**：由 `Command+8` 改为**快速双击左 Command**；单击左 Command 仍为「我来口喷」。本地仍为旧默认 `Command+8` 时启动自动迁移。
@@ -16,6 +17,7 @@
 
 ### 产品 / 代码
 
+- **UI 改浅色主题（Mac 主线）**：整体从近黑深紫改为**浅色 + 紫色主调**，提升对比与层次；统一字号层级、间距、卡片阴影；输入/按钮/徽章/联系人/微信聊天流按浅色重排；HUD 悬浮胶囊保持紫渐变不变。方向经用户确认（浅色 + 紫）。
 - **Windows 热键 / 截屏 / 粘贴**：Alt 单击=我来口喷、Alt 双击=帮你口喷；`desktopCapturer` 截屏；PowerShell Ctrl+V 粘贴；Mac 仍为左 Command 单击/双击（`modifier-tap.ts`）
 - **HUD 紫渐变**：底部悬浮状态条与主界面一致的紫色 AI 渐变（进行中 / 完成 / 失败）
 - **双击左 Command → 帮你口喷**；单击 → 我来口喷；设置默认热键 `DoubleCommand`

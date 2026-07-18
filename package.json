@@ -13,7 +13,8 @@
     "pack": "npm run ensure-clean && npm run build && electron-builder --mac --dir",
     "dist": "npm run ensure-clean && npm run build && electron-builder --mac",
     "pack:win": "npm run ensure-clean && npm run build && electron-builder --win --dir",
-    "dist:win": "npm run ensure-clean && npm run build && electron-builder --win",
+    "dist:win": "npm run ensure-clean && npm run build && electron-builder --win nsis --publish never",
+    "dist:win:green": "npm run ensure-clean && npm run build && electron-builder --win portable zip --publish never",
     "rebuild": "electron-rebuild -f -w better-sqlite3,uiohook-napi",
     "postinstall": "electron-rebuild -f -w better-sqlite3,uiohook-napi || true"
   },
@@ -79,8 +80,24 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
         }
-      ]
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-绿色版-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,

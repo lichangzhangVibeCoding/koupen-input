@@ -49,7 +49,27 @@ npx electron-rebuild -f -w better-sqlite3,uiohook-napi,active-win
 npm run dist:win
 ```
 
-产物一般为 `release/口喷输入 Setup 0.1.0.exe`。未签名，Windows 可能提示「未知发布者」，选仍要运行即可。
+产物：
+
+| 类型 | 文件名示例 | 用法 |
+|---|---|---|
+| 安装版 | `口喷输入-0.1.0-x64.exe`（NSIS Setup） | 双击安装 |
+| **绿色版（单文件）** | `口喷输入-0.1.0-绿色版-x64.exe` | 免安装，双击即用，可放 U 盘 |
+| **绿色版（压缩包）** | `口喷输入-0.1.0-x64.zip` | 解压后运行目录内 `口喷输入.exe` |
+
+GitHub Actions：
+
+- 安装版：**Build Windows** → Artifact `koupen-windows`
+- 绿色版：**Build Windows Green** → Artifact `koupen-windows-green`（含 portable + zip）
+
+本地命令：
+
+```bash
+npm run dist:win        # 安装版
+npm run dist:win:green  # 绿色版（portable + zip）
+```
+
+未签名，Windows 可能提示「未知发布者」，选仍要运行即可。
 
 ---
 

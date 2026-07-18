@@ -39,7 +39,7 @@ jobs:
 
       - name: Build Windows installer
         # --publish never：只出包上传 Artifact，不发 GitHub Release
-        run: npm run ensure-clean && npm run build && npx electron-builder --win --publish never
+        run: npm run dist:win
         env:
           # 未签名内测包即可；有证书时再配 WIN_CSC_*
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -50,7 +50,7 @@ jobs:
         with:
           name: koupen-windows
           path: |
-            release/*.exe
+            release/*Setup*.exe
             release/*.yml
           if-no-files-found: error
           retention-days: 14
