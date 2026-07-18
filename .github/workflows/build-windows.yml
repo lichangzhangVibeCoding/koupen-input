@@ -50,7 +50,7 @@ jobs:
         with:
           name: koupen-windows
           path: |
-            release/*Setup*.exe
+            release/*.exe
             release/*.yml
           if-no-files-found: error
           retention-days: 14
