@@ -7,6 +7,7 @@ import {
   Message,
   ProfileRefreshResult
 } from '../shared/types'
+import { parseContactNameFromWindowTitle } from './capture'
 import { getOllamaStatus } from './ollama'
 
 function resolveRuntime(settings: AppSettings): {
@@ -90,6 +91,19 @@ function extractJson(raw: string): unknown {
   return JSON.parse(candidate)
 }
 
+function isGenericContactName(name: string): boolean {
+  const t = name.trim().toLowerCase()
+  return (
+    t === '微信' ||
+    t === 'wechat' ||
+    t === 'weixin' ||
+    t === 'qq' ||
+    t === '腾讯qq' ||
+    t === 'unknown' ||
+    t === '未知'
+  )
+}
+
 export async function testConnection(settings: AppSettings): Promise<string> {
   const runtime = resolveRuntime(settings)
   const content = await chatCompletion(settings, {
@@ -108,8 +122,9 @@ export async function recognizeChatScreenshot(
 ): Promise<CaptureResult> {
   const runtime = resolveRuntime(settings)
   const model = runtime.visionModelName || runtime.modelName
+  const titleHint = parseContactNameFromWindowTitle(hint.windowTitle, hint.appName)
   const prompt = `你是聊天窗口截图解析器。请分析这张即时通讯（微信/QQ）聊天窗口截图。
-已知前台应用：${hint.appName || '未知'}，窗口标题：${hint.windowTitle || '未知'}。
+已知前台应用：${hint.appName || '未知'}，窗口标题：${hint.windowTitle || '未知'}${titleHint ? `（标题很可能就是联系人「${titleHint}」）` : ''}。
 
 请只输出 JSON（不要解释），格式：
 {
@@ -124,8 +139,9 @@ export async function recognizeChatScreenshot(
 1. role=them 表示对方说的（通常在左侧气泡），role=me 表示我说的（通常在右侧气泡）
 2. 只提取文字消息，忽略图片、表情、时间分隔、系统提示
 3. 按从上到下时间顺序
-4. contactName 不要带未读数字
-5. 如果看不清就尽量猜测可见文字，不要编造不存在的长对话`
+4. contactName 不要带未读数字；Windows 微信窗口标题常为人名，请优先采用
+5. 如果看不清 contactName，但窗口标题像人名，请用窗口标题
+6. 尽量提取可见文字，不要编造不存在的长对话`
 
   const content = await chatCompletion(settings, {
     model,
@@ -163,8 +179,18 @@ export async function recognizeChatScreenshot(
     parsed.channel === 'wechat' || parsed.channel === 'qq' || parsed.channel === 'unknown'
       ? parsed.channel
       : 'unknown'
-  const contactName = (parsed.contactName || '').trim()
-  if (!contactName) throw new Error('未能识别联系人名称')
+  let contactName = (parsed.contactName || '').trim()
+  if (!contactName || isGenericContactName(contactName)) {
+    const fromTitle = parseContactNameFromWindowTitle(hint.windowTitle, hint.appName)
+    if (fromTitle) contactName = fromTitle
+  }
+  if (!contactName) {
+    throw new Error(
+      hint.windowTitle
+        ? '未能识别联系人名称：请确保已打开与某人的聊天窗口（不要停在微信主界面）'
+        : '未能识别联系人名称：请把聊天窗口置于最前后再试'
+    )
+  }
 
   const messages = (parsed.messages || [])
     .filter((m) => m && (m.role === 'me' || m.role === 'them') && String(m.content || '').trim())

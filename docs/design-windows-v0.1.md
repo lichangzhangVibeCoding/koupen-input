@@ -25,7 +25,7 @@
 
 | 能力 | Mac | Windows |
 |---|---|---|
-| 截屏 | `screencapture` + active-win | `desktopCapturer` + active-win |
+| 截屏 | `screencapture` + active-win | 优先 `desktopCapturer` 截前台窗口；失败则整屏裁剪；联系人名可从窗口标题兜底 |
 | 粘贴 | AppleScript Command+V | PowerShell SendKeys Ctrl+V |
 | 修饰键监听 | uiohook Meta | uiohook Alt / AltRight |
 

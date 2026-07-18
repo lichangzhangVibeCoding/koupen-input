@@ -9,6 +9,7 @@
 
 ### 文档
 
+- **Windows 帮你口喷识别修复**：Win 改为优先截前台聊天窗口（非整屏）；窗口标题解析联系人名作为兜底，解决「未能识别联系人名称」。
 - **Windows 绿色版**：`npm run dist:win:green` 出 portable 单文件 + zip 解压版；Actions 工作流 **Build Windows Green** → Artifact `koupen-windows-green`。
 - **Windows 版**：Mac 行为不动；Win 上 Alt 单击=我来口喷、Alt 双击=帮你口喷；截屏/粘贴走 Windows API；无 Windows 本机时用 GitHub Actions（`Build Windows`）出 NSIS。详见 `docs/design-windows-v0.1.md`。
 - **内测 UI 优化规划（已搁置）**：曾起草 Onboarding / 模型折叠 / 版本角标等方案，暂不实施。详见 `docs/design-ui-beta-v0.1.md`。
