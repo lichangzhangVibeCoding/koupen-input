@@ -222,12 +222,13 @@ export const STT_PROVIDER_PRESETS: SttProviderPreset[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   // Mac：快速双击左 Command（单击留给「我来口喷」）
   hotkey: 'DoubleCommand',
-  inferenceMode: 'local',
-  provider: 'local',
-  baseUrl: LOCAL_DEFAULTS.openaiBase,
-  apiKey: LOCAL_DEFAULTS.apiKeyPlaceholder,
-  modelName: LOCAL_DEFAULTS.textModel,
-  visionModelName: LOCAL_DEFAULTS.visionModel,
+  // 默认走在线硅基推荐（与模型页「硅基流动」快捷区一致）；本地套件需用户主动点安装
+  inferenceMode: 'cloud',
+  provider: 'siliconflow',
+  baseUrl: 'https://api.siliconflow.cn/v1',
+  apiKey: '',
+  modelName: 'deepseek-ai/DeepSeek-V3',
+  visionModelName: 'moonshotai/Kimi-K2.7-Code',
   localModelName: LOCAL_DEFAULTS.textModel,
   localVisionModelName: LOCAL_DEFAULTS.visionModel,
   contextWindowSize: 40,

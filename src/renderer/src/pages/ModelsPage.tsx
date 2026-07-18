@@ -11,17 +11,34 @@ import {
 } from '../../../shared/types'
 
 type Dashboard = Awaited<ReturnType<typeof window.vipChat.getModelDashboard>>
-
 type Mode = 'local' | 'cloud'
+type Feedback = { type: 'ok' | 'err'; text: string }
+
+function detectSttPreset(form: AppSettings): string {
+  if (form.sttInferenceMode === 'local') return ''
+  if (form.sttBaseUrl.includes('siliconflow')) return 'siliconflow'
+  if (form.sttBaseUrl.includes('openai.com')) return 'openai'
+  if (form.sttBaseUrl.trim()) return 'custom'
+  return 'siliconflow'
+}
+
+function detectChatPreset(form: AppSettings): string {
+  if (form.inferenceMode === 'local') return ''
+  if (form.baseUrl.includes('siliconflow')) return 'siliconflow'
+  if (form.baseUrl.includes('openai.com')) return 'openai'
+  if (form.baseUrl.includes('deepseek.com')) return 'deepseek'
+  if (form.baseUrl.includes('dashscope.aliyuncs.com')) return 'qwen'
+  if (form.baseUrl.includes('moonshot.cn')) return 'moonshot'
+  if (form.provider === 'custom' || form.baseUrl.trim()) return 'custom'
+  return 'siliconflow'
+}
 
 export default function ModelsPage() {
   const [dash, setDash] = useState<Dashboard | null>(null)
   const [form, setForm] = useState<AppSettings>({ ...DEFAULT_SETTINGS })
   const [sfKey, setSfKey] = useState('')
-  const [status, setStatus] = useState<{ type: '' | 'ok' | 'err'; text: string }>({
-    type: '',
-    text: ''
-  })
+  const [pageStatus, setPageStatus] = useState<Feedback | null>(null)
+  const [slotFeedback, setSlotFeedback] = useState<Partial<Record<SlotId, Feedback>>>({})
   const [busy, setBusy] = useState('')
   const [progress, setProgress] = useState('')
   const [expanded, setExpanded] = useState<Record<SlotId, boolean>>({
@@ -58,14 +75,14 @@ export default function ModelsPage() {
   async function saveAll(next?: AppSettings) {
     const payload = next || form
     setBusy('save')
-    setStatus({ type: '', text: '' })
+    setPageStatus(null)
     try {
       await window.vipChat.saveSettings(payload)
       setForm(payload)
       await refresh()
-      setStatus({ type: 'ok', text: '模型配置已保存' })
+      setPageStatus({ type: 'ok', text: '模型配置已保存' })
     } catch (e) {
-      setStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
+      setPageStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
     } finally {
       setBusy('')
     }
@@ -73,18 +90,19 @@ export default function ModelsPage() {
 
   async function onSiliconflow() {
     if (!sfKey.trim()) {
-      setStatus({ type: 'err', text: '请先填写硅基流动 API Key' })
+      setPageStatus({ type: 'err', text: '请先填写硅基流动 API Key' })
       return
     }
     setBusy('sf')
-    setStatus({ type: '', text: '' })
+    setPageStatus(null)
     try {
       const res = await window.vipChat.applySiliconflow(sfKey.trim())
       setDash(res.dashboard)
       setForm(res.settings)
-      setStatus({ type: 'ok', text: '已套用硅基推荐：三槽已写入，可再单独微调' })
+      setSfKey(sfKey.trim())
+      setPageStatus({ type: 'ok', text: '已套用硅基推荐：下方三槽已同步为硅基流动' })
     } catch (e) {
-      setStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
+      setPageStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
     } finally {
       setBusy('')
     }
@@ -92,13 +110,13 @@ export default function ModelsPage() {
 
   async function onLocalSuite() {
     setBusy('local')
-    setStatus({ type: '', text: '' })
+    setPageStatus(null)
     setProgress('开始安装本地套件…')
     try {
       const o = await window.vipChat.getOllamaStatus()
       if (!o.installed) {
         await window.vipChat.openOllamaDownload()
-        setStatus({
+        setPageStatus({
           type: 'err',
           text: '请先安装并打开 Ollama，然后回到这里再点「一键安装本地套件」'
         })
@@ -107,10 +125,10 @@ export default function ModelsPage() {
       const res = await window.vipChat.installLocalSuite()
       setDash(res.dashboard)
       setForm(res.settings)
-      setStatus({ type: 'ok', text: '本地套件已就绪，三槽已切到本地' })
+      setPageStatus({ type: 'ok', text: '本地套件已就绪，三槽已切到本地' })
       setProgress('')
     } catch (e) {
-      setStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
+      setPageStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
     } finally {
       setBusy('')
     }
@@ -118,15 +136,46 @@ export default function ModelsPage() {
 
   async function onTest(slot: SlotId) {
     setBusy(`test-${slot}`)
-    setStatus({ type: '', text: '' })
+    setSlotFeedback((prev) => ({ ...prev, [slot]: undefined }))
     try {
-      // 先保存当前表单，再测
       await window.vipChat.saveSettings(form)
       const msg = await window.vipChat.testModelSlot(slot)
-      setStatus({ type: 'ok', text: `${slotLabel(slot)}：${msg}` })
+      setSlotFeedback((prev) => ({
+        ...prev,
+        [slot]: { type: 'ok', text: msg }
+      }))
       await refresh()
     } catch (e) {
-      setStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
+      setSlotFeedback((prev) => ({
+        ...prev,
+        [slot]: {
+          type: 'err',
+          text: e instanceof Error ? e.message : String(e)
+        }
+      }))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function onSaveSlot(slot: SlotId) {
+    setBusy(`save-${slot}`)
+    setSlotFeedback((prev) => ({ ...prev, [slot]: undefined }))
+    try {
+      await window.vipChat.saveSettings(form)
+      await refresh()
+      setSlotFeedback((prev) => ({
+        ...prev,
+        [slot]: { type: 'ok', text: '本槽配置已保存' }
+      }))
+    } catch (e) {
+      setSlotFeedback((prev) => ({
+        ...prev,
+        [slot]: {
+          type: 'err',
+          text: e instanceof Error ? e.message : String(e)
+        }
+      }))
     } finally {
       setBusy('')
     }
@@ -147,7 +196,7 @@ export default function ModelsPage() {
     if (!p) return
     patch({
       inferenceMode: 'cloud',
-      provider: p.id,
+      provider: p.id === 'custom' ? 'custom' : p.id === 'siliconflow' ? 'siliconflow' : 'custom',
       baseUrl: p.baseUrl || form.baseUrl,
       modelName: p.modelName || form.modelName,
       visionModelName: p.visionModelName || form.visionModelName
@@ -254,6 +303,9 @@ export default function ModelsPage() {
             <button className="btn" disabled={busy === 'sf'} onClick={() => void onSiliconflow()}>
               {busy === 'sf' ? '套用中…' : '使用硅基推荐并同步下方'}
             </button>
+            {pageStatus && busy !== 'local' ? (
+              <p className={`status slot-inline-feedback ${pageStatus.type}`}>{pageStatus.text}</p>
+            ) : null}
           </div>
           <div className="recommend-box">
             <h4>
@@ -265,6 +317,9 @@ export default function ModelsPage() {
               {busy === 'local' ? '安装中…' : '一键安装并启用'}
             </button>
             {progress ? <p className="status">{progress}</p> : null}
+            {pageStatus && busy === 'local' ? (
+              <p className={`status slot-inline-feedback ${pageStatus.type}`}>{pageStatus.text}</p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -286,7 +341,8 @@ export default function ModelsPage() {
         onToggle={() => setExpanded((e) => ({ ...e, asr: !e.asr }))}
         busy={busy}
         onTest={() => void onTest('asr')}
-        onSave={() => void saveAll()}
+        onSave={() => void onSaveSlot('asr')}
+        feedback={slotFeedback.asr}
       >
         <div className="mode-toggle">
           <button
@@ -358,14 +414,13 @@ export default function ModelsPage() {
         ) : (
           <>
             <div className="field">
-              <label>服务商快捷填入</label>
+              <label>服务商</label>
               <select
-                defaultValue=""
+                value={detectSttPreset(form)}
                 onChange={(e) => {
                   if (e.target.value) applySttPreset(e.target.value)
                 }}
               >
-                <option value="">选择预设…</option>
                 {STT_PROVIDER_PRESETS.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
@@ -414,7 +469,8 @@ export default function ModelsPage() {
         onToggle={() => setExpanded((e) => ({ ...e, vision: !e.vision }))}
         busy={busy}
         onTest={() => void onTest('vision')}
-        onSave={() => void saveAll()}
+        onSave={() => void onSaveSlot('vision')}
+        feedback={slotFeedback.vision}
       >
         <div className="mode-toggle">
           <button
@@ -453,14 +509,13 @@ export default function ModelsPage() {
         ) : (
           <>
             <div className="field">
-              <label>服务商快捷填入</label>
+              <label>服务商</label>
               <select
-                defaultValue=""
+                value={detectChatPreset(form)}
                 onChange={(e) => {
                   if (e.target.value) applyChatPreset(e.target.value)
                 }}
               >
-                <option value="">选择预设…</option>
                 {PROVIDER_PRESETS.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label}
@@ -507,7 +562,8 @@ export default function ModelsPage() {
         onToggle={() => setExpanded((e) => ({ ...e, chat: !e.chat }))}
         busy={busy}
         onTest={() => void onTest('chat')}
-        onSave={() => void saveAll()}
+        onSave={() => void onSaveSlot('chat')}
+        feedback={slotFeedback.chat}
       >
         <div className="mode-toggle">
           <button
@@ -544,14 +600,31 @@ export default function ModelsPage() {
             />
           </div>
         ) : (
-          <div className="field">
-            <label>文本模型名</label>
-            <input
-              value={form.modelName}
-              onChange={(e) => patch({ modelName: e.target.value })}
-              placeholder="deepseek-ai/DeepSeek-V3"
-            />
-          </div>
+          <>
+            <div className="field">
+              <label>服务商</label>
+              <select
+                value={detectChatPreset(form)}
+                onChange={(e) => {
+                  if (e.target.value) applyChatPreset(e.target.value)
+                }}
+              >
+                {PROVIDER_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>文本模型名</label>
+              <input
+                value={form.modelName}
+                onChange={(e) => patch({ modelName: e.target.value })}
+                placeholder="deepseek-ai/DeepSeek-V3"
+              />
+            </div>
+          </>
         )}
         {form.inferenceMode === 'cloud' ? (
           <p className="status">
@@ -567,20 +640,15 @@ export default function ModelsPage() {
           {busy === 'save' ? '保存中…' : '保存全部配置'}
         </button>
       </div>
-
-      {status.text ? <p className={`status ${status.type}`}>{status.text}</p> : null}
+      {pageStatus && busy !== 'sf' && busy !== 'local' ? (
+        <p className={`status slot-inline-feedback ${pageStatus.type}`}>{pageStatus.text}</p>
+      ) : null}
 
       <p className="status" style={{ marginTop: 18 }}>
         快捷键与权限说明在 <Link to="/settings">设置</Link>。
       </p>
     </section>
   )
-}
-
-function slotLabel(id: SlotId): string {
-  if (id === 'asr') return '语音识别'
-  if (id === 'vision') return '截图理解'
-  return '回复生成'
 }
 
 function SlotPanel(props: {
@@ -595,6 +663,7 @@ function SlotPanel(props: {
   busy: string
   onTest: () => void
   onSave: () => void
+  feedback?: Feedback
   children: ReactNode
 }) {
   const {
@@ -608,6 +677,7 @@ function SlotPanel(props: {
     busy,
     onTest,
     onSave,
+    feedback,
     children,
     id
   } = props
@@ -631,14 +701,21 @@ function SlotPanel(props: {
       {expanded ? (
         <div className="slot-config-body">
           {children}
-          <div className="row" style={{ marginTop: 4 }}>
-            <button className="btn" disabled={Boolean(busy)} onClick={onSave}>
-              保存本槽
+          <div className="row slot-actions">
+            <button
+              className="btn"
+              disabled={Boolean(busy)}
+              onClick={onSave}
+            >
+              {busy === `save-${id}` ? '保存中…' : '保存本槽'}
             </button>
             <button className="btn secondary" disabled={Boolean(busy)} onClick={onTest}>
               {busy === `test-${id}` ? '检测中…' : '测一下'}
             </button>
           </div>
+          {feedback ? (
+            <p className={`status slot-inline-feedback ${feedback.type}`}>{feedback.text}</p>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -51,18 +51,26 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
     }
     if (id === 'asr') {
       const key = settings.sttApiKey.trim()
+      const label = `${providerLabel(b.providerId)} · ${b.modelName}`
       return key
-        ? { ready: true, detail: `${providerLabel(b.providerId)} · 已填 Key` }
-        : { ready: false, detail: '未填写语音 API Key' }
+        ? { ready: true, detail: label }
+        : { ready: false, detail: `${label} · 未填 Key` }
     }
     const key = settings.apiKey.trim()
+    const label = `${providerLabel(b.providerId)} · ${b.modelName}`
     const ok =
       key &&
       key !== LOCAL_DEFAULTS.apiKeyPlaceholder &&
       settings.inferenceMode === 'cloud'
     return ok
-      ? { ready: true, detail: `${providerLabel(b.providerId)} · 已填 Key` }
-      : { ready: false, detail: '未配置在线对话 Key，或仍为本地占位' }
+      ? { ready: true, detail: label }
+      : {
+          ready: false,
+          detail:
+            settings.inferenceMode === 'local'
+              ? `${label} · 当前为本地模式`
+              : `${label} · 未填 Key`
+        }
   }
 
   const slots: SlotStatus[] = (['asr', 'vision', 'chat'] as SlotId[]).map((id) => {

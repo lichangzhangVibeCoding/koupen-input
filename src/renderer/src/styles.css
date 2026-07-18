@@ -1236,6 +1236,29 @@ a {
   pointer-events: none;
 }
 
+.slot-actions {
+  margin-top: 4px;
+}
+
+.slot-inline-feedback {
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+}
+
+.slot-inline-feedback.ok {
+  background: var(--ok-soft);
+  border-color: rgba(15, 157, 107, 0.25);
+}
+
+.slot-inline-feedback.err {
+  background: var(--danger-soft);
+  border-color: rgba(224, 57, 107, 0.25);
+}
+
 @media (max-width: 760px) {
   .app-shell {
     grid-template-columns: 1fr;
