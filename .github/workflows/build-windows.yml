@@ -48,7 +48,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: koupen-windows
+          name: typenow-windows
           path: |
             release/*.exe
             release/*.yml

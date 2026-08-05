@@ -23,11 +23,12 @@
 ## 2. 数据分层（先分清再动手）
 
 ```
-Application Support / 口喷输入/     ← Electron userData（运行时，不进安装包）
+Application Support / typenow/  ← Electron userData（appId `com.typenow.app`；运行时，不进安装包；旧目录会自动迁移）
 ├── config/
 │   └── settings.json                 ← A. 个性化配置（单独文件）
 ├── data/
-│   └── vip-chat.sqlite               ← B. 用户业务数据（客户 + 聊天）
+│   ├── vip-chat.sqlite               ← B. 用户业务数据（联系人 + 帮我对话消息 + 看屏幕会话）
+│   └── screen-ask/                   ← B. 看屏幕截图文件（按会话归档）
 ├── models/                           ← C. 可重建缓存（本地 Whisper 等）
 └── voice/                            ← C. 临时录音（可随时清）
 ```
@@ -65,7 +66,7 @@ Application Support / 口喷输入/     ← Electron userData（运行时，不�
 
 | 能力 | 行为 | 确认文案要点 |
 |---|---|---|
-| **导出配置** | 弹出「存储位置」对话框，保存 `口喷输入-配置-日期.json` | 默认**不含** API Key；可勾选「包含密钥」 |
+| **导出配置** | 弹出「存储位置」对话框，保存 `即刻对话-配置-日期.json` | 默认**不含** API Key；可勾选「包含密钥」 |
 | **导出全部用户数据** | 保存 zip：`settings.json` + `vip-chat.sqlite`（或等价 JSON bundle） | 含联系人与聊天，提醒勿外传 |
 | **还原默认配置** | 仅把 `settings.json` 写成 `DEFAULT_SETTINGS`，**不动**客户/聊天 | 「只清模型/快捷键等配置」 |
 | **清空业务数据** | 清空 contacts + messages（或删库重建），**不动**配置 | 「删除全部联系人与聊天，不可恢复」 |

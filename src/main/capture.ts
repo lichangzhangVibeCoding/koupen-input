@@ -1,16 +1,25 @@
-import { desktopCapturer, screen } from 'electron'
+import { desktopCapturer, NativeImage, screen } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { existsSync, readFileSync, unlinkSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
-import { randomUUID } from 'crypto'
+import { assertMacScreenCaptureAllowed, hasMacAccessibility, macAccessibilityApisAllowed } from './permissions'
+import {
+  capThumbnailDimensions,
+  preprocessCaptureForVision,
+  preprocessFullScreenForVision,
+  VisionImagePayload
+} from './capture-preprocess'
 
 const execFileAsync = promisify(execFile)
 
+export type { VisionImagePayload }
+
 export interface WindowCapture {
   imagePath: string
+  /** 兼容旧字段，等同 visionImage.base64 */
   imageBase64: string
+  visionImage: VisionImagePayload
+  /** 从窗口标题解析的联系人名（视觉模型不必再识别） */
+  contactNameHint: string
   appName: string
   windowTitle: string
 }
@@ -22,6 +31,9 @@ type ActiveWindowInfo = {
 }
 
 async function getActiveWindow(): Promise<ActiveWindowInfo | null> {
+  if (process.platform === 'darwin' && (!macAccessibilityApisAllowed() || !hasMacAccessibility())) {
+    return null
+  }
   try {
     const activeWin = (await import('active-win')).default
     return (await activeWin()) as ActiveWindowInfo | null
@@ -31,16 +43,21 @@ async function getActiveWindow(): Promise<ActiveWindowInfo | null> {
 }
 
 async function getFrontAppMeta(): Promise<{ appName: string; windowTitle: string }> {
-  if (process.platform === 'darwin') {
+  const win = await getActiveWindow()
+  if (win?.owner?.name || win?.title) {
     return {
-      appName: await getFrontAppNameMac(),
-      windowTitle: await getFrontWindowTitleMac()
+      appName: win.owner?.name || '',
+      windowTitle: win.title || ''
     }
   }
-  const win = await getActiveWindow()
+
+  if (process.platform !== 'darwin' || !macAccessibilityApisAllowed() || !hasMacAccessibility()) {
+    return { appName: '', windowTitle: '' }
+  }
+
   return {
-    appName: win?.owner?.name || '',
-    windowTitle: win?.title || ''
+    appName: await getFrontAppNameMac(),
+    windowTitle: await getFrontWindowTitleMac()
   }
 }
 
@@ -68,45 +85,6 @@ async function getFrontWindowTitleMac(): Promise<string> {
   }
 }
 
-async function captureMac(): Promise<WindowCapture> {
-  const { appName, windowTitle } = await getFrontAppMeta()
-  const imagePath = join(tmpdir(), `vip-chat-${randomUUID()}.png`)
-
-  let windowId: number | null = null
-  try {
-    const win = await getActiveWindow()
-    if (win && 'id' in win && typeof (win as { id?: number }).id === 'number') {
-      windowId = (win as { id: number }).id
-    }
-  } catch {
-    // optional
-  }
-
-  if (windowId) {
-    try {
-      await execFileAsync('screencapture', ['-x', '-l', String(windowId), imagePath])
-    } catch {
-      await execFileAsync('screencapture', ['-x', '-m', imagePath])
-    }
-  } else {
-    await execFileAsync('screencapture', ['-x', '-m', imagePath])
-  }
-
-  if (!existsSync(imagePath)) {
-    throw new Error('截屏失败，请在系统设置中授予屏幕录制权限')
-  }
-
-  const buf = readFileSync(imagePath)
-  const imageBase64 = buf.toString('base64')
-  try {
-    unlinkSync(imagePath)
-  } catch {
-    // ignore
-  }
-
-  return { imagePath, imageBase64, appName, windowTitle }
-}
-
 function normalizeTitle(s: string): string {
   return s.trim().replace(/\s+/g, ' ').toLowerCase()
 }
@@ -118,9 +96,18 @@ function isGenericChatTitle(title: string): boolean {
     t === '微信' ||
     t === 'wechat' ||
     t === 'weixin' ||
+    t === 'wechatapp' ||
     t === 'qq' ||
     t === '腾讯qq' ||
-    t === 'wechat for windows'
+    t === 'wechat for windows' ||
+    t === '即刻对话' ||
+    t === '即刻对话（开发）' ||
+    t === 'typenow' ||
+    t === 'typenow (dev)' ||
+    t === 'talknow' ||
+    t === 'talknow (dev)' ||
+    t === '口喷输入' ||
+    t === 'electron'
   )
 }
 
@@ -140,18 +127,36 @@ export function parseContactNameFromWindowTitle(
   title = title.replace(/\s*[-|–—|｜]\s*腾讯QQ.*$/i, '').trim()
 
   if (isGenericChatTitle(title)) {
-    // 有时标题只有应用名，尝试从进程名判断后仍无法得到联系人
     void appName
     return ''
   }
   return title
 }
 
+function finalizeCapture(
+  image: NativeImage,
+  appName: string,
+  windowTitle: string
+): WindowCapture {
+  const channel = guessChannel(appName, windowTitle)
+  const visionImage = preprocessCaptureForVision(image, channel)
+  const contactNameHint = parseContactNameFromWindowTitle(windowTitle, appName)
+  return {
+    imagePath: '',
+    imageBase64: visionImage.base64,
+    visionImage,
+    contactNameHint,
+    appName,
+    windowTitle
+  }
+}
+
 function pickWindowSource(
   sources: Electron.DesktopCapturerSource[],
-  active: ActiveWindowInfo | null
+  active: ActiveWindowInfo | null,
+  fallbackTitle?: string
 ): Electron.DesktopCapturerSource | undefined {
-  const title = active?.title?.trim()
+  const title = (active?.title || fallbackTitle || '').trim()
   if (!title) return undefined
 
   const nTitle = normalizeTitle(title)
@@ -200,21 +205,22 @@ function cropThumbnailToBounds(
   return thumbnail.crop({ x, y, width: w, height: h })
 }
 
-async function captureWindows(): Promise<WindowCapture> {
+async function captureViaDesktopCapturer(): Promise<WindowCapture> {
+  if (process.platform === 'darwin') {
+    assertMacScreenCaptureAllowed()
+  }
+
   const active = await getActiveWindow()
-  const appName = active?.owner?.name || ''
-  const windowTitle = active?.title || ''
+  const meta = await getFrontAppMeta()
+  const appName = active?.owner?.name || meta.appName
+  const windowTitle = active?.title || meta.windowTitle
+
   const display = screen.getPrimaryDisplay()
   const scale = display.scaleFactor || 1
   const bounds = active?.bounds
-  const tw = Math.max(
-    640,
-    Math.min(2560, Math.round((bounds?.width || display.size.width) * scale))
-  )
-  const th = Math.max(
-    480,
-    Math.min(1600, Math.round((bounds?.height || display.size.height) * scale))
-  )
+  const rawW = Math.round((bounds?.width || display.size.width) * scale)
+  const rawH = Math.round((bounds?.height || display.size.height) * scale)
+  const { width: tw, height: th } = capThumbnailDimensions(rawW, rawH)
 
   const windowSources = await desktopCapturer.getSources({
     types: ['window'],
@@ -222,27 +228,26 @@ async function captureWindows(): Promise<WindowCapture> {
     fetchWindowIcons: false
   })
 
-  const picked = pickWindowSource(windowSources, active)
+  const picked = pickWindowSource(windowSources, active, windowTitle)
   if (picked?.thumbnail && !picked.thumbnail.isEmpty()) {
-    return {
-      imagePath: '',
-      imageBase64: picked.thumbnail.toPNG().toString('base64'),
-      appName,
-      windowTitle
-    }
+    return finalizeCapture(picked.thumbnail, appName, windowTitle)
   }
 
-  // 兜底：整屏截取后按前台窗口区域裁剪（比纯整屏更容易识别）
-  const screenW = Math.round(display.size.width * scale)
-  const screenH = Math.round(display.size.height * scale)
+  const screenRawW = Math.round(display.size.width * scale)
+  const screenRawH = Math.round(display.size.height * scale)
+  const screenCap = capThumbnailDimensions(screenRawW, screenRawH)
   const screenSources = await desktopCapturer.getSources({
     types: ['screen'],
-    thumbnailSize: { width: screenW, height: screenH }
+    thumbnailSize: { width: screenCap.width, height: screenCap.height }
   })
   const screenSource =
     screenSources.find((s) => s.display_id === String(display.id)) || screenSources[0]
   if (!screenSource?.thumbnail || screenSource.thumbnail.isEmpty()) {
-    throw new Error('截屏失败，请检查系统是否允许屏幕捕获')
+    throw new Error(
+      process.platform === 'darwin'
+        ? '截屏失败：请确认已在 系统设置 → 屏幕录制 中勾选「即刻对话」，并完全退出后重开。'
+        : '截屏失败，请检查系统是否允许屏幕捕获'
+    )
   }
 
   let image = screenSource.thumbnail
@@ -250,20 +255,44 @@ async function captureWindows(): Promise<WindowCapture> {
     image = cropThumbnailToBounds(image, bounds, display)
   }
 
-  return {
-    imagePath: '',
-    imageBase64: image.toPNG().toString('base64'),
-    appName,
-    windowTitle
-  }
+  return finalizeCapture(image, appName, windowTitle)
 }
 
-/** Capture the frontmost window (Mac) or active chat window (Windows) */
+/** Capture the frontmost window (Mac / Windows) */
 export async function captureFrontWindow(): Promise<WindowCapture> {
-  if (process.platform === 'win32') {
-    return captureWindows()
+  return captureViaDesktopCapturer()
+}
+
+/** 截取主屏幕整屏（看屏幕问答） */
+export async function captureFullScreen(): Promise<{
+  visionImage: VisionImagePayload
+  imageBase64: string
+}> {
+  if (process.platform === 'darwin') {
+    assertMacScreenCaptureAllowed()
   }
-  return captureMac()
+
+  const display = screen.getPrimaryDisplay()
+  const scale = display.scaleFactor || 1
+  const screenRawW = Math.round(display.size.width * scale)
+  const screenRawH = Math.round(display.size.height * scale)
+  const screenCap = capThumbnailDimensions(screenRawW, screenRawH)
+  const screenSources = await desktopCapturer.getSources({
+    types: ['screen'],
+    thumbnailSize: { width: screenCap.width, height: screenCap.height }
+  })
+  const screenSource =
+    screenSources.find((s) => s.display_id === String(display.id)) || screenSources[0]
+  if (!screenSource?.thumbnail || screenSource.thumbnail.isEmpty()) {
+    throw new Error(
+      process.platform === 'darwin'
+        ? '截屏失败：请确认已在 系统设置 → 屏幕录制 中勾选应用，并完全退出后重开。'
+        : '截屏失败，请检查系统是否允许屏幕捕获'
+    )
+  }
+
+  const visionImage = preprocessFullScreenForVision(screenSource.thumbnail)
+  return { visionImage, imageBase64: visionImage.base64 }
 }
 
 export function guessChannel(appName: string, windowTitle: string): 'wechat' | 'qq' | 'unknown' {

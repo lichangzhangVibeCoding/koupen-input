@@ -1,0 +1,305 @@
+window.TALKNOW_RELEASES = {
+  "product": "即刻对话",
+  "productEn": "TalkNow",
+  "repo": "https://github.com/lichangzhangVibeCoding/koupen-input",
+  "releasesUrl": "https://github.com/lichangzhangVibeCoding/koupen-input/releases",
+  "latestUrl": "https://github.com/lichangzhangVibeCoding/koupen-input/releases/latest",
+  "siteUrl": "https://www.talknow.cn/",
+  "releases": [
+    {
+      "version": "0.5.7",
+      "date": "2026-07-28",
+      "title": "本地套件一键安装修复",
+      "titleEn": "Fix one-click local suite install",
+      "highlights": [
+        "修：一点「一键安装本地套件」就报 sharp/libvips 错误",
+        "发版前校验原生语音依赖；语音半边失败时提示更清楚，对话模型仍可单独就绪"
+      ],
+      "highlightsEn": [
+        "Fix: one-click local suite failing immediately on sharp/libvips",
+        "Verify native ASR deps before release; clearer errors if voice install fails while chat models succeed"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.7-arm64.dmg",
+        "macX64": "即刻对话-0.5.7-x64.dmg",
+        "winX64": "即刻对话-0.5.7-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.6",
+      "date": "2026-07-28",
+      "title": "程序坞图标用着用着消失",
+      "titleEn": "Dock icon vanishing during use",
+      "highlights": [
+        "修：用一会儿或多次触发功能后主窗口被 HUD 藏掉、程序坞图标消失",
+        "附属窗弹出后按原状态恢复主窗口（显示 / 缩小），并确保 Dock 可见"
+      ],
+      "highlightsEn": [
+        "Fix: Dock icon vanishing after using features for a while (HUD hiding the main window)",
+        "Restore main window visibility/minimized state after aux windows; keep Dock shown"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.6-arm64.dmg",
+        "macX64": "即刻对话-0.5.6-x64.dmg",
+        "winX64": "即刻对话-0.5.6-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.5",
+      "date": "2026-07-28",
+      "title": "缩小后调用功能不丢程序坞",
+      "titleEn": "Keep Dock icon when triggering while minimized",
+      "highlights": [
+        "主窗口缩到程序坞后再用语音/帮我对话/看屏幕，不再把程序坞图标弄丢",
+        "HUD / 录音附属窗改为 panel，并在弹出后恢复主窗口最小化状态"
+      ],
+      "highlightsEn": [
+        "Triggering voice / reply / screen ask while minimized no longer drops the Dock icon",
+        "HUD and recorder use panel windows and restore the main window's minimized state"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.5-arm64.dmg",
+        "macX64": "即刻对话-0.5.5-x64.dmg",
+        "winX64": "即刻对话-0.5.5-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.4",
+      "date": "2026-07-28",
+      "title": "程序坞缩小行为",
+      "titleEn": "Dock minimize behavior",
+      "highlights": [
+        "点关闭/缩小时窗口会留在程序坞，再点图标即可恢复",
+        "真退出请用 ⌘Q 或菜单栏图标右键「退出即刻对话」"
+      ],
+      "highlightsEn": [
+        "Close/minimize keeps the window in the Dock — click the icon to restore",
+        "To fully quit: ⌘Q or menu-bar tray → Quit"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.4-arm64.dmg",
+        "macX64": "即刻对话-0.5.4-x64.dmg",
+        "winX64": "即刻对话-0.5.4-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.3",
+      "date": "2026-07-28",
+      "title": "消除辅助功能反复弹窗",
+      "titleEn": "Stop Accessibility prompt loops",
+      "highlights": [
+        "Mac 未签名包不再调用 uIOhook / System Events，从根上避免「辅助功能访问」反复弹窗",
+        "快捷键请用 Command+8（语音）、Command+0（帮我对话）、Command+1（看屏幕）或首页按钮",
+        "粘贴改为剪贴板兜底；辅助功能改为可选项"
+      ],
+      "highlightsEn": [
+        "Unsigned Mac builds no longer call uIOhook / System Events — stops Accessibility dialog loops",
+        "Use Command+8 (voice), Command+0 (reply), Command+1 (screen ask), or home buttons",
+        "Paste falls back to clipboard; Accessibility is optional"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.3-arm64.dmg",
+        "macX64": "即刻对话-0.5.3-x64.dmg",
+        "winX64": "即刻对话-0.5.3-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.2",
+      "date": "2026-07-28",
+      "title": "Mac 权限体验",
+      "titleEn": "macOS permissions polish",
+      "highlights": [
+        "辅助功能勾选后不再反复弹系统窗：改为提示 ⌘Q 完全退出再重开",
+        "语音前主动申请麦克风，设置页「打开」会先触发系统授权再跳转",
+        "权限文案更清楚：麦克风未授权时给出可操作提示"
+      ],
+      "highlightsEn": [
+        "Accessibility: stop repeated system prompts after grant — ask to ⌘Q quit and reopen",
+        "Request microphone before voice; Settings Open triggers the system prompt first",
+        "Clearer microphone-denied guidance"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.2-arm64.dmg",
+        "macX64": "即刻对话-0.5.2-x64.dmg",
+        "winX64": "即刻对话-0.5.2-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.1",
+      "date": "2026-07-27",
+      "title": "稳定与开发版标识",
+      "titleEn": "Stability & Dev badge",
+      "highlights": [
+        "按系统测试报告修复：Esc 取消保留草稿、答案 HUD 点击穿透、TTS 可 Esc 停播",
+        "首页指挥台顶部不再被裁切；开发版窗口/轨/Dock 带「开发」标识",
+        "宣传站语言链、Changelog 标题、英文默认文案与 releases 回退更稳",
+        "对话空线程文案、删除会话跳转、权限引导二次确认等体验修正"
+      ],
+      "highlightsEn": [
+        "QA fixes: keep draft on Esc cancel, answer HUD click-through, Esc stops TTS",
+        "Home hero no longer clips at the top; Dev builds show a clear Dev badge",
+        "Marketing site: language links, changelog title, English defaults, releases fallback",
+        "Empty-thread copy, delete-session navigation, permission-guide confirm polish"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.1-arm64.dmg",
+        "macX64": "即刻对话-0.5.1-x64.dmg",
+        "winX64": "即刻对话-0.5.1-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-07-26",
+      "title": "商用界面与宣传站",
+      "titleEn": "Commercial UI & marketing site",
+      "highlights": [
+        "桌面 UI 大改版：图标轨导航、首页指挥台、设置分组",
+        "宣传站上线（www.talknow.cn）",
+        "更新日志：网站与 App「更新」页共用同一份发版数据",
+        "下载入口直达 GitHub Releases"
+      ],
+      "highlightsEn": [
+        "Desktop UI refresh: icon rail, home command center, grouped settings",
+        "Marketing site at www.talknow.cn",
+        "Changelog shared by the website and the in-app Updates page",
+        "Download CTAs point to GitHub Releases"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.0-arm64.dmg",
+        "macX64": "即刻对话-0.5.0-x64.dmg",
+        "winX64": "即刻对话-0.5.0-x64.exe"
+      }
+    },
+    {
+      "version": "0.4.1",
+      "date": "2026-07-26",
+      "title": "Esc 立刻取消",
+      "titleEn": "Esc cancels instantly",
+      "highlights": [
+        "语音 / 帮我对话 / 看屏幕进行中按 Esc 立刻停下",
+        "停麦、停播报、中断转写与模型请求"
+      ],
+      "highlightsEn": [
+        "Press Esc during voice / reply / screen ask to stop immediately",
+        "Stops mic, speech, transcription, and model requests"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.4.1-arm64.dmg",
+        "macX64": "即刻对话-0.4.1-x64.dmg",
+        "winX64": "即刻对话-0.4.1-x64.exe"
+      }
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-07-26",
+      "title": "墨色信号 VI",
+      "titleEn": "Ink Signal visual identity",
+      "highlights": [
+        "全新视觉：浅底墨黑 + 电青强调",
+        "App 图标、托盘、HUD、权限引导统一去紫"
+      ],
+      "highlightsEn": [
+        "New look: light ink base with cyan accent only",
+        "App icon, tray, HUD, and permission guide drop purple"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.4.0-arm64.dmg",
+        "macX64": "即刻对话-0.4.0-x64.dmg",
+        "winX64": "即刻对话-0.4.0-x64.exe"
+      }
+    },
+    {
+      "version": "0.3.6",
+      "date": "2026-07-26",
+      "title": "HUD 过程反馈",
+      "titleEn": "HUD progress feedback",
+      "highlights": [
+        "看屏幕长流程底部浮窗持续显示阶段与动效",
+        "与其它快捷键撞车时重亮进度提示"
+      ],
+      "highlightsEn": [
+        "Screen Ask shows ongoing phases in the bottom HUD",
+        "Busy conflicts re-highlight the progress tip"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.3.6-arm64.dmg",
+        "macX64": "即刻对话-0.3.6-x64.dmg",
+        "winX64": "即刻对话-0.3.6-x64.exe"
+      }
+    },
+    {
+      "version": "0.3.5",
+      "date": "2026-07-26",
+      "title": "看屏幕快捷键调整",
+      "titleEn": "Screen Ask shortcut tweak",
+      "highlights": [
+        "看屏幕默认 Command+1 / Win+1",
+        "语音播报改用更自然的系统中文音色"
+      ],
+      "highlightsEn": [
+        "Screen Ask defaults to Command+1 / Win+1",
+        "Spoken replies use a more natural Chinese system voice"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.3.5-arm64.dmg",
+        "macX64": "即刻对话-0.3.5-x64.dmg",
+        "winX64": "即刻对话-0.3.5-x64.exe"
+      }
+    },
+    {
+      "version": "0.3.4",
+      "date": "2026-07-26",
+      "title": "看屏幕对话归档",
+      "titleEn": "Screen Ask session archive",
+      "highlights": [
+        "侧栏对话列表保存截图与问答",
+        "可继续同一会话多轮提问"
+      ],
+      "highlightsEn": [
+        "Sidebar chats keep screenshots and Q&A",
+        "Continue multi-turn questions in the same session"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.3.4-arm64.dmg",
+        "macX64": "即刻对话-0.3.4-x64.dmg",
+        "winX64": "即刻对话-0.3.4-x64.exe"
+      }
+    },
+    {
+      "version": "0.3.3",
+      "date": "2026-07-26",
+      "title": "看屏幕问答",
+      "titleEn": "Screen Ask",
+      "highlights": [
+        "截整屏 + 语音提问，HUD 展示并复制回答"
+      ],
+      "highlightsEn": [
+        "Capture the full screen, ask by voice; HUD shows and copies the answer"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.3.3-arm64.dmg",
+        "macX64": "即刻对话-0.3.3-x64.dmg",
+        "winX64": "即刻对话-0.3.3-x64.exe"
+      }
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-07-26",
+      "title": "能力更名与硬件键",
+      "titleEn": "Capability rename & hardware keys",
+      "highlights": [
+        "对外名：即刻对话 / 帮我对话",
+        "硬件隐藏键 Command/Win+8、+0"
+      ],
+      "highlightsEn": [
+        "Public names: TalkNow / Reply Assist",
+        "Hidden hardware keys Command/Win+8 and +0"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.3.0-arm64.dmg",
+        "macX64": "即刻对话-0.3.0-x64.dmg",
+        "winX64": "即刻对话-0.3.0-x64.exe"
+      }
+    }
+  ]
+};

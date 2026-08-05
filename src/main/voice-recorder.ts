@@ -2,6 +2,10 @@ import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { randomUUID } from 'crypto'
 import { writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { ensureMacMicrophoneAccess } from './permissions'
+import { markAuxWindow, withMainDockPreservedAsync } from './preserve-main-dock'
+import { TaskCancelledError } from './task-cancel'
+import { t } from '../shared/i18n'
 
 let recorderWin: BrowserWindow | null = null
 let pending:
@@ -76,7 +80,22 @@ function stop() {
   }
 }
 
-window.recorderApi = { start, stop }
+function discard() {
+  try {
+    if (mediaRecorder) {
+      mediaRecorder.ondataavailable = null
+      mediaRecorder.onstop = null
+      if (mediaRecorder.state !== 'inactive') mediaRecorder.stop()
+    }
+  } catch (e) {}
+  if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop())
+  mediaStream = null
+  mediaRecorder = null
+  chunks = []
+  window.recBridge.result({ requestId, ok: false, error: 'CANCELLED' })
+}
+
+window.recorderApi = { start, stop, discard }
 </script>
 </body>
 </html>`
@@ -97,7 +116,11 @@ function ensureIpc(): void {
       const { resolve, reject } = pending
       pending = null
       if (!payload.ok || !payload.bytes) {
-        reject(new Error(payload.error || '录音失败'))
+        if (payload.error === 'CANCELLED') {
+          reject(new TaskCancelledError())
+        } else {
+          reject(new Error(payload.error || '录音失败'))
+        }
         return
       }
       resolve({
@@ -132,24 +155,35 @@ async function ensureRecorderWindow(): Promise<BrowserWindow> {
   hookMicPermission()
   if (recorderWin && !recorderWin.isDestroyed()) return recorderWin
 
-  recorderWin = new BrowserWindow({
-    show: false,
-    width: 120,
-    height: 120,
-    webPreferences: {
-      preload: join(__dirname, '../preload/recorder.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false
-    }
+  return withMainDockPreservedAsync(async () => {
+    recorderWin = new BrowserWindow({
+      show: false,
+      width: 120,
+      height: 120,
+      skipTaskbar: true,
+      focusable: false,
+      ...(process.platform === 'darwin'
+        ? { type: 'panel' as const, hiddenInMissionControl: true }
+        : {}),
+      webPreferences: {
+        preload: join(__dirname, '../preload/recorder.js'),
+        contextIsolation: true,
+        nodeIntegration: false,
+        sandbox: false
+      }
+    })
+    markAuxWindow(recorderWin)
+    await recorderWin.loadFile(recorderHtmlPath())
+    return recorderWin
   })
-
-  await recorderWin.loadFile(recorderHtmlPath())
-  return recorderWin
 }
 
 export async function startMicRecording(): Promise<string> {
   ensureIpc()
+  const micOk = await ensureMacMicrophoneAccess()
+  if (!micOk) {
+    throw new Error(t('error.microphone', { name: t('brand.name') }))
+  }
   const win = await ensureRecorderWindow()
   const requestId = randomUUID()
   currentRequestId = requestId
@@ -180,6 +214,25 @@ export async function stopMicRecording(
       }
     }, 180000)
   })
+}
+
+/** 丢弃当前录音（Esc 取消）；若已有 pending stop，以取消拒绝 */
+export function discardMicRecording(): void {
+  ensureIpc()
+  const id = currentRequestId
+  if (pending) {
+    const p = pending
+    pending = null
+    p.reject(new TaskCancelledError())
+  }
+  currentRequestId = ''
+  if (recorderWin && !recorderWin.isDestroyed()) {
+    void recorderWin.webContents
+      .executeJavaScript(`window.recorderApi.discard && window.recorderApi.discard()`)
+      .catch(() => undefined)
+  } else if (id) {
+    // no window — already cleared
+  }
 }
 
 export function destroyRecorder(): void {

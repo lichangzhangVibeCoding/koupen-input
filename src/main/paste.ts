@@ -1,6 +1,7 @@
 import { clipboard } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { hasMacAccessibility, macAccessibilityApisAllowed } from './permissions'
 
 const execFileAsync = promisify(execFile)
 
@@ -36,6 +37,10 @@ export async function pasteIntoFrontApp(
 }
 
 async function pasteMac(): Promise<void> {
+  // 未签名包即使勾了辅助功能，System Events 也会反复弹窗 → 只用剪贴板兜底
+  if (!macAccessibilityApisAllowed() || !hasMacAccessibility()) {
+    throw new Error('accessibility required')
+  }
   await execFileAsync('osascript', [
     '-e',
     'tell application "System Events" to keystroke "v" using command down'
@@ -43,7 +48,6 @@ async function pasteMac(): Promise<void> {
 }
 
 async function pasteWindows(): Promise<void> {
-  // Ctrl+V via .NET SendKeys
   await execFileAsync('powershell.exe', [
     '-NoProfile',
     '-ExecutionPolicy',

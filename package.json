@@ -1,22 +1,26 @@
 {
-  "name": "streamer-vip-chat",
-  "version": "0.1.0",
-  "description": "口喷输入 — 本机对话助手：我来口喷 / 帮你口喷",
+  "name": "typenow",
+  "version": "0.5.7",
+  "description": "即刻对话 / TalkNow — local chat assistant · www.talknow.cn",
   "main": "./out/main/index.js",
-  "author": "VIP Chat",
+  "author": "TalkNow",
   "license": "UNLICENSED",
   "scripts": {
     "dev": "electron-vite dev",
+    "membership:server": "npm --prefix server start",
+    "membership:dev": "npm --prefix server run dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "ensure-clean": "node scripts/ensure-clean-release.mjs",
-    "pack": "npm run ensure-clean && npm run build && electron-builder --mac --dir",
-    "dist": "npm run ensure-clean && npm run build && electron-builder --mac",
-    "pack:win": "npm run ensure-clean && npm run build && electron-builder --win --dir",
-    "dist:win": "npm run ensure-clean && npm run build && electron-builder --win nsis --publish never",
-    "dist:win:green": "npm run ensure-clean && npm run build && electron-builder --win portable zip --publish never",
+    "ensure-sharp": "node scripts/ensure-sharp.mjs",
+    "pack": "npm run ensure-sharp && npm run ensure-clean && npm run build && electron-builder --mac --dir",
+    "dist": "npm run ensure-sharp && npm run ensure-clean && npm run build && electron-builder --mac",
+    "pack:win": "npm run ensure-sharp && npm run ensure-clean && npm run build && electron-builder --win --dir",
+    "dist:win": "npm run ensure-sharp && npm run ensure-clean && npm run build && electron-builder --win nsis --publish never",
+    "dist:win:green": "npm run ensure-sharp && npm run ensure-clean && npm run build && electron-builder --win portable zip --publish never",
     "rebuild": "electron-rebuild -f -w better-sqlite3,uiohook-napi",
-    "postinstall": "electron-rebuild -f -w better-sqlite3,uiohook-napi || true"
+    "sync:plans": "node scripts/sync-plan-catalog.mjs",
+    "postinstall": "(electron-rebuild -f -w better-sqlite3,uiohook-napi || true) && node scripts/ensure-sharp.mjs"
   },
   "dependencies": {
     "@xenova/transformers": "^2.17.2",
@@ -26,6 +30,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0",
+    "sharp": "0.32.6",
     "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
@@ -41,8 +46,8 @@
     "vite": "^6.2.0"
   },
   "build": {
-    "appId": "com.streamer.vipchat",
-    "productName": "口喷输入",
+    "appId": "com.typenow.app",
+    "productName": "即刻对话",
     "directories": {
       "output": "release"
     },
@@ -53,10 +58,14 @@
       "**/active-win/**/*",
       "**/uiohook-napi/**/*",
       "**/@xenova/transformers/**/*",
+      "**/onnxruntime-node/**/*",
+      "**/sharp/**/*",
       "**/ffmpeg-static/**/*"
     ],
     "npmRebuild": true,
+    "afterPack": "./scripts/after-pack-verify-sharp.cjs",
     "mac": {
+      "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
       "target": [
         "dmg"
@@ -67,13 +76,32 @@
       "extendInfo": {
         "NSAppleEventsUsageDescription": "需要控制其他应用以将回复粘贴到聊天输入框。",
         "NSScreenCaptureDescription": "需要截取当前聊天窗口以识别对话内容。",
-        "NSMicrophoneUsageDescription": "需要使用麦克风进行「我来口喷」语音转文字。"
+        "NSMicrophoneUsageDescription": "需要使用麦克风进行「即刻对话 / TalkNow」语音转文字。"
       }
     },
     "dmg": {
-      "title": "口喷输入"
+      "title": "即刻对话",
+      "background": "resources/dmg-background.png",
+      "contents": [
+        {
+          "x": 140,
+          "y": 220,
+          "type": "file"
+        },
+        {
+          "x": 480,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 660,
+        "height": 400
+      }
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -102,13 +130,22 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "口喷输入",
+      "shortcutName": "即刻对话",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
     "files": [
       "out/**/*",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources",
+        "filter": [
+          "**/*"
+        ]
+      }
     ]
   }
 }

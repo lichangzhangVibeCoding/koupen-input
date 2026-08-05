@@ -3,9 +3,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import {
   defaultReplyHotkey,
+  defaultScreenAskHotkey,
+  defaultScreenQuizHotkey,
   isDoubleAltHotkey,
-  isDoubleCommandHotkey
+  isDoubleCommandHotkey,
+  isDoubleHardwareReplyHotkey,
+  normalizeVoiceTrigger
 } from '../shared/hotkey'
+import { isPersonaPackId } from '../shared/persona-packs'
+import { t } from '../shared/i18n'
 import { AppSettings, DEFAULT_SETTINGS } from '../shared/types'
 
 const LEGACY_HOTKEYS = [
@@ -23,7 +29,9 @@ const LEGACY_HOTKEYS = [
 function platformDefaultSettings(): AppSettings {
   return {
     ...DEFAULT_SETTINGS,
-    hotkey: defaultReplyHotkey()
+    hotkey: defaultReplyHotkey(),
+    screenAskHotkey: defaultScreenAskHotkey(),
+    screenQuizHotkey: defaultScreenQuizHotkey()
   }
 }
 
@@ -50,13 +58,17 @@ export function redactSecrets(settings: AppSettings): AppSettings {
     sttApiKey: '',
     localSttApiKey: isPlaceholderKey(settings.localSttApiKey)
       ? settings.localSttApiKey || 'local'
-      : ''
+      : '',
+    membershipAccessToken: ''
   }
 }
 
 export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppSettings {
   const base = platformDefaultSettings()
   const merged = { ...base, ...raw } as AppSettings
+  // 已移除蓝牙遥控：丢掉旧配置里的残留字段
+  delete (merged as AppSettings & { remoteButtonEnabled?: unknown }).remoteButtonEnabled
+  delete (merged as AppSettings & { remoteLearnedKeycode?: unknown }).remoteLearnedKeycode
   if (LEGACY_HOTKEYS.includes(merged.hotkey)) {
     merged.hotkey = base.hotkey
   }
@@ -66,6 +78,62 @@ export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppS
   } else if (process.platform === 'darwin' && isDoubleAltHotkey(merged.hotkey)) {
     merged.hotkey = defaultReplyHotkey('darwin')
   }
+  if (typeof merged.deAiToneEnabled !== 'boolean') {
+    merged.deAiToneEnabled = true
+  }
+  if (!isPersonaPackId(merged.personaPackId)) {
+    merged.personaPackId = 'none'
+  }
+  if (typeof merged.permissionGuideCompleted !== 'boolean') {
+    merged.permissionGuideCompleted = false
+  }
+  if (merged.locale !== 'system' && merged.locale !== 'zh-CN' && merged.locale !== 'en-US') {
+    merged.locale = 'system'
+  }
+  if (typeof merged.screenAskEnabled !== 'boolean') {
+    merged.screenAskEnabled = true
+  }
+  if (typeof merged.screenAskHotkey !== 'string' || !merged.screenAskHotkey.trim()) {
+    merged.screenAskHotkey = defaultScreenAskHotkey()
+  } else if (
+    // 旧默认易与浏览器「第 N 个标签」冲突 → 迁到 Command+Shift+N
+    merged.screenAskHotkey === 'Command+Shift+A' ||
+    merged.screenAskHotkey === 'Control+Shift+A' ||
+    merged.screenAskHotkey === 'Command+1' ||
+    merged.screenAskHotkey === 'Super+1' ||
+    isDoubleHardwareReplyHotkey(merged.screenAskHotkey)
+  ) {
+    merged.screenAskHotkey = defaultScreenAskHotkey()
+  } else if (process.platform === 'win32' && /^Command\+(Shift\+)?1$/i.test(merged.screenAskHotkey)) {
+    merged.screenAskHotkey = defaultScreenAskHotkey('win32')
+  } else if (process.platform === 'darwin' && /^(Super|Control)(\+Shift)?\+1$/i.test(merged.screenAskHotkey)) {
+    merged.screenAskHotkey = defaultScreenAskHotkey('darwin')
+  }
+  if (typeof merged.screenQuizEnabled !== 'boolean') {
+    merged.screenQuizEnabled = true
+  }
+  if (typeof merged.screenQuizHotkey !== 'string' || !merged.screenQuizHotkey.trim()) {
+    merged.screenQuizHotkey = defaultScreenQuizHotkey()
+  } else if (
+    merged.screenQuizHotkey === 'Command+2' ||
+    merged.screenQuizHotkey === 'Super+2'
+  ) {
+    merged.screenQuizHotkey = defaultScreenQuizHotkey()
+  } else if (process.platform === 'win32' && /^Command\+(Shift\+)?2$/i.test(merged.screenQuizHotkey)) {
+    merged.screenQuizHotkey = defaultScreenQuizHotkey('win32')
+  } else if (process.platform === 'darwin' && /^(Super|Control)(\+Shift)?\+2$/i.test(merged.screenQuizHotkey)) {
+    merged.screenQuizHotkey = defaultScreenQuizHotkey('darwin')
+  }
+  if (merged.modelRoutingMode !== 'byok' && merged.modelRoutingMode !== 'membership') {
+    merged.modelRoutingMode = 'byok'
+  }
+  if (typeof merged.membershipServerUrl !== 'string' || !merged.membershipServerUrl.trim()) {
+    merged.membershipServerUrl = 'https://www.lizhenning.com/other/typenow/talknowAPi/index.php'
+  }
+  if (typeof merged.membershipAccessToken !== 'string') {
+    merged.membershipAccessToken = ''
+  }
+  merged.voiceTrigger = normalizeVoiceTrigger(merged.voiceTrigger)
   return merged
 }
 
@@ -116,8 +184,8 @@ export async function exportSettingsToFile(
   const settings = getSettings()
   const stamp = new Date().toISOString().slice(0, 10)
   const { canceled, filePath } = await dialog.showSaveDialog({
-    title: '导出配置',
-    defaultPath: `口喷输入-配置-${stamp}.json`,
+    title: t('export.title'),
+    defaultPath: `${t('export.filenamePrefix')}-${stamp}.json`,
     filters: [{ name: 'JSON', extensions: ['json'] }]
   })
   if (canceled || !filePath) return { ok: false, canceled: true }

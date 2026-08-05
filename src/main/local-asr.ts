@@ -33,10 +33,27 @@ export function isLocalAsrInstalled(): boolean {
 }
 
 async function getFfmpegPath(): Promise<string> {
-  const mod = await import('ffmpeg-static')
-  const p = (mod as { default?: string }).default || (mod as unknown as string)
-  if (!p || !existsSync(p)) throw new Error('未找到 ffmpeg，无法处理录音格式')
-  return p
+  try {
+    const mod = await import('ffmpeg-static')
+    const p = (mod as { default?: string }).default || (mod as unknown as string)
+    if (p && existsSync(p)) return p
+  } catch {
+    // fall through
+  }
+  // 打包二进制缺失时，回退到系统 ffmpeg（Homebrew 等）
+  for (const candidate of ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', 'ffmpeg']) {
+    if (candidate === 'ffmpeg' || existsSync(candidate)) {
+      try {
+        await execFileAsync(candidate === 'ffmpeg' ? 'ffmpeg' : candidate, ['-version'], {
+          timeout: 5000
+        })
+        return candidate
+      } catch {
+        // try next
+      }
+    }
+  }
+  throw new Error('未找到 ffmpeg，无法处理录音格式')
 }
 
 /** Convert webm/opus buffer to 16kHz mono wav file path */
@@ -96,25 +113,38 @@ export async function ensureLocalAsr(
 
   loading = (async () => {
     onProgress?.({ status: '正在准备本地语音模型…', progress: 0 })
-    const { pipeline, env } = await import('@xenova/transformers')
+    let pipeline: typeof import('@xenova/transformers').pipeline
+    let env: typeof import('@xenova/transformers').env
+    try {
+      ;({ pipeline, env } = await import('@xenova/transformers'))
+    } catch (err) {
+      throw new Error(friendlyLocalAsrLoadError(err))
+    }
     env.cacheDir = modelsDir()
     env.allowLocalModels = true
     env.allowRemoteModels = true
+    // 国内直连 huggingface.co 常 Connection reset / fetch failed；默认走镜像
+    const host = (process.env.TALKNOW_HF_ENDPOINT || 'https://hf-mirror.com/').replace(/\/*$/, '/')
+    env.remoteHost = host
 
-    const pipe = await pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
-      progress_callback: (info: { status?: string; progress?: number; file?: string }) => {
-        onProgress?.({
-          status: info.status || 'downloading',
-          progress:
-            typeof info.progress === 'number' ? Math.round(info.progress * 100) : undefined,
-          file: info.file
-        })
-      }
-    })
+    try {
+      const pipe = await pipeline('automatic-speech-recognition', 'Xenova/whisper-base', {
+        progress_callback: (info: { status?: string; progress?: number; file?: string }) => {
+          onProgress?.({
+            status: info.status || 'downloading',
+            progress:
+              typeof info.progress === 'number' ? Math.round(info.progress * 100) : undefined,
+            file: info.file
+          })
+        }
+      })
 
-    asrPipeline = pipe as typeof asrPipeline
-    writeFileSync(readyMarker(), new Date().toISOString(), 'utf8')
-    onProgress?.({ status: '本地语音模型已就绪', progress: 100 })
+      asrPipeline = pipe as typeof asrPipeline
+      writeFileSync(readyMarker(), new Date().toISOString(), 'utf8')
+      onProgress?.({ status: '本地语音模型已就绪', progress: 100 })
+    } catch (err) {
+      throw new Error(friendlyLocalAsrLoadError(err))
+    }
   })()
 
   try {
@@ -122,6 +152,24 @@ export async function ensureLocalAsr(
   } finally {
     loading = null
   }
+}
+
+/** 把 sharp/libvips 等原生库错误收成用户能看懂的话 */
+export function friendlyLocalAsrLoadError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err)
+  if (/sharp|libvips|dlopen/i.test(raw)) {
+    return (
+      '本地语音组件未正确安装（缺 sharp/libvips）。' +
+      '请改用最新安装包，或先用「硅基流动」配语音；开发环境可执行 npm run ensure-sharp。'
+    )
+  }
+  if (/fetch failed|ECONNRESET|ETIMEDOUT|ENOTFOUND|network/i.test(raw)) {
+    return (
+      '下载本地语音模型失败（网络不通）。' +
+      '请检查网络后重试「一键安装」；也可先用官方会员或自配硅基 Key 做语音。'
+    )
+  }
+  return raw.replace(/^Error invoking remote method '[^']+':\s*(Error:\s*)?/i, '').trim() || raw
 }
 
 export async function transcribeLocalBuiltin(

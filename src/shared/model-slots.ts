@@ -25,15 +25,15 @@ export const SLOT_META: Record<
 > = {
   asr: {
     label: '语音识别',
-    hint: '我来口喷：你说，我转成字（左 Command）'
+    hint: '即刻对话：你说，我转成字（右 Command）'
   },
   vision: {
-    label: '截图理解',
-    hint: '帮你口喷：看懂当前聊天窗口（快速双击左 Command）'
+    label: '视觉理解',
+    hint: '帮我对话看聊天窗；看屏幕答题时负责读题'
   },
   chat: {
     label: '回复生成',
-    hint: '帮你口喷：按人设写出下一条回复'
+    hint: '帮我对话写回复；看屏幕答题时对照知识库作答'
   }
 }
 
@@ -41,8 +41,9 @@ export const SLOT_META: Record<
 export const SILICONFLOW_RECOMMEND = {
   baseUrl: 'https://api.siliconflow.cn/v1',
   asr: 'FunAudioLLM/SenseVoiceSmall',
-  vision: 'moonshotai/Kimi-K2.7-Code',
-  chat: 'deepseek-ai/DeepSeek-V3'
+  /** 看屏幕答题读题：32B VL 比 8B / 代码向模型更稳 */
+  vision: 'Qwen/Qwen3-VL-32B-Instruct',
+  chat: 'deepseek-ai/DeepSeek-V4-Flash'
 } as const
 
 export const LOCAL_RECOMMEND = {
@@ -114,6 +115,29 @@ export function applySiliconflowRecommend(
     sttBaseUrl: SILICONFLOW_RECOMMEND.baseUrl,
     sttApiKey: apiKey.trim() || settings.sttApiKey || settings.apiKey,
     sttModel: SILICONFLOW_RECOMMEND.asr
+  }
+}
+
+/** 官方会员：把服务端三槽模型同步到本地配置（免 Key，仅模型名供展示/请求） */
+export function applyOfficialModelRoutes(
+  settings: AppSettings,
+  routes?: { asr?: string; vision?: string; chat?: string } | null
+): AppSettings {
+  const asr = String(routes?.asr || '').trim()
+  const vision = String(routes?.vision || '').trim()
+  const chat = String(routes?.chat || '').trim()
+  return {
+    ...settings,
+    modelRoutingMode: 'membership',
+    inferenceMode: 'cloud',
+    sttInferenceMode: 'cloud',
+    // 展示与兼容字段：走会员代理时 Key 由服务端持有，本地不必填
+    provider: 'siliconflow',
+    baseUrl: SILICONFLOW_RECOMMEND.baseUrl,
+    sttBaseUrl: SILICONFLOW_RECOMMEND.baseUrl,
+    ...(chat ? { modelName: chat } : {}),
+    ...(vision ? { visionModelName: vision } : {}),
+    ...(asr ? { sttModel: asr } : {})
   }
 }
 

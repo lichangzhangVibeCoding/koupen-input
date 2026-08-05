@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>即刻对话 · TalkNow Ops</title>
+  <link rel="stylesheet" href="./admin.css" />
+</head>
+<body>
+  <div id="login" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="brand-mark" aria-hidden></span>
+        <div>
+          <h1>即刻对话</h1>
+          <p>TalkNow Ops · www.talknow.cn</p>
+        </div>
+      </div>
+      <label class="field">用户名<input id="adminUser" value="admin" autocomplete="username" /></label>
+      <label class="field">密码<input id="adminPass" type="password" autocomplete="current-password" /></label>
+      <button id="btnLogin" class="btn btn-primary btn-block">登录</button>
+      <p class="hint">仅团队使用，勿挂公开导航。账号见服务器 config.php。</p>
+      <p id="loginErr" class="err" hidden></p>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark" aria-hidden></span>
+        <div>
+          <strong>即刻对话</strong>
+          <span>Ops</span>
+        </div>
+      </div>
+      <nav class="side-nav">
+        <p class="nav-group">总览</p>
+        <button type="button" data-tab="overview" class="nav-item active">工作台</button>
+
+        <p class="nav-group">会员运营</p>
+        <button type="button" data-tab="users" class="nav-item">用户</button>
+        <button type="button" data-tab="orders" class="nav-item">开通与充值</button>
+        <button type="button" data-tab="ledger" class="nav-item">积分流水</button>
+        <button type="button" data-tab="redeem" class="nav-item">兑换码</button>
+
+        <p class="nav-group">产品配置</p>
+        <button type="button" data-tab="plans" class="nav-item">套餐档位</button>
+        <button type="button" data-tab="prices" class="nav-item">扣费单价</button>
+        <button type="button" data-tab="routes" class="nav-item">模型路由</button>
+        <button type="button" data-tab="ops" class="nav-item">运营文案</button>
+
+        <p class="nav-group">内部协作</p>
+        <button type="button" data-tab="roadmap" class="nav-item">产品规划</button>
+        <button type="button" data-tab="kb" class="nav-item">项目情报</button>
+      </nav>
+      <button type="button" id="btnLogout" class="btn btn-ghost sidebar-logout">退出登录</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">工作台</h2>
+          <p id="pageDesc" class="hint">会员、配置与内部协作一览</p>
+        </div>
+        <div id="toast" class="toast" hidden></div>
+      </header>
+
+      <section id="tab-overview" class="tab">
+        <div class="stat-grid" id="overviewStats"></div>
+        <div class="panel-grid">
+          <div class="panel">
+            <h3>快捷入口</h3>
+            <div class="quick-row">
+              <button type="button" class="btn btn-secondary" data-jump="orders">开通会员 / 流量包</button>
+              <button type="button" class="btn btn-secondary" data-jump="users">查找用户</button>
+              <button type="button" class="btn btn-secondary" data-jump="routes">检查模型 Key</button>
+              <button type="button" class="btn btn-secondary" data-jump="kb">项目情报库</button>
+              <button type="button" class="btn btn-secondary" data-jump="redeem">发兑换码</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>产品规划摘要</h3>
+            <p id="overviewRoadmap" class="hint">加载中…</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-users" class="tab hidden">
+        <div class="toolbar">
+          <input id="userQ" placeholder="手机号 / 昵称搜索" />
+          <button type="button" id="btnSearchUsers" class="btn btn-primary">搜索</button>
+        </div>
+        <div class="users-layout">
+          <div class="table-wrap users-table-wrap">
+            <table id="usersTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>手机 / 昵称</th>
+                  <th>当前档位</th>
+                  <th>到期</th>
+                  <th>积分</th>
+                  <th>冻结</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <aside id="userCard" class="user-card panel hidden">
+            <div class="user-card-head">
+              <div>
+                <p class="user-card-kicker">当前选中</p>
+                <h3 id="ucPhone">—</h3>
+                <p id="ucMeta" class="hint">选择左侧用户后在此变更会员或充流量包</p>
+              </div>
+              <button type="button" id="ucClose" class="btn btn-ghost">收起</button>
+            </div>
+            <div class="user-card-stats" id="ucStats"></div>
+
+            <div class="ops-split">
+              <div class="ops-panel">
+                <h4>会员变更</h4>
+                <p class="hint">选动作后改档位与到期；流量包请用右侧，勿混开。</p>
+                <label class="field">变更动作
+                  <select id="ucChangeType">
+                    <option value="open">首开</option>
+                    <option value="upgrade">升级（保留到期 · 默认补差额）</option>
+                    <option value="renew">续费同档（到期叠加）</option>
+                    <option value="downgrade">降级（到期生效）</option>
+                    <option value="downgrade_now">降级（立刻）</option>
+                  </select>
+                </label>
+                <div class="plan-chips" id="ucPlanChips"></div>
+                <div class="form-grid compact">
+                  <label class="field">开通时长
+                    <select id="ucMonths">
+                      <option value="1">1 个月</option>
+                      <option value="3">3 个月</option>
+                      <option value="12">12 个月（年付）</option>
+                      <option value="custom">自定义到期日</option>
+                    </select>
+                  </label>
+                  <label class="field" id="ucEndWrap" hidden>到期日
+                    <input id="ucPeriodEnd" type="date" />
+                  </label>
+                  <label class="field">发放套餐积分
+                    <select id="ucGrantMode">
+                      <option value="diff">升级差额（目标−当前）</option>
+                      <option value="one">发 1 个账期额度</option>
+                      <option value="months">按开通月数倍发</option>
+                      <option value="none">不发放</option>
+                    </select>
+                  </label>
+                  <label class="field">收款金额（元）
+                    <input id="ucSubAmount" type="number" step="0.01" min="0" placeholder="如 99" />
+                  </label>
+                  <label class="field field-span">付款备注
+                    <input id="ucSubNote" placeholder="转账流水 / 微信昵称" />
+                  </label>
+                </div>
+                <p class="hint" id="ucSubPreview">选择档位后显示发放预览</p>
+                <button type="button" id="btnSaveSub" class="btn btn-primary">确认会员变更</button>
+              </div>
+
+              <div class="ops-panel">
+                <h4>流量包充值</h4>
+                <p class="hint">只加积分，不改会员档位。</p>
+                <div class="pack-chips" id="ucPackChips">
+                  <button type="button" class="chip" data-credits="1000" data-yuan="20">+1000 · ¥20</button>
+                  <button type="button" class="chip" data-credits="3000" data-yuan="50">+3000 · ¥50</button>
+                  <button type="button" class="chip" data-credits="10000" data-yuan="150">+10000 · ¥150</button>
+                </div>
+                <div class="form-grid compact">
+                  <label class="field">积分
+                    <input id="ucPackCredits" type="number" value="1000" min="1" />
+                  </label>
+                  <label class="field">收款金额（元）
+                    <input id="ucPackAmount" type="number" step="0.01" min="0" value="20" />
+                  </label>
+                  <label class="field field-span">付款备注
+                    <input id="ucPackNote" placeholder="转账流水 / 微信昵称" />
+                  </label>
+                </div>
+                <button type="button" id="btnSavePack" class="btn btn-secondary">确认充值流量包</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="tab-orders" class="tab hidden">
+        <div class="panel">
+          <h3>快捷开单（未选用户时）</h3>
+          <p class="hint">推荐先在「用户」页选中账号；也可在此直接填手机号开通或充值。</p>
+          <div class="form-grid">
+            <label class="field">手机号<input id="ordPhone" placeholder="138…" /></label>
+            <label class="field">或用户 ID<input id="ordUserId" type="number" /></label>
+          </div>
+          <div class="ops-split">
+            <div class="ops-panel">
+              <h4>开通会员</h4>
+              <div class="plan-chips" id="ordPlanChips"></div>
+              <div class="form-grid compact">
+                <label class="field">时长
+                  <select id="ordMonths">
+                    <option value="1">1 个月</option>
+                    <option value="3">3 个月</option>
+                    <option value="12">12 个月</option>
+                    <option value="custom">自定义到期</option>
+                  </select>
+                </label>
+                <label class="field" id="ordEndWrap" hidden>到期日
+                  <input id="ordPeriodEnd" type="date" />
+                </label>
+                <label class="field">发放积分
+                  <select id="ordGrantMode">
+                    <option value="one">发 1 账期</option>
+                    <option value="months">按月数倍发</option>
+                    <option value="none">不发</option>
+                  </select>
+                </label>
+                <label class="field">金额（元）<input id="ordSubAmount" type="number" step="0.01" min="0" /></label>
+                <label class="field field-span">付款备注<input id="ordSubNote" /></label>
+              </div>
+              <button type="button" id="btnOrdSub" class="btn btn-primary">开通会员</button>
+            </div>
+            <div class="ops-panel">
+              <h4>流量包</h4>
+              <div class="form-grid compact">
+                <label class="field">积分<input id="ordCredits" type="number" value="1000" /></label>
+                <label class="field">金额（元）<input id="ordAmount" type="number" step="0.01" value="20" /></label>
+                <label class="field field-span">付款备注<input id="ordNote" /></label>
+              </div>
+              <button type="button" id="btnOrdPack" class="btn btn-secondary">充值流量包</button>
+            </div>
+          </div>
+        </div>
+        <h3 class="section-h">待确认预约 / 最近订单</h3>
+        <p class="hint">用户提交的线下意向会出现在此。待确认：可「确认预约」「拒绝」或「删除」；已处理记录也可删除清理。</p>
+        <div class="table-wrap">
+          <table id="ordersTable">
+            <thead><tr><th>ID</th><th>手机号</th><th>用户ID</th><th>状态</th><th>类型</th><th>积分</th><th>套餐</th><th>备注</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="tab-ledger" class="tab hidden">
+        <div class="toolbar">
+          <input id="ledgerPhone" placeholder="手机号筛选（可空）" />
+          <input id="ledgerUserId" type="number" placeholder="或用户 ID" />
+          <button type="button" id="btnLedger" class="btn btn-primary">刷新</button>
+        </div>
+        <div class="table-wrap">
+          <table id="ledgerTable">
+            <thead><tr><th>时间</th><th>手机号</th><th>用户ID</th><th>Δ</th><th>余额</th><th>原因</th><th>备注</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="tab-redeem" class="tab hidden">
+        <div class="panel">
+          <h3>生成兑换码</h3>
+          <div class="form-grid">
+            <label class="field">码（可空自动生成）<input id="rCode" /></label>
+            <label class="field">积分<input id="rCredits" type="number" value="500" /></label>
+            <label class="field">可用次数<input id="rUses" type="number" value="1" /></label>
+            <label class="field">备注<input id="rNote" /></label>
+          </div>
+          <button type="button" id="btnCreateRedeem" class="btn btn-primary">生成</button>
+        </div>
+        <div class="table-wrap">
+          <table id="redeemTable">
+            <thead><tr><th>码</th><th>积分</th><th>已用/上限</th><th>使用手机号</th><th>备注</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="tab-plans" class="tab hidden">
+        <p class="hint">四档：体验 / 标准 / 高级 / 旗舰。月赠=基础用量；另有赠送用量。月价/年价单位为「分」。</p>
+        <div class="table-wrap">
+          <table id="plansTable">
+            <thead><tr><th>ID</th><th>名称</th><th>基础积分</th><th>赠送积分</th><th>月价(分)</th><th>年价(分)</th><th>排序</th><th>启用</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="tab-prices" class="tab hidden">
+        <div class="panel">
+          <h3>官方能力扣费单价（积分）</h3>
+          <div id="pricesForm" class="form-grid"></div>
+          <button type="button" id="btnSavePrices" class="btn btn-primary">保存单价</button>
+        </div>
+      </section>
+
+      <section id="tab-routes" class="tab hidden">
+        <p class="hint">上游 Key 仅存服务端。保存走 WAF 安全接口，勿把真实 Key 贴进公开文档。</p>
+        <div id="routesForm" class="route-grid"></div>
+      </section>
+
+      <section id="tab-ops" class="tab hidden">
+        <div class="panel">
+          <h3>客户端会员页展示文案</h3>
+          <label class="field">付款说明<textarea id="opsHint" rows="4"></textarea></label>
+          <label class="field">客服联系方式<input id="opsContact" /></label>
+          <button type="button" id="btnSaveOps" class="btn btn-primary">保存</button>
+        </div>
+      </section>
+
+      <section id="tab-roadmap" class="tab hidden">
+        <div id="roadmapSummary" class="stat-inline hint"></div>
+        <div class="panel">
+          <h3>添加任务</h3>
+          <div class="form-grid">
+            <label class="field">阶段<input id="rmPhase" placeholder="P5 / 产品" /></label>
+            <label class="field">标题<input id="rmTitle" placeholder="任务标题" /></label>
+            <label class="field">状态
+              <select id="rmStatus">
+                <option value="pending">未开始</option>
+                <option value="in_progress">进行中</option>
+                <option value="done">已完成</option>
+                <option value="deferred">后置</option>
+                <option value="cancelled">取消</option>
+              </select>
+            </label>
+            <label class="field">排序<input id="rmSort" type="number" value="100" /></label>
+            <label class="field field-span">说明<textarea id="rmDetail" rows="2" placeholder="补充说明 / 链接"></textarea></label>
+          </div>
+          <button type="button" id="btnAddRoadmap" class="btn btn-primary">添加任务</button>
+        </div>
+        <div class="table-wrap">
+          <table id="roadmapTable">
+            <thead><tr><th>阶段</th><th>标题</th><th>状态</th><th>说明</th><th>排序</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="tab-kb" class="tab hidden">
+        <div class="panel kb-intro">
+          <h3>项目情报库（仅管理员）</h3>
+          <p class="hint">
+            这里存<strong>本项目全部关键信息</strong>：开发核心、踩坑、Key / 账号密码、功能操作教程等。
+            按分类归档，方便后人接手。不是对外帮助文档。
+          </p>
+          <p class="kb-warn">含密钥与密码，勿截图外传；离开电脑请退出后台。</p>
+        </div>
+
+        <div class="kb-toolbar">
+          <input id="kbSearch" type="search" placeholder="搜索标题或正文…" />
+          <div id="kbFilters" class="kb-filters" role="tablist" aria-label="情报分类"></div>
+        </div>
+
+        <div class="panel">
+          <h3>新增一条情报</h3>
+          <div class="form-grid">
+            <label class="field">标题<input id="kbTitle" placeholder="例：硅基流动 API Key" /></label>
+            <label class="field">分类
+              <select id="kbCategory"></select>
+            </label>
+            <label class="field">排序<input id="kbSort" type="number" value="100" title="同分类内越小越靠前" /></label>
+            <label class="field field-span">正文（可写多行：账号、密码、步骤、链接、命令）
+              <textarea id="kbBody" class="kb-body-input" rows="8" placeholder="直接粘贴密钥、账号、操作步骤、报错原文与解法…"></textarea>
+            </label>
+          </div>
+          <button type="button" id="btnAddKb" class="btn btn-primary">保存到情报库</button>
+        </div>
+
+        <div id="kbGrouped" class="kb-grouped"></div>
+      </section>
+    </main>
+  </div>
+  <script src="./admin.js"></script>
+</body>
+</html>

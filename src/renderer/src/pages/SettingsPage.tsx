@@ -1,16 +1,72 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BRAND } from '../../../shared/brand'
 import {
   DOUBLE_ALT_HOTKEY,
   DOUBLE_COMMAND_HOTKEY,
+  DEFAULT_VOICE_TRIGGER,
+  defaultHotkeySettings,
+  defaultScreenAskHotkey,
+  defaultScreenQuizHotkey,
   formatHotkeyLabel,
+  formatMacCommandLabel,
   formatVoiceTriggerLabel,
-  isModifierDoubleHotkey
+  formatVoiceTriggerShortLabel,
+  hotkeyLabelChips,
+  isModifierDoubleHotkey,
+  normalizeVoiceTrigger
 } from '../../../shared/hotkey'
+import { LOCALE_OPTIONS, type LocalePreference } from '../../../shared/i18n'
+import { listPersonaPackOptions } from '../../../shared/persona-packs'
+import type { PersonaPackId } from '../../../shared/persona-packs'
 import { AppSettings, DEFAULT_SETTINGS } from '../../../shared/types'
+import { ComboHotkeyCapture, VoiceTriggerCapture } from '../components/HotkeyCapture'
+import { useI18n } from '../i18n'
+
+type EditRow = null | 'voice' | 'reply' | 'screenAsk' | 'screenQuiz'
+
+function ToggleRow({
+  checked,
+  onChange,
+  title,
+  hint
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  title: string
+  hint?: string
+}) {
+  return (
+    <label className="settings-toggle">
+      <span className="settings-toggle-copy">
+        <strong>{title}</strong>
+        {hint ? <span>{hint}</span> : null}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+      <span className="settings-switch" aria-hidden />
+    </label>
+  )
+}
+
+function KeyChips({ label }: { label: string }) {
+  const chips = hotkeyLabelChips(label)
+  if (!chips.length) return <span className="settings-kbd-empty">—</span>
+  return (
+    <span className="settings-kbd-row" title={label}>
+      {chips.map((c, i) => (
+        <kbd key={`${c}-${i}`} className="kbd settings-kbd">
+          {c}
+        </kbd>
+      ))}
+    </span>
+  )
+}
 
 export default function SettingsPage() {
+  const { t, brand, setPreference, refreshFromSettings } = useI18n()
   const [platform, setPlatform] = useState('darwin')
   const [form, setForm] = useState<AppSettings>({ ...DEFAULT_SETTINGS })
   const [status, setStatus] = useState<{ type: '' | 'ok' | 'err'; text: string }>({
@@ -20,37 +76,90 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState('')
   const [includeSecrets, setIncludeSecrets] = useState(false)
+  const [editing, setEditing] = useState<EditRow>(null)
+  const [macPerms, setMacPerms] = useState<{
+    screen: string
+    microphone: string
+    accessibility: boolean
+  } | null>(null)
 
   const isWin = platform === 'win32'
+  const plat = (isWin ? 'win32' : 'darwin') as NodeJS.Platform
   const defaultDouble = isWin ? DOUBLE_ALT_HOTKEY : DOUBLE_COMMAND_HOTKEY
-  const doubleLabel = isWin ? '快速双击 Alt（推荐）' : '快速双击左 Command（推荐）'
-  const doubleHint = isWin
-    ? '约 0.4 秒内连按两次 Alt'
-    : '约 0.4 秒内连按两次空格键左侧的 Command'
-  const customFallback = isWin ? 'Control+Shift+V' : 'Command+8'
-  const customPlaceholder = isWin ? '例如 Control+Shift+V' : '例如 Command+8'
+  const voiceTrigger = normalizeVoiceTrigger(form.voiceTrigger)
+  const recommendedReplyLabel = formatHotkeyLabel(defaultDouble, plat)
 
   useEffect(() => {
-    void window.vipChat.getPlatform().then(setPlatform)
-    void window.vipChat.getSettings().then(setForm)
+    void (async () => {
+      const p = await window.vipChat.getPlatform()
+      setPlatform(p)
+      setForm(await window.vipChat.getSettings())
+      if (p === 'darwin') {
+        try {
+          setMacPerms(await window.vipChat.getMacPermissions())
+        } catch {
+          setMacPerms(null)
+        }
+      }
+    })()
   }, [])
 
-  async function onSave() {
+  function permLabel(status: string): string {
+    switch (status) {
+      case 'granted':
+        return t('settings.permGranted')
+      case 'denied':
+        return t('settings.permDenied')
+      case 'restricted':
+        return t('settings.permRestricted')
+      case 'not-determined':
+        return t('settings.permNotDetermined')
+      default:
+        return status || t('settings.permUnknown')
+    }
+  }
+
+  function permTone(status: string): 'ok' | 'bad' | 'warn' {
+    if (status === 'granted') return 'ok'
+    if (status === 'denied' || status === 'restricted') return 'bad'
+    return 'warn'
+  }
+
+  async function refreshMacPerms() {
+    if (platform !== 'darwin') return
+    await window.vipChat.retryAccessibility()
+    const snap = await window.vipChat.getMacPermissions()
+    setMacPerms(snap)
+  }
+
+  async function persist(next: AppSettings, okMsg: string, failMsg: string) {
     setSaving(true)
     setStatus({ type: '', text: '' })
     try {
-      const res = await window.vipChat.saveSettings(form)
+      const res = await window.vipChat.saveSettings(next)
+      setForm(next)
+      await refreshFromSettings()
       setStatus({
         type: res.ok ? 'ok' : 'err',
-        text: res.ok
-          ? `已保存，帮你口喷：${formatHotkeyLabel(res.hotkey, platform)}`
-          : `已保存，但快捷键注册失败：${formatHotkeyLabel(res.hotkey, platform)}`
+        text: res.ok ? okMsg : failMsg
       })
+      return res.ok
     } catch (e) {
       setStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
+      return false
     } finally {
       setSaving(false)
     }
+  }
+
+  async function onSave() {
+    const hotkey = formatHotkeyLabel(form.hotkey, plat)
+    await persist(
+      form,
+      t('settings.saveOk', { name: brand.reply.name, hotkey }),
+      t('settings.saveHotkeyFail', { hotkey })
+    )
+    setEditing(null)
   }
 
   async function onExport() {
@@ -65,12 +174,14 @@ export default function SettingsPage() {
       if (res.ok) {
         setStatus({
           type: 'ok',
-          text: `已导出到：${res.path}${includeSecrets ? '（含 API Key，请妥善保管）' : '（不含 API Key）'}`
+          text: includeSecrets
+            ? t('settings.exportOkSecrets', { path: res.path })
+            : t('settings.exportOkRedacted', { path: res.path })
         })
       } else {
         setStatus({
           type: 'err',
-          text: 'error' in res ? res.error : '导出失败'
+          text: 'error' in res ? res.error : t('settings.exportFail')
         })
       }
     } catch (e) {
@@ -81,20 +192,19 @@ export default function SettingsPage() {
   }
 
   async function onReset() {
-    const ok = window.confirm(
-      '确定还原默认配置？\n\n会清除：快捷键、模型偏好、API Key 等设置。\n不会删除：联系人列表与聊天记录。'
-    )
+    const ok = window.confirm(t('settings.resetConfirm'))
     if (!ok) return
     setBusy('reset')
     setStatus({ type: '', text: '' })
     try {
       const res = await window.vipChat.resetSettingsDefaults()
       setForm(res.settings)
+      setEditing(null)
+      await refreshFromSettings()
+      const hotkey = formatHotkeyLabel(res.hotkey, plat)
       setStatus({
         type: res.ok ? 'ok' : 'err',
-        text: res.ok
-          ? `已还原默认配置：${formatHotkeyLabel(res.hotkey, platform)}（联系人与聊天未动）`
-          : `已还原配置，但快捷键注册失败：${formatHotkeyLabel(res.hotkey, platform)}`
+        text: res.ok ? t('settings.resetOk', { hotkey }) : t('settings.resetHotkeyFail', { hotkey })
       })
     } catch (e) {
       setStatus({ type: 'err', text: e instanceof Error ? e.message : String(e) })
@@ -103,146 +213,553 @@ export default function SettingsPage() {
     }
   }
 
-  return (
-    <section>
-      <h2 className="page-title">设置</h2>
-      <p className="page-desc">
-        快捷键与开关。模型请到 <Link to="/models">模型</Link> 页配置。
-      </p>
+  async function onResetAllHotkeys() {
+    const ok = window.confirm(t('settings.hotkeys.resetAllConfirm'))
+    if (!ok) return
+    const next = { ...form, ...defaultHotkeySettings(plat) }
+    setEditing(null)
+    await persist(next, t('settings.hotkeys.resetAllOk'), t('settings.hotkeys.resetAllFail'))
+  }
 
-      <div className="panel">
-        <div className="field">
-          <label>
-            {BRAND.reply.name} · 快捷键
-          </label>
-          <p className="status" style={{ marginTop: 0 }}>
-            {BRAND.reply.blurb}
-          </p>
-          <select
-            value={isModifierDoubleHotkey(form.hotkey) ? defaultDouble : 'custom'}
-            onChange={(e) => {
-              if (e.target.value === defaultDouble) {
-                setForm({ ...form, hotkey: defaultDouble })
-              } else {
-                setForm({
-                  ...form,
-                  hotkey: isModifierDoubleHotkey(form.hotkey) ? customFallback : form.hotkey
+  function resetRow(row: Exclude<EditRow, null>) {
+    const defaults = defaultHotkeySettings(plat)
+    if (row === 'voice') {
+      setForm({ ...form, voiceTrigger: defaults.voiceTrigger })
+    } else if (row === 'reply') {
+      setForm({ ...form, hotkey: defaults.hotkey })
+    } else if (row === 'screenAsk') {
+      setForm({ ...form, screenAskHotkey: defaults.screenAskHotkey })
+    } else if (row === 'screenQuiz') {
+      setForm({ ...form, screenQuizHotkey: defaults.screenQuizHotkey })
+    }
+    setEditing(null)
+  }
+
+  const personaBlurb =
+    listPersonaPackOptions().find((p) => p.id === (form.personaPackId || 'none'))?.blurb || ''
+
+  const voiceBindLabel = isWin
+    ? formatVoiceTriggerShortLabel(DEFAULT_VOICE_TRIGGER, 'win32')
+    : formatVoiceTriggerShortLabel(voiceTrigger, 'darwin')
+  const replyBindLabel = formatHotkeyLabel(form.hotkey, plat)
+  const askBindLabel = formatHotkeyLabel(
+    form.screenAskHotkey || defaultScreenAskHotkey(plat),
+    plat
+  )
+  const quizBindLabel = formatHotkeyLabel(
+    form.screenQuizHotkey || defaultScreenQuizHotkey(plat),
+    plat
+  )
+
+  const shortcutRows: {
+    id: Exclude<EditRow, null> | 'esc'
+    name: string
+    blurb: string
+    editable: boolean
+  }[] = [
+    {
+      id: 'voice',
+      name: brand.voice.name,
+      blurb: brand.voice.blurb,
+      editable: !isWin
+    },
+    {
+      id: 'reply',
+      name: brand.reply.name,
+      blurb: brand.reply.blurb,
+      editable: true
+    },
+    {
+      id: 'screenAsk',
+      name: brand.screenAsk.name,
+      blurb: brand.screenAsk.blurb,
+      editable: true
+    },
+    {
+      id: 'screenQuiz',
+      name: brand.screenQuiz.name,
+      blurb: brand.screenQuiz.blurb,
+      editable: true
+    },
+    {
+      id: 'esc',
+      name: t('settings.hotkeys.esc'),
+      blurb: t('settings.hotkeys.escBlurb'),
+      editable: false
+    }
+  ]
+
+  function bindLabelFor(id: (typeof shortcutRows)[number]['id']): string {
+    if (id === 'voice') return voiceBindLabel
+    if (id === 'reply') return replyBindLabel
+    if (id === 'screenAsk') return askBindLabel
+    if (id === 'screenQuiz') return quizBindLabel
+    return 'Esc'
+  }
+
+  return (
+    <section className="settings-page">
+      <header className="settings-hero">
+        <div className="settings-hero-copy">
+          <h2 className="page-title">{t('settings.title')}</h2>
+          <p className="page-desc">{t('settings.pageDesc')}</p>
+        </div>
+        <Link className="btn secondary sm" to="/models">
+          {t('home.configModels')}
+        </Link>
+      </header>
+
+      <nav className="settings-toc" aria-label={t('settings.title')}>
+        <a href="#settings-hotkeys">{t('settings.group.hotkeys')}</a>
+        <a href="#settings-caps">{t('settings.group.caps')}</a>
+        <a href="#settings-reply">{t('settings.group.replyPrefs')}</a>
+        <a href="#settings-language">{t('settings.group.language')}</a>
+        <a href="#settings-data">{t('settings.group.data')}</a>
+        <a href="#settings-perms">{isWin ? t('settings.permWinTitle') : t('settings.permMacTitle')}</a>
+      </nav>
+
+      <div className="settings-stack">
+        <section className="settings-card" id="settings-hotkeys">
+          <div className="settings-card-head settings-card-head-row">
+            <div>
+              <h3>{t('settings.group.hotkeys')}</h3>
+              <p>{t('settings.group.hotkeysHint')}</p>
+            </div>
+            <button
+              type="button"
+              className="btn ghost sm"
+              disabled={Boolean(busy) || saving}
+              onClick={() => void onResetAllHotkeys()}
+            >
+              {t('settings.hotkeys.resetAll')}
+            </button>
+          </div>
+
+          <div className="settings-hotkey-table" role="table">
+            <div className="settings-hotkey-head" role="row">
+              <span role="columnheader">{t('settings.hotkeys.colCommand')}</span>
+              <span role="columnheader">{t('settings.hotkeys.colBinding')}</span>
+              <span role="columnheader">{t('settings.hotkeys.colAction')}</span>
+            </div>
+
+            {shortcutRows.map((row) => {
+              const isEdit = editing === row.id
+              return (
+                <div className="settings-hotkey-row" role="row" key={row.id}>
+                  <div className="settings-hotkey-cmd" role="cell">
+                    <strong>{row.name}</strong>
+                    <span>{row.blurb}</span>
+                  </div>
+                  <div className="settings-hotkey-bind" role="cell">
+                    {isEdit && row.id === 'voice' && !isWin ? (
+                      <VoiceTriggerCapture
+                        value={voiceTrigger}
+                        onChange={(id) => {
+                          setForm({ ...form, voiceTrigger: id })
+                          setEditing(null)
+                        }}
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : null}
+
+                    {isEdit && row.id === 'reply' ? (
+                      <ComboHotkeyCapture
+                        platform={plat}
+                        value={isModifierDoubleHotkey(form.hotkey) ? '' : form.hotkey}
+                        onChange={(accel) => {
+                          setForm({ ...form, hotkey: accel })
+                          setEditing(null)
+                        }}
+                        onCancel={() => setEditing(null)}
+                        recommendedLabel={recommendedReplyLabel}
+                        onUseRecommended={() => {
+                          setForm({ ...form, hotkey: defaultDouble })
+                          setEditing(null)
+                        }}
+                      />
+                    ) : null}
+
+                    {isEdit && row.id === 'screenAsk' ? (
+                      <ComboHotkeyCapture
+                        platform={plat}
+                        value={form.screenAskHotkey || ''}
+                        onChange={(accel) => {
+                          setForm({ ...form, screenAskHotkey: accel })
+                          setEditing(null)
+                        }}
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : null}
+
+                    {isEdit && row.id === 'screenQuiz' ? (
+                      <ComboHotkeyCapture
+                        platform={plat}
+                        value={form.screenQuizHotkey || ''}
+                        onChange={(accel) => {
+                          setForm({ ...form, screenQuizHotkey: accel })
+                          setEditing(null)
+                        }}
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : null}
+
+                    {!isEdit ? <KeyChips label={bindLabelFor(row.id)} /> : null}
+                  </div>
+                  <div className="settings-hotkey-actions" role="cell">
+                    {row.id === 'esc' ? (
+                      <span className="settings-hotkey-fixed">{t('settings.hotkeys.fixed')}</span>
+                    ) : isEdit ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn ghost sm"
+                          onClick={() => setEditing(null)}
+                        >
+                          {t('settings.hotkeys.done')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn ghost sm"
+                          onClick={() => resetRow(row.id as Exclude<EditRow, null>)}
+                        >
+                          {t('settings.hotkeys.restoreRow')}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {row.editable ? (
+                          <button
+                            type="button"
+                            className="btn ghost sm"
+                            onClick={() => setEditing(row.id as Exclude<EditRow, null>)}
+                          >
+                            {t('settings.hotkeys.edit')}
+                          </button>
+                        ) : (
+                          <span className="settings-hotkey-fixed">{t('settings.hotkeys.fixed')}</span>
+                        )}
+                        {row.editable ? (
+                          <button
+                            type="button"
+                            className="btn ghost sm"
+                            onClick={() => resetRow(row.id as Exclude<EditRow, null>)}
+                          >
+                            {t('settings.hotkeys.restoreRow')}
+                          </button>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="settings-hint settings-map-hint">
+            {isWin
+              ? t('settings.hotkey.mapWin', {
+                  reply: brand.reply.name,
+                  screenAsk: brand.screenAsk.name,
+                  screenQuiz: brand.screenQuiz.name,
+                  askKey: defaultScreenAskHotkey('win32'),
+                  quizKey: defaultScreenQuizHotkey('win32')
                 })
+              : t('settings.hotkey.mapMac', {
+                  reply: brand.reply.name,
+                  screenAsk: brand.screenAsk.name,
+                  screenQuiz: brand.screenQuiz.name,
+                  askKey: formatMacCommandLabel(defaultScreenAskHotkey('darwin')),
+                  quizKey: formatMacCommandLabel(defaultScreenQuizHotkey('darwin'))
+                })}
+          </p>
+          {!isWin ? (
+            <p className="settings-hint">
+              {t('settings.hotkey.voiceNote', { name: brand.voice.name })}
+            </p>
+          ) : null}
+        </section>
+
+        <section className="settings-card" id="settings-caps">
+          <div className="settings-card-head">
+            <h3>{t('settings.group.caps')}</h3>
+            <p>{t('settings.group.capsHint')}</p>
+          </div>
+          <ToggleRow
+            checked={form.voiceInputEnabled}
+            onChange={(checked) => setForm({ ...form, voiceInputEnabled: checked })}
+            title={t('settings.voiceEnabled', { name: brand.voice.name })}
+            hint={t('settings.voiceTriggerNote', {
+              trigger: formatVoiceTriggerLabel(plat, voiceTrigger)
+            })}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
+            checked={form.screenAskEnabled !== false}
+            onChange={(checked) => setForm({ ...form, screenAskEnabled: checked })}
+            title={brand.screenAsk.name}
+            hint={brand.screenAsk.blurb}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
+            checked={form.screenQuizEnabled !== false}
+            onChange={(checked) => setForm({ ...form, screenQuizEnabled: checked })}
+            title={brand.screenQuiz.name}
+            hint={t('settings.screenQuiz.hint')}
+          />
+        </section>
+
+        <section className="settings-card" id="settings-reply">
+          <div className="settings-card-head">
+            <h3>{t('settings.group.replyPrefs')}</h3>
+            <p>{brand.reply.blurb}</p>
+          </div>
+          <div className="field">
+            <label htmlFor="settings-persona">{t('settings.persona.title')}</label>
+            <p className="settings-hint">{t('settings.persona.longHint')}</p>
+            <select
+              id="settings-persona"
+              value={form.personaPackId || 'none'}
+              onChange={(e) =>
+                setForm({ ...form, personaPackId: e.target.value as PersonaPackId })
               }
-            }}
-          >
-            <option value={defaultDouble}>{doubleLabel}</option>
-            <option value="custom">自定义快捷键</option>
-          </select>
-          {!isModifierDoubleHotkey(form.hotkey) ? (
+            >
+              {listPersonaPackOptions().map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            {personaBlurb ? <p className="settings-hint">{personaBlurb}</p> : null}
+          </div>
+          <ToggleRow
+            checked={form.deAiToneEnabled !== false}
+            onChange={(checked) => setForm({ ...form, deAiToneEnabled: checked })}
+            title={t('settings.deAi.title')}
+            hint={t('settings.deAi.longHint')}
+          />
+        </section>
+
+        <section className="settings-card" id="settings-language">
+          <div className="settings-card-head">
+            <h3>{t('settings.group.language')}</h3>
+          </div>
+          <div className="field">
+            <label htmlFor="settings-locale">{t('settings.locale.title')}</label>
+            <p className="settings-hint">{t('settings.locale.hint')}</p>
+            <select
+              id="settings-locale"
+              value={form.locale || 'system'}
+              onChange={(e) => {
+                const locale = e.target.value as LocalePreference
+                setForm({ ...form, locale })
+                void setPreference(locale)
+              }}
+            >
+              {LOCALE_OPTIONS.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+
+        <section className="settings-card" id="settings-advanced">
+          <div className="settings-card-head">
+            <h3>{t('settings.group.advanced')}</h3>
+          </div>
+          <div className="field">
+            <label htmlFor="settings-context">{t('settings.contextWindow')}</label>
             <input
-              style={{ marginTop: 8 }}
-              value={form.hotkey}
-              onChange={(e) => setForm({ ...form, hotkey: e.target.value })}
-              placeholder={customPlaceholder}
+              id="settings-context"
+              type="number"
+              min={10}
+              max={200}
+              value={form.contextWindowSize}
+              onChange={(e) =>
+                setForm({ ...form, contextWindowSize: Number(e.target.value) || 40 })
+              }
             />
+          </div>
+        </section>
+
+        <section className="settings-card" id="settings-data">
+          <div className="settings-card-head">
+            <h3>{t('settings.group.data')}</h3>
+            <p>{t('settings.resetHint')}</p>
+          </div>
+          <ToggleRow
+            checked={includeSecrets}
+            onChange={setIncludeSecrets}
+            title={t('settings.exportSecrets')}
+            hint={t('settings.exportSecretsHint')}
+          />
+          <div className="settings-actions">
+            <button
+              type="button"
+              className="btn secondary sm"
+              disabled={Boolean(busy)}
+              onClick={() => void onExport()}
+            >
+              {busy === 'export' ? t('home.processing') : t('settings.export')}
+            </button>
+            <button
+              type="button"
+              className="btn ghost sm"
+              disabled={Boolean(busy)}
+              onClick={() => void onReset()}
+            >
+              {busy === 'reset' ? t('settings.resetting') : t('settings.reset')}
+            </button>
+          </div>
+        </section>
+
+        <section className="settings-card" id="settings-perms">
+          <div className="settings-card-head">
+            <h3>{isWin ? t('settings.permWinTitle') : t('settings.permMacTitle')}</h3>
+            <p>
+              {isWin
+                ? t('settings.permWinIntro')
+                : t('settings.permMacIntro', { name: brand.name })}
+            </p>
+          </div>
+
+          {isWin ? (
+            <ul className="settings-perm-list">
+              <li>
+                <span>{t('settings.permMic')}</span>
+                <em>{brand.voice.name}</em>
+              </li>
+              <li>
+                <span>{t('settings.permScreen')}</span>
+                <em>{brand.reply.name}</em>
+              </li>
+            </ul>
           ) : (
-            <p className="status">{doubleHint}</p>
+            <>
+              {macPerms ? (
+                <ul className="settings-perm-list">
+                  <li>
+                    <div className="settings-perm-main">
+                      <span>{t('settings.permScreen')}</span>
+                      <em className={`settings-perm-chip ${permTone(macPerms.screen)}`}>
+                        {permLabel(macPerms.screen)}
+                      </em>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn secondary sm"
+                      onClick={() =>
+                        void window.vipChat.openMacPrivacy('screen').then(refreshMacPerms)
+                      }
+                    >
+                      {t('settings.permOpen')}
+                    </button>
+                  </li>
+                  <li>
+                    <div className="settings-perm-main">
+                      <span>{t('settings.permMic')}</span>
+                      <em className={`settings-perm-chip ${permTone(macPerms.microphone)}`}>
+                        {permLabel(macPerms.microphone)}
+                      </em>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn secondary sm"
+                      onClick={() =>
+                        void window.vipChat
+                          .requestMacMicrophone()
+                          .then(() => window.vipChat.openMacPrivacy('microphone'))
+                          .then(refreshMacPerms)
+                      }
+                    >
+                      {t('settings.permOpen')}
+                    </button>
+                  </li>
+                  <li>
+                    <div className="settings-perm-main">
+                      <span>{t('settings.permA11y')}</span>
+                      <em
+                        className={`settings-perm-chip ${
+                          macPerms.accessibility ? 'ok' : 'bad'
+                        }`}
+                      >
+                        {macPerms.accessibility
+                          ? t('settings.permA11yOk')
+                          : t('settings.permA11yBad')}
+                      </em>
+                    </div>
+                    <div className="settings-perm-actions">
+                      <button
+                        type="button"
+                        className="btn secondary sm"
+                        onClick={() =>
+                          void window.vipChat
+                            .openMacPrivacy('accessibility')
+                            .then(refreshMacPerms)
+                        }
+                      >
+                        {t('settings.permOpen')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn ghost sm"
+                        onClick={() => void refreshMacPerms()}
+                      >
+                        {t('settings.permRetry')}
+                      </button>
+                    </div>
+                  </li>
+                </ul>
+              ) : (
+                <ul className="settings-perm-list">
+                  <li>
+                    <span>{t('settings.permMic')}</span>
+                    <em>{brand.voice.name}</em>
+                  </li>
+                  <li>
+                    <span>{t('settings.permScreen')}</span>
+                    <em>{brand.reply.name}</em>
+                  </li>
+                  <li>
+                    <span>{t('settings.permA11y')}</span>
+                  </li>
+                </ul>
+              )}
+              <div className="settings-actions">
+                <button
+                  type="button"
+                  className="btn secondary sm"
+                  onClick={() => {
+                    void (async () => {
+                      const s = await window.vipChat.getSettings()
+                      const next = { ...s, permissionGuideCompleted: false }
+                      await window.vipChat.saveSettings(next)
+                      setForm(next)
+                      window.dispatchEvent(new Event('typenow:open-permission-guide'))
+                    })()
+                  }}
+                >
+                  {t('settings.permGuideReopen')}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+
+      <footer className="settings-dock">
+        <div className="settings-dock-copy">
+          {status.text ? (
+            <p className={`status ${status.type}`}>{status.text}</p>
+          ) : (
+            <p className="settings-hint">{t('settings.dockHint')}</p>
           )}
         </div>
-
-        <div className="field">
-          <label>
-            <input
-              type="checkbox"
-              checked={form.voiceInputEnabled}
-              onChange={(e) => setForm({ ...form, voiceInputEnabled: e.target.checked })}
-            />{' '}
-            启用 {BRAND.voice.name}
-          </label>
-          <p className="status">{BRAND.voice.blurb}</p>
-          <p className="status">
-            触发：{formatVoiceTriggerLabel(platform)}（勿与双击混淆）
-          </p>
-        </div>
-
-        <div className="field">
-          <label>回复上下文条数（最近 N 条）</label>
-          <input
-            type="number"
-            min={10}
-            max={200}
-            value={form.contextWindowSize}
-            onChange={(e) =>
-              setForm({ ...form, contextWindowSize: Number(e.target.value) || 40 })
-            }
-          />
-        </div>
-
-        <div className="row">
-          <button className="btn" disabled={saving} onClick={() => void onSave()}>
-            {saving ? '保存中…' : '保存'}
-          </button>
-          <Link className="btn secondary" to="/models">
-            去配置模型
-          </Link>
-        </div>
-        {status.text ? <p className={`status ${status.type}`}>{status.text}</p> : null}
-      </div>
-
-      <div className="panel" style={{ marginTop: 14 }}>
-        <h3 style={{ marginTop: 0 }}>配置与数据</h3>
-        <p className="status">
-          个性化配置单独保存在本机配置文件；联系人与聊天在业务数据库，互不影响。
-        </p>
-        <div className="field">
-          <label>
-            <input
-              type="checkbox"
-              checked={includeSecrets}
-              onChange={(e) => setIncludeSecrets(e.target.checked)}
-            />{' '}
-            导出时包含 API Key（默认不包含，勾选后请勿外传）
-          </label>
-        </div>
-        <div className="row">
-          <button
-            className="btn secondary"
-            disabled={Boolean(busy)}
-            onClick={() => void onExport()}
-          >
-            {busy === 'export' ? '导出中…' : '导出配置…'}
-          </button>
-          <button
-            className="btn secondary"
-            disabled={Boolean(busy)}
-            onClick={() => void onReset()}
-          >
-            {busy === 'reset' ? '还原中…' : '还原默认配置'}
-          </button>
-        </div>
-        <p className="status" style={{ marginTop: 10 }}>
-          「还原默认配置」只清设置，不会删除联系人与聊天。
-        </p>
-      </div>
-
-      <div className="panel" style={{ marginTop: 14 }}>
-        <h3 style={{ marginTop: 0 }}>{isWin ? 'Windows 提示' : 'Mac 权限'}</h3>
-        {isWin ? (
-          <>
-            <p className="status">请允许本应用使用：</p>
-            <ul className="perm-list">
-              <li>麦克风 — {BRAND.voice.name}</li>
-              <li>屏幕捕获 — {BRAND.reply.name}</li>
-              <li>若粘贴失败，请以管理员以外的普通权限运行，并确认前台窗口可接收 Ctrl+V</li>
-            </ul>
-          </>
-        ) : (
-          <>
-            <p className="status">系统设置 → 隐私与安全性，请允许本应用：</p>
-            <ul className="perm-list">
-              <li>麦克风 — {BRAND.voice.name}</li>
-              <li>屏幕录制 — {BRAND.reply.name}</li>
-              <li>辅助功能 — 粘贴文字、监听左 Command</li>
-            </ul>
-          </>
-        )}
-      </div>
+        <button type="button" className="btn" disabled={saving} onClick={() => void onSave()}>
+          {saving ? t('settings.saving') : t('settings.save')}
+        </button>
+      </footer>
     </section>
   )
 }

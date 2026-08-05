@@ -36,7 +36,7 @@ jobs:
       - name: Upload green package
         uses: actions/upload-artifact@v4
         with:
-          name: koupen-windows-green
+          name: typenow-windows-green
           path: |
             release/*绿色版*.exe
             release/*.zip

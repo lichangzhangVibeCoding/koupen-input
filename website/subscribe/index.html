@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订阅 · 即刻对话 TalkNow</title>
+  <meta name="description" content="即刻对话会员套餐：体验版 / 标准版 / 高级版 / 旗舰版。与 App 个人中心同一套档位。">
+  <link rel="icon" href="../assets/icon.png" type="image/png">
+  <link rel="canonical" href="https://www.talknow.cn/subscribe/">
+  <link rel="stylesheet" href="../css/ink-signal.css">
+  <style>
+    body[data-page="subscribe"] {
+      background:
+        radial-gradient(ellipse 70% 45% at 50% -10%, var(--signal-soft), transparent 60%),
+        linear-gradient(180deg, #f7fbfc 0%, #fff 42%, #f4f7f8 100%);
+    }
+    .pricing-hero {
+      padding: 112px 24px 20px;
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .pricing-hero .hero-badge {
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+    .pricing-hero h1 {
+      font-size: clamp(2rem, 4.2vw, 2.75rem);
+      margin: 10px 0 12px;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+    .pricing-hero > p {
+      margin: 0 auto;
+      max-width: 34em;
+      color: var(--ink-3);
+      line-height: 1.65;
+      font-size: 1.02rem;
+    }
+    .billing-toggle {
+      display: inline-flex;
+      gap: 4px;
+      margin: 22px auto 0;
+      padding: 5px;
+      border: 1px solid rgba(18, 20, 26, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 1px 2px rgba(18, 20, 26, 0.04);
+    }
+    .billing-toggle button {
+      border: 0;
+      background: transparent;
+      padding: 9px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      color: var(--ink-3);
+      transition: background .15s, color .15s;
+    }
+    .billing-toggle button.active {
+      background: var(--signal);
+      color: #fff;
+    }
+    .subscribe-status {
+      text-align: center;
+      font-size: 0.86rem;
+      color: var(--ink-4);
+      margin: 12px 0 8px;
+      min-height: 1.2em;
+    }
+    .subscribe-status.ok { display: none; }
+    .subscribe-status.warn { color: #8a5a00; }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      max-width: 1120px;
+      margin: 12px auto 48px;
+      padding: 0 20px;
+      align-items: stretch;
+    }
+    @media (max-width: 1020px) {
+      .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+
+    .price-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      border: 1px solid rgba(18, 20, 26, 0.1);
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 16px;
+      padding: 22px 18px 20px;
+      text-align: left;
+      box-shadow: 0 8px 24px rgba(18, 20, 26, 0.04);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .price-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(18, 20, 26, 0.07);
+    }
+    .price-card.featured {
+      border-color: var(--signal);
+      box-shadow:
+        0 0 0 1px var(--signal),
+        0 14px 32px rgba(0, 180, 200, 0.16);
+      background: linear-gradient(180deg, #fff 0%, #f3fbfd 100%);
+    }
+    .price-card.free {
+      background: rgba(255, 255, 255, 0.75);
+    }
+    .price-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: var(--signal);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .price-card-top h2 {
+      margin: 0 0 6px;
+      font-size: 1.28rem;
+      color: var(--ink);
+      padding-right: 52px;
+    }
+    .price-blurb {
+      margin: 0;
+      color: var(--ink-4);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      min-height: 2.6em;
+    }
+    .price-block { margin-top: 2px; }
+    .amount {
+      font-size: 1.85rem;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      line-height: 1.15;
+    }
+    .amount-sub {
+      margin-top: 4px;
+      font-size: 0.82rem;
+      color: var(--signal-strong);
+      font-weight: 600;
+    }
+    .credit-chip {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 8px;
+      row-gap: 2px;
+      align-items: baseline;
+      padding: 12px 12px;
+      border-radius: 12px;
+      background: var(--signal-light);
+      border: 1px solid rgba(0, 180, 200, 0.18);
+    }
+    .credit-num {
+      grid-row: 1;
+      grid-column: 1;
+      font-size: 1.45rem;
+      font-weight: 750;
+      color: var(--signal-strong);
+      letter-spacing: -0.02em;
+    }
+    .credit-unit {
+      grid-row: 1;
+      grid-column: 2;
+      font-size: 0.85rem;
+      color: var(--ink-3);
+      font-weight: 600;
+    }
+    .credit-detail {
+      grid-row: 2;
+      grid-column: 1 / -1;
+      font-size: 0.78rem;
+      color: var(--ink-4);
+      line-height: 1.4;
+    }
+    .feat-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+    .feat-list li {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--ink-2);
+    }
+    .feat-check {
+      flex: 0 0 auto;
+      width: 18px;
+      height: 18px;
+      margin-top: 1px;
+      border-radius: 50%;
+      background: var(--signal-soft);
+      position: relative;
+    }
+    .feat-check::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 3px;
+      width: 5px;
+      height: 9px;
+      border: solid var(--signal-strong);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .pricing-rates {
+      max-width: 960px;
+      margin: 0 auto 28px;
+      padding: 0 20px;
+    }
+    .pricing-rates h2 {
+      text-align: center;
+      font-size: 1.35rem;
+      margin: 0 0 16px;
+      color: var(--ink);
+    }
+    .rates-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .rates-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 480px) {
+      .rates-grid { grid-template-columns: 1fr; }
+    }
+    .rate-card {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(18, 20, 26, 0.08);
+      border-radius: 14px;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(18, 20, 26, 0.03);
+    }
+    .rate-label {
+      font-size: 0.84rem;
+      color: var(--ink-4);
+      font-weight: 600;
+    }
+    .rate-value {
+      font-size: 1.05rem;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .pricing-note {
+      max-width: 640px;
+      margin: 0 auto 28px;
+      padding: 14px 18px;
+      color: var(--ink-3);
+      line-height: 1.7;
+      font-size: 0.95rem;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(18, 20, 26, 0.06);
+      border-radius: 12px;
+    }
+    .subscribe-cta {
+      text-align: center;
+      margin-bottom: 72px;
+    }
+    .subscribe-cta .btn {
+      min-width: 180px;
+    }
+  </style>
+</head>
+<body data-page="subscribe">
+<nav class="nav nav-scrolled" id="nav">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo" data-keep-lang>
+      <img src="../assets/icon.png" alt="" class="nav-logo-icon">
+      <span class="nav-logo-text">
+        <span class="nav-logo-zh" data-i18n="brand.name">即刻对话</span>
+        <span class="nav-logo-en">TalkNow</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="../" data-keep-lang data-i18n="nav.home">首页</a>
+      <a href="./" data-keep-lang data-i18n="nav.subscribe" aria-current="page">订阅</a>
+      <a href="../help/" data-keep-lang data-i18n="nav.help">帮助</a>
+      <a href="#" data-lang-toggle class="nav-lang" data-i18n="nav.lang">English</a>
+    </div>
+    <a href="../#download" class="btn btn-primary btn-sm nav-cta" data-i18n="nav.download">下载</a>
+    <button class="nav-burger" id="navBurger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<header class="pricing-hero">
+  <div class="hero-badge" data-i18n="subscribe.badge">自配 Key 永久免费 · 官方模式统一积分</div>
+  <h1 data-i18n="subscribe.title">订阅与套餐</h1>
+  <p data-i18n="subscribe.subtitle">与 App「个人中心」同一套档位。价格与积分以后台为准；开通请在客户端联系客服线下办理。</p>
+  <div class="billing-toggle" role="tablist">
+    <button type="button" data-billing="month" class="active" data-i18n="subscribe.billingMonth">月付</button>
+    <button type="button" data-billing="year" data-i18n="subscribe.billingYear">年付更省</button>
+  </div>
+  <p id="subscribeStatus" class="subscribe-status" hidden></p>
+</header>
+
+<section id="subscribeGrid" class="pricing-grid" aria-live="polite"></section>
+<section id="subscribeRates" class="pricing-rates"></section>
+<p class="pricing-note" data-i18n="subscribe.note">
+  购买方式：下载 App → 个人中心登录 → 按付款说明转账并联系客服开通。自配 Key / 本地模型不消耗本产品积分。
+</p>
+<div class="subscribe-cta">
+  <a href="../#download" class="btn btn-primary" data-i18n="subscribe.cta">下载 App 开通</a>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../assets/icon.png" alt="" class="footer-logo">
+      <span class="footer-brand-text">
+        <span class="footer-brand-zh" data-i18n="brand.name">即刻对话</span>
+        <span class="footer-brand-en">TalkNow</span>
+      </span>
+    </div>
+    <div class="footer-links">
+      <a href="./" data-keep-lang data-i18n="footer.subscribe">订阅</a>
+      <a href="../help/" data-keep-lang data-i18n="footer.help">帮助</a>
+      <a href="../changelog/" data-keep-lang data-i18n="footer.changelog">更新日志</a>
+      <span class="footer-domain">www.talknow.cn</span>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/i18n.js"></script>
+<script src="../js/plan-catalog.js"></script>
+<script src="../js/subscribe.js"></script>
+<script>
+  var burger = document.getElementById('navBurger');
+  var links = document.querySelector('.nav-links');
+  if (burger && links) {
+    burger.addEventListener('click', function () {
+      links.classList.toggle('nav-links-open');
+    });
+  }
+</script>
+</body>
+</html>

@@ -13,3 +13,5 @@ release
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+website/talknowAPi/config.php

@@ -12,7 +12,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('src/preload/index.ts'),
-          recorder: resolve('src/preload/recorder.ts')
+          recorder: resolve('src/preload/recorder.ts'),
+          hud: resolve('src/preload/hud.ts')
         }
       }
     }

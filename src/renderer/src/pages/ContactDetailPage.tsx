@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Contact, KeyFact, Message } from '../../../shared/types'
+import { useI18n } from '../i18n'
 
 function splitTags(raw: string): string[] {
   return raw
@@ -62,6 +63,7 @@ function fromLocalInputValue(local: string): string | undefined {
 }
 
 export default function ContactDetailPage() {
+  const { brand } = useI18n()
   const { id } = useParams()
   const navigate = useNavigate()
   const contactId = Number(id)
@@ -478,8 +480,8 @@ export default function ContactDetailPage() {
           {messages.length === 0 ? (
             <p className="wx-empty">
               {platform === 'win32'
-                ? '该时间段暂无消息。快速双击 Alt（帮你口喷）截屏识别后会出现在这里。'
-                : '该时间段暂无消息。快速双击左 Command（帮你口喷）截屏识别后会出现在这里。'}
+                ? `该时间段暂无消息。快速双击 Alt（${brand.reply.name}）截屏识别后会出现在这里。`
+                : `该时间段暂无消息。快速双击右 Command（${brand.reply.name}）截屏识别后会出现在这里。`}
             </p>
           ) : (
             messages.map((m, idx) => {

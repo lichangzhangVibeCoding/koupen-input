@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>更新日志 — 即刻对话 TalkNow</title>
+  <meta name="description" content="即刻对话 TalkNow 的版本更新日志，记录每次发布的功能改进和问题修复。">
+  <link rel="icon" href="../assets/icon.png" type="image/png">
+  <link rel="canonical" href="https://www.talknow.cn/changelog/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.talknow.cn/changelog/">
+  <meta property="og:title" content="更新日志 — 即刻对话 TalkNow">
+  <meta property="og:description" content="即刻对话 TalkNow 的版本更新日志。">
+  <meta property="og:image" content="https://www.talknow.cn/assets/hero-mock.jpg">
+  <meta property="og:site_name" content="即刻对话 TalkNow">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="更新日志 — 即刻对话 TalkNow">
+  <meta name="twitter:description" content="即刻对话 TalkNow 的版本更新日志。">
+
+  <link rel="stylesheet" href="../css/ink-signal.css">
+  <style>
+    /* changelog-specific styles */
+    .changelog-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 100px 24px 80px;
+    }
+    .changelog-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--ink-4);
+      margin-bottom: 24px;
+      transition: color .2s;
+    }
+    .changelog-back:hover { color: var(--signal-strong); }
+    .changelog-page h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--ink);
+      margin-bottom: 40px;
+      letter-spacing: -.01em;
+    }
+    .release {
+      padding: 28px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .release:last-child { border-bottom: none; }
+    .release .meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .release .ver {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--signal);
+      color: #fff;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .release .date {
+      font-size: 13px;
+      color: var(--ink-4);
+    }
+    .release .meta > span:last-child {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink-2);
+      flex: 1;
+    }
+    .release ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .release ul li {
+      position: relative;
+      padding-left: 20px;
+      margin-bottom: 8px;
+      font-size: 15px;
+      color: var(--ink-3);
+      line-height: 1.6;
+    }
+    .release ul li::before {
+      content: '';
+      position: absolute;
+      left: 4px; top: 10px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--signal);
+    }
+    .plain {
+      color: var(--ink-4);
+      font-size: 15px;
+      padding: 40px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body data-page="changelog">
+
+<nav class="nav nav-scrolled" id="nav">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo">
+      <img src="../assets/icon.png" alt="TalkNow" class="nav-logo-icon">
+      <span data-i18n="brand.name">即刻对话</span>
+    </a>
+    <div class="nav-links">
+      <a href="../#scenarios" data-i18n="nav.scenarios">场景</a>
+      <a href="../#capabilities" data-i18n="nav.capabilities">能力</a>
+      <a href="../#trust" data-i18n="nav.trust">信任</a>
+      <a href="../#howto" data-i18n="nav.howto">上手</a>
+      <a href="../#download" data-i18n="nav.download">下载</a>
+      <a href="#" data-lang-toggle class="nav-lang" data-i18n="nav.lang">English</a>
+    </div>
+    <a href="../#download" class="btn btn-primary btn-sm nav-cta" data-i18n="nav.download">下载</a>
+    <button class="nav-burger" id="navBurger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<div class="changelog-page">
+  <a href="../" class="changelog-back">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    <span data-i18n="changelog.back">返回首页</span>
+  </a>
+  <h1 data-i18n="changelog.title">更新日志</h1>
+  <div id="changelog">
+    <p class="plain">加载中…</p>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../assets/icon.png" alt="TalkNow" class="footer-logo">
+      <span data-i18n="footer.tag">即刻对话 / TalkNow · 本机对话助手</span>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/lichangzhangVibeCoding/koupen-input" target="_blank" rel="noopener" data-i18n="footer.github">GitHub</a>
+      <span class="footer-domain">www.talknow.cn</span>
+    </div>
+    <div class="footer-copy">© <span id="footerYear">2026</span> <span data-i18n="brand.name">即刻对话</span> · <span data-i18n="footer.rights">保留所有权利</span></div>
+  </div>
+</footer>
+
+<script src="../js/i18n.js"></script>
+<script src="../js/releases-data.js"></script>
+<script src="../js/releases.js"></script>
+<script>
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
+  var burger = document.getElementById('navBurger');
+  var links = document.querySelector('.nav-links');
+  if (burger) {
+    burger.addEventListener('click', function() {
+      links.classList.toggle('nav-links-open');
+    });
+  }
+</script>
+</body>
+</html>

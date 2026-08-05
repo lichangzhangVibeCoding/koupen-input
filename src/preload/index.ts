@@ -4,12 +4,32 @@ import {
   Contact,
   MessageQuery,
   OllamaStatus,
-  PullProgress
+  PullProgress,
+  ScreenAskMessage,
+  ScreenAskSession
 } from '../shared/types'
 import type { SlotId } from '../shared/model-slots'
+import type { ReleasesCatalog } from '../shared/releases'
 
 const api = {
   getPlatform: (): Promise<string> => ipcRenderer.invoke('app:platform'),
+  getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
+  isDev: (): Promise<boolean> => ipcRenderer.invoke('app:isDev'),
+  getReleasesCatalog: (): Promise<ReleasesCatalog> => ipcRenderer.invoke('updates:catalog'),
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
+  getMacPermissions: (): Promise<{
+    screen: string
+    microphone: string
+    accessibility: boolean
+  }> => ipcRenderer.invoke('permissions:mac'),
+  openMacPrivacy: (pane: 'screen' | 'accessibility' | 'microphone'): Promise<void> =>
+    ipcRenderer.invoke('permissions:openMac', pane),
+  requestMacMicrophone: (): Promise<boolean> => ipcRenderer.invoke('permissions:requestMic'),
+  retryAccessibility: (): Promise<{
+    ok: boolean
+    accessibility: boolean
+    needsRelaunch?: boolean
+  }> => ipcRenderer.invoke('permissions:retryAccessibility'),
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke('settings:get'),
   saveSettings: (
     settings: AppSettings
@@ -54,6 +74,32 @@ const api = {
   listMessages: (contactId: number, query?: MessageQuery) =>
     ipcRenderer.invoke('messages:list', contactId, query),
   runPipeline: (): Promise<boolean> => ipcRenderer.invoke('pipeline:run'),
+  runScreenAsk: (): Promise<void> => ipcRenderer.invoke('pipeline:screenAsk'),
+  runScreenQuiz: (): Promise<void> => ipcRenderer.invoke('pipeline:screenQuiz'),
+  askScreenText: (question: string): Promise<boolean> =>
+    ipcRenderer.invoke('screenAsk:askText', question),
+  listScreenAskSessions: (): Promise<ScreenAskSession[]> =>
+    ipcRenderer.invoke('screenAsk:listSessions'),
+  getScreenAskSession: (id: number): Promise<ScreenAskSession | null> =>
+    ipcRenderer.invoke('screenAsk:getSession', id),
+  listScreenAskMessages: (id: number): Promise<ScreenAskMessage[]> =>
+    ipcRenderer.invoke('screenAsk:listMessages', id),
+  deleteScreenAskSession: (id: number): Promise<boolean> =>
+    ipcRenderer.invoke('screenAsk:delete', id),
+  renameScreenAskSession: (id: number, title: string): Promise<ScreenAskSession | null> =>
+    ipcRenderer.invoke('screenAsk:rename', id, title),
+  newScreenAskSession: (): Promise<number> => ipcRenderer.invoke('screenAsk:new'),
+  setActiveScreenAskSession: (id: number | null): Promise<number | null> =>
+    ipcRenderer.invoke('screenAsk:setActive', id),
+  getActiveScreenAskSession: (): Promise<number | null> =>
+    ipcRenderer.invoke('screenAsk:getActive'),
+  readScreenAskImage: (relativePath: string): Promise<string | null> =>
+    ipcRenderer.invoke('screenAsk:readImage', relativePath),
+  onScreenAskUpdated: (cb: (sessionId: number) => void): (() => void) => {
+    const listener = (_: Electron.IpcRendererEvent, sessionId: number): void => cb(sessionId)
+    ipcRenderer.on('screenAsk:updated', listener)
+    return () => ipcRenderer.removeListener('screenAsk:updated', listener)
+  },
   toggleVoiceInput: (): Promise<boolean> => ipcRenderer.invoke('voice:toggle'),
   getModelDashboard: () => ipcRenderer.invoke('models:dashboard'),
   applySiliconflow: (apiKey: string) => ipcRenderer.invoke('models:applySiliconflow', apiKey),
@@ -78,7 +124,35 @@ const api = {
     const listener = (_: Electron.IpcRendererEvent, p: PullProgress): void => cb(p)
     ipcRenderer.on('ollama:pull-progress', listener)
     return () => ipcRenderer.removeListener('ollama:pull-progress', listener)
-  }
+  },
+  membershipRequestCode: (phone: string): Promise<void> =>
+    ipcRenderer.invoke('membership:requestCode', phone),
+  membershipLogin: (
+    phone: string,
+    code: string
+  ): Promise<{ accessToken: string; me: import('../shared/membership').MembershipMe }> =>
+    ipcRenderer.invoke('membership:login', phone, code),
+  membershipGetMe: (): Promise<import('../shared/membership').MembershipMe> =>
+    ipcRenderer.invoke('membership:me'),
+  membershipUpdateProfile: (
+    displayName: string
+  ): Promise<import('../shared/membership').MembershipMe> =>
+    ipcRenderer.invoke('membership:updateProfile', displayName),
+  membershipGetLedger: (opts?: {
+    days?: number
+    from?: string
+    to?: string
+  }): Promise<import('../shared/membership').MembershipLedgerPayload> =>
+    ipcRenderer.invoke('membership:ledger', opts || {}),
+  membershipGetPlans: (): Promise<unknown> => ipcRenderer.invoke('membership:plans'),
+  membershipRedeem: (code: string): Promise<import('../shared/membership').MembershipMe> =>
+    ipcRenderer.invoke('membership:redeem', code),
+  membershipCreateOfflineIntent: (body: {
+    planId?: string
+    credits?: number
+    amountCents?: number
+  }): Promise<{ paymentHint: string; supportContact: string; id: string }> =>
+    ipcRenderer.invoke('membership:offlineIntent', body)
 }
 
 contextBridge.exposeInMainWorld('vipChat', api)

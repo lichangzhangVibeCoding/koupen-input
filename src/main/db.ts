@@ -63,6 +63,29 @@ export function initDb(): void {
 
     CREATE INDEX IF NOT EXISTS idx_messages_contact ON messages(contact_id, id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_hash ON messages(contact_id, raw_hash);
+
+    CREATE TABLE IF NOT EXISTS screen_ask_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS screen_ask_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL,
+      role TEXT NOT NULL,
+      content_text TEXT NOT NULL,
+      screenshot_path TEXT,
+      screenshot_mime TEXT,
+      captured_at TEXT NOT NULL,
+      FOREIGN KEY(session_id) REFERENCES screen_ask_sessions(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_screen_ask_msgs_session
+      ON screen_ask_messages(session_id, id);
+    CREATE INDEX IF NOT EXISTS idx_screen_ask_sessions_updated
+      ON screen_ask_sessions(updated_at DESC);
   `)
 
   ensureColumn('contacts', 'persona_tags', `TEXT NOT NULL DEFAULT ''`)
@@ -80,7 +103,7 @@ export function initDb(): void {
   }
 }
 
-function getDb(): Database.Database {
+export function getDb(): Database.Database {
   if (!db) throw new Error('Database not initialized')
   return db
 }

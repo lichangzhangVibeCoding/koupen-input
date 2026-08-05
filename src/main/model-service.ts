@@ -4,6 +4,7 @@ import { ensureLocalAsr, isLocalAsrInstalled, AsrProgress } from './local-asr'
 import { testConnection } from './llm'
 import {
   applyLocalSuiteRecommend,
+  applyOfficialModelRoutes,
   applySiliconflowRecommend,
   getSlotBindings,
   LOCAL_RECOMMEND,
@@ -14,6 +15,7 @@ import {
   providerLabel
 } from '../shared/model-slots'
 import { AppSettings, LOCAL_DEFAULTS } from '../shared/types'
+import { membershipGetMe, usesMembershipCloud } from './membership'
 
 export interface ModelDashboard {
   slots: SlotStatus[]
@@ -25,10 +27,33 @@ export interface ModelDashboard {
   }[]
   readyCount: number
   total: number
+  /** 当前云端是否走官方会员代理 */
+  routingMode: 'membership' | 'byok' | 'local-mixed'
+  membershipActive: boolean
 }
 
 export async function getModelDashboard(): Promise<ModelDashboard> {
-  const settings = getSettings()
+  let settings = getSettings()
+  const membershipActive = usesMembershipCloud(settings)
+
+  // 官方会员：把服务端三槽模型同步到本地，避免仍显示/请求自配模型名
+  if (membershipActive) {
+    try {
+      const me = await membershipGetMe(settings)
+      const synced = applyOfficialModelRoutes(settings, me.modelRoutes)
+      if (
+        synced.modelName !== settings.modelName ||
+        synced.visionModelName !== settings.visionModelName ||
+        synced.sttModel !== settings.sttModel
+      ) {
+        saveSettings(synced)
+        settings = synced
+      }
+    } catch {
+      /* 同步失败不挡仪表盘 */
+    }
+  }
+
   const bindings = getSlotBindings(settings)
   const ollama = await getOllamaStatus(
     settings.localModelName || LOCAL_DEFAULTS.textModel,
@@ -39,6 +64,13 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
 
   const slotReady = (id: SlotId): { ready: boolean; detail: string } => {
     const b = bindings[id]
+    // 官方会员：云端槽位免 Key，由服务端路由；本地槽仍按本地就绪判断
+    if (membershipActive && b.providerId !== 'local') {
+      return {
+        ready: true,
+        detail: `官方套餐 · ${SLOT_META[id].label}`
+      }
+    }
     if (b.providerId === 'local') {
       if (id === 'asr') {
         return localAsr
@@ -116,7 +148,13 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
   ]
 
   const readyCount = slots.filter((s) => s.ready).length
-  return { slots, providers, readyCount, total: 3 }
+  const allLocal = slots.every((s) => s.providerId === 'local')
+  const routingMode: ModelDashboard['routingMode'] = membershipActive
+    ? 'membership'
+    : allLocal
+      ? 'local-mixed'
+      : 'byok'
+  return { slots, providers, readyCount, total: 3, routingMode, membershipActive }
 }
 
 export async function applySiliconflow(
@@ -129,7 +167,7 @@ export async function applySiliconflow(
 
 export async function installLocalSuite(
   onProgress?: (p: { phase: string; message: string; percent?: number }) => void
-): Promise<{ settings: AppSettings; dashboard: ModelDashboard }> {
+): Promise<{ settings: AppSettings; dashboard: ModelDashboard; warning?: string }> {
   onProgress?.({ phase: 'ollama', message: '检查并启动 Ollama…' })
   const started = await startOllama()
   if (!started.ok) {
@@ -146,16 +184,42 @@ export async function installLocalSuite(
   })
 
   onProgress?.({ phase: 'asr', message: '安装本地语音模型（Whisper）…' })
-  await ensureLocalAsr((p: AsrProgress) => {
-    onProgress?.({
-      phase: 'asr',
-      message: p.file ? `${p.status} ${p.file}` : p.status,
-      percent: p.progress
+  let asrWarning: string | undefined
+  try {
+    await ensureLocalAsr((p: AsrProgress) => {
+      onProgress?.({
+        phase: 'asr',
+        message: p.file ? `${p.status} ${p.file}` : p.status,
+        percent: p.progress
+      })
     })
-  })
+  } catch (err) {
+    asrWarning = err instanceof Error ? err.message : String(err)
+  }
 
-  const next = applyLocalSuiteRecommend(getSettings())
+  const prev = getSettings()
+  const next = applyLocalSuiteRecommend(prev)
+  if (asrWarning) {
+    // 对话半边已就绪；语音失败时不要强行把 STT 切到坏掉的本地
+    next.sttInferenceMode = prev.sttInferenceMode
+    next.localSttBaseUrl = prev.localSttBaseUrl
+    next.localSttApiKey = prev.localSttApiKey
+    next.localSttModel = prev.localSttModel
+    next.sttBaseUrl = prev.sttBaseUrl
+    next.sttApiKey = prev.sttApiKey
+    next.sttModel = prev.sttModel
+  }
   saveSettings(next)
+
+  if (asrWarning) {
+    onProgress?.({ phase: 'done', message: '对话模型已就绪；本地语音未装上', percent: 100 })
+    return {
+      settings: next,
+      dashboard: await getModelDashboard(),
+      warning: `本地对话已就绪，但本地语音失败：${asrWarning}`
+    }
+  }
+
   onProgress?.({ phase: 'done', message: '本地套件已就绪', percent: 100 })
   return { settings: next, dashboard: await getModelDashboard() }
 }

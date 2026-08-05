@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto'
+import { t } from '../shared/i18n'
+import { LOCAL_DEFAULTS } from '../shared/types'
 import { captureFrontWindow, guessChannel } from './capture'
 import {
   findOrCreateContact,
@@ -6,20 +8,68 @@ import {
   insertMessages,
   recentMessages
 } from './db'
+import { notifyActivityChanged } from './activity-notify'
 import { showHud } from './hud'
 import { generateReply, isLocalMode, recognizeChatScreenshot } from './llm'
 import { getOllamaStatus } from './ollama'
+import { hasMacAccessibility, macAccessibilityApisAllowed } from './permissions'
 import { pasteIntoFrontApp } from './paste'
-import { LOCAL_DEFAULTS } from '../shared/types'
+import { isScreenAskBusy, showScreenAskProgressHud } from './screen-ask'
+import {
+  abortNetworkWork,
+  beginNetworkWork,
+  isTaskCancelled,
+  TaskCancelledError
+} from './task-cancel'
 
 let running = false
+let runId = 0
+
+export function isReplyBusy(): boolean {
+  return running
+}
+
+/** Esc：立刻停下帮我对话 */
+export function cancelCapturePipeline(): boolean {
+  if (!running) return false
+  runId += 1
+  abortNetworkWork()
+  running = false
+  notifyActivityChanged()
+  return true
+}
 
 export async function runCapturePipeline(): Promise<void> {
-  if (running) {
-    showHud({ kind: 'error', text: '上一次还在处理中…' })
+  if (isScreenAskBusy()) {
+    showScreenAskProgressHud()
     return
   }
+
+  if (running) {
+    showHud({
+      kind: 'generating',
+      text: t('reply.hud.busy'),
+      detail: t('screenAsk.busyDetail'),
+      icon: 'think'
+    })
+    return
+  }
+
+  if (
+    process.platform === 'darwin' &&
+    macAccessibilityApisAllowed() &&
+    !hasMacAccessibility()
+  ) {
+    showHud({
+      kind: 'error',
+      text: t('hud.a11yMissingFull', { name: t('brand.name') })
+    })
+    return
+  }
+
   running = true
+  const myRun = ++runId
+  notifyActivityChanged()
 
   try {
     const settings = getSettings()
@@ -28,30 +78,40 @@ export async function runCapturePipeline(): Promise<void> {
       const textModel = settings.localModelName || LOCAL_DEFAULTS.textModel
       const visionModel = settings.localVisionModelName || LOCAL_DEFAULTS.visionModel
       const status = await getOllamaStatus(textModel, visionModel)
+      if (myRun !== runId) throw new TaskCancelledError()
       if (!status.running) {
-        showHud({ kind: 'error', text: '本地模型未就绪，请到设置安装/启动' })
+        showHud({ kind: 'error', text: t('reply.hud.localNotReady') })
         return
       }
       if (!status.textModelReady || !status.visionModelReady) {
-        showHud({ kind: 'error', text: '请先在设置页一键安装本地模型' })
+        showHud({ kind: 'error', text: t('reply.hud.installModels') })
         return
       }
     } else if (!settings.apiKey.trim()) {
-      showHud({ kind: 'error', text: '请先配置 API Key，或改用免费本地模型' })
+      showHud({ kind: 'error', text: t('reply.hud.needApiKey') })
       return
     }
 
     showHud({
       kind: 'recognizing',
-      text: isLocalMode(settings) ? '帮你口喷：正在看聊天…（本地）' : '帮你口喷：正在看聊天…'
+      text: isLocalMode(settings) ? t('reply.hud.lookingLocal') : t('reply.hud.looking')
     })
     const shot = await captureFrontWindow()
+    if (myRun !== runId) throw new TaskCancelledError()
     const guessed = guessChannel(shot.appName, shot.windowTitle)
 
-    const recognized = await recognizeChatScreenshot(settings, shot.imageBase64, {
-      appName: shot.appName,
-      windowTitle: shot.windowTitle
-    })
+    const signal = beginNetworkWork()
+    const recognized = await recognizeChatScreenshot(
+      settings,
+      shot.visionImage,
+      {
+        appName: shot.appName,
+        windowTitle: shot.windowTitle,
+        contactNameHint: shot.contactNameHint
+      },
+      signal
+    )
+    if (myRun !== runId) throw new TaskCancelledError()
 
     if (recognized.channel === 'unknown' && guessed !== 'unknown') {
       recognized.channel = guessed
@@ -61,29 +121,43 @@ export async function runCapturePipeline(): Promise<void> {
     const batchId = randomUUID()
     insertMessages(contact.id, recognized.messages, batchId)
 
+    const history = recentMessages(contact.id, settings.contextWindowSize)
     showHud({
       kind: 'generating',
-      text: isLocalMode(settings) ? '帮你口喷：正在写回复…（本地）' : '帮你口喷：正在写回复…'
+      text: isLocalMode(settings) ? t('reply.hud.writingLocal') : t('reply.hud.writing')
     })
-    const history = recentMessages(contact.id, settings.contextWindowSize)
-    const reply = await generateReply(settings, contact, history)
+    const signal2 = beginNetworkWork()
+    const { text: reply, scenarioShortName } = await generateReply(
+      settings,
+      contact,
+      history,
+      signal2
+    )
+    if (myRun !== runId) throw new TaskCancelledError()
     if (!reply.trim()) throw new Error('模型返回了空回复')
 
-    const pasteResult = await pasteIntoFrontApp(reply.trim())
-    if (pasteResult === 'pasted') {
+    if (scenarioShortName) {
       showHud({
-        kind: 'done',
-        text: isLocalMode(settings)
-          ? '帮你口喷：已填入（本地档，不准可升级云端）'
-          : '帮你口喷：已填入输入框，请你确认后发送'
+        kind: 'generating',
+        text: t('reply.hud.scenario', { name: scenarioShortName })
       })
+    }
+
+    const pasteResult = await pasteIntoFrontApp(reply.trim())
+    if (myRun !== runId) throw new TaskCancelledError()
+    if (pasteResult === 'pasted') {
+      showHud({ kind: 'done', text: t('reply.hud.done') })
     } else {
-      showHud({ kind: 'done', text: '粘贴失败，回复已复制到剪贴板' })
+      showHud({ kind: 'done', text: t('reply.hud.pasteFail') })
     }
   } catch (err) {
+    if (isTaskCancelled(err) || myRun !== runId) return
     const message = err instanceof Error ? err.message : String(err)
     showHud({ kind: 'error', text: message.slice(0, 80) })
   } finally {
-    running = false
+    if (myRun === runId) {
+      running = false
+      notifyActivityChanged()
+    }
   }
 }

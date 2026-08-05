@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帮助 · 即刻对话 TalkNow</title>
+  <meta name="description" content="即刻对话帮助：安装下载、Mac 权限、官方会员与自配 Key、套餐开通、常见问题。">
+  <link rel="icon" href="../assets/icon.png" type="image/png">
+  <link rel="canonical" href="https://www.talknow.cn/help/">
+  <link rel="stylesheet" href="../css/ink-signal.css">
+  <style>
+    .help-page { max-width: 720px; margin: 0 auto; padding: 120px 24px 80px; }
+    .help-page h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 0 0 8px; }
+    .help-lead { color: rgba(0,0,0,.6); margin-bottom: 36px; line-height: 1.6; }
+    .help-item { border-top: 1px solid rgba(0,0,0,.1); padding: 20px 0; }
+    .help-item:last-child { border-bottom: 1px solid rgba(0,0,0,.1); }
+    .help-item h2 { font-size: 1.1rem; margin: 0 0 8px; }
+    .help-item p { margin: 0; line-height: 1.7; color: rgba(0,0,0,.72); }
+    .help-links { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; }
+  </style>
+</head>
+<body data-page="help">
+<nav class="nav nav-scrolled" id="nav">
+  <div class="nav-inner">
+    <a href="../" class="nav-logo" data-keep-lang>
+      <img src="../assets/icon.png" alt="" class="nav-logo-icon">
+      <span class="nav-logo-text">
+        <span class="nav-logo-zh" data-i18n="brand.name">即刻对话</span>
+        <span class="nav-logo-en">TalkNow</span>
+      </span>
+    </a>
+    <div class="nav-links">
+      <a href="../" data-keep-lang data-i18n="nav.home">首页</a>
+      <a href="../subscribe/" data-keep-lang data-i18n="nav.subscribe">订阅</a>
+      <a href="./" data-keep-lang data-i18n="nav.help" aria-current="page">帮助</a>
+      <a href="#" data-lang-toggle class="nav-lang" data-i18n="nav.lang">English</a>
+    </div>
+    <a href="../#download" class="btn btn-primary btn-sm nav-cta" data-i18n="nav.download">下载</a>
+    <button class="nav-burger" id="navBurger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<main class="help-page">
+  <h1 data-i18n="help.title">帮助</h1>
+  <p class="help-lead" data-i18n="help.subtitle">安装、权限、会员与常见问题</p>
+
+  <div class="help-item">
+    <h2 data-i18n="help.q1">如何下载安装？</h2>
+    <p data-i18n="help.a1">打开官网首页下载区，选择 macOS 或 Windows 安装包。包托管在 GitHub Releases。</p>
+  </div>
+  <div class="help-item">
+    <h2 data-i18n="help.q2">Mac 需要哪些权限？</h2>
+    <p data-i18n="help.a2">麦克风（语音）、屏幕录制（帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。</p>
+  </div>
+  <div class="help-item">
+    <h2 data-i18n="help.q3">官方会员和自配 Key 有什么区别？</h2>
+    <p data-i18n="help.a3">官方会员免填第三方 Key，按次扣统一积分；自配 Key / 本地模型不消耗本产品积分，费用按你的服务商账单。</p>
+  </div>
+  <div class="help-item">
+    <h2 data-i18n="help.q4">如何开通或更换套餐？</h2>
+    <p data-i18n="help.a4">下载 App → 个人中心登录 → 选择档位联系客服线下开通。套餐说明见「订阅」页，与个人中心一致。</p>
+  </div>
+  <div class="help-item">
+    <h2 data-i18n="help.q5">积分不够怎么办？</h2>
+    <p data-i18n="help.a5">可购买加量包，或升级更高档位；也可临时改用自配 Key / 本地模型继续使用。</p>
+  </div>
+  <div class="help-item">
+    <h2 data-i18n="help.q6">找不到更新日志？</h2>
+    <p data-i18n="help.a6">页脚有「更新日志」入口；也可在 App 内「更新」页查看。</p>
+  </div>
+
+  <div class="help-links">
+    <a class="btn btn-primary" href="../subscribe/" data-keep-lang data-i18n="nav.subscribe">订阅</a>
+    <a class="btn btn-secondary" href="../#download" data-i18n="nav.download">下载</a>
+    <a class="btn btn-secondary" href="../changelog/" data-keep-lang data-i18n="nav.changelog">更新日志</a>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="../assets/icon.png" alt="" class="footer-logo">
+      <span class="footer-brand-text">
+        <span class="footer-brand-zh" data-i18n="brand.name">即刻对话</span>
+        <span class="footer-brand-en">TalkNow</span>
+      </span>
+    </div>
+    <div class="footer-links">
+      <a href="../subscribe/" data-keep-lang data-i18n="footer.subscribe">订阅</a>
+      <a href="./" data-keep-lang data-i18n="footer.help">帮助</a>
+      <a href="../changelog/" data-keep-lang data-i18n="footer.changelog">更新日志</a>
+      <span class="footer-domain">www.talknow.cn</span>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/i18n.js"></script>
+<script>
+  var burger = document.getElementById('navBurger');
+  var links = document.querySelector('.nav-links');
+  if (burger && links) {
+    burger.addEventListener('click', function () {
+      links.classList.toggle('nav-links-open');
+    });
+  }
+</script>
+</body>
+</html>

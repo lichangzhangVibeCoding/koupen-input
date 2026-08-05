@@ -1,0 +1,62 @@
+{
+  "order": ["trial", "standard", "advanced", "flagship"],
+  "catalog": {
+    "trial": {
+      "id": "trial",
+      "featureKinds": ["credits", "officialSlots", "byok", "local", "light"]
+    },
+    "standard": {
+      "id": "standard",
+      "featured": true,
+      "featureKinds": ["credits", "officialSlots", "nocode", "byok"]
+    },
+    "advanced": {
+      "id": "advanced",
+      "featureKinds": ["credits", "officialSlots", "heavy", "byok"]
+    },
+    "flagship": {
+      "id": "flagship",
+      "featureKinds": ["credits", "officialSlots", "priority", "byok"]
+    }
+  },
+  "fallback": [
+    {
+      "id": "trial",
+      "nameZh": "体验版",
+      "nameEn": "Trial",
+      "baseCredits": 500,
+      "giftCredits": 0,
+      "priceMonthCents": 0,
+      "priceYearCents": 0
+    },
+    {
+      "id": "standard",
+      "nameZh": "标准版",
+      "nameEn": "Standard",
+      "baseCredits": 2000,
+      "giftCredits": 2000,
+      "priceMonthCents": 9900,
+      "priceYearCents": 66800
+    },
+    {
+      "id": "advanced",
+      "nameZh": "高级版",
+      "nameEn": "Advanced",
+      "baseCredits": 4000,
+      "giftCredits": 5000,
+      "priceMonthCents": 19900,
+      "priceYearCents": 133800
+    },
+    {
+      "id": "flagship",
+      "nameZh": "旗舰版",
+      "nameEn": "Flagship",
+      "baseCredits": 20000,
+      "giftCredits": 30000,
+      "priceMonthCents": 99900,
+      "priceYearCents": 671300
+    }
+  ],
+  "topupFallback": { "credits": 1000, "priceCents": 2000 },
+  "plansApi": "https://www.lizhenning.com/other/typenow/talknowAPi/index.php/v1/plans"
+}

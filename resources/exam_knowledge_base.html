@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20大厂AI证书 · 考试知识库</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f5f7fa;color:#2d3748;line-height:1.7;font-size:14px}
+  .container{max-width:1080px;margin:0 auto;padding:20px}
+
+  /* Header */
+  .header{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:32px 28px;border-radius:12px;margin-bottom:24px}
+  .header h1{font-size:24px;margin-bottom:6px}
+  .header .sub{font-size:13px;opacity:.7}
+
+  /* Nav */
+  .nav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px;padding:12px 16px;background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .nav a{font-size:12px;color:#667eea;text-decoration:none;padding:3px 10px;border-radius:4px;background:#f0f0ff;transition:all .2s}
+  .nav a:hover{background:#667eea;color:#fff}
+
+  /* Section */
+  .section{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:20px;overflow:hidden}
+  .section-title{padding:14px 20px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;border-bottom:1px solid #edf2f7}
+  .section-title .icon{font-size:18px}
+  .section-body{padding:16px 20px}
+
+  /* Domain card */
+  .domain{border-left:3px solid #667eea;padding:12px 16px;margin-bottom:12px;background:#fafbff;border-radius:0 6px 6px 0}
+  .domain h3{font-size:14px;font-weight:600;margin-bottom:6px;color:#4a5568}
+  .domain .certs{font-size:12px;color:#718096;margin-bottom:8px}
+  .domain .points{list-style:none;padding:0}
+  .domain .points li{font-size:13px;padding:3px 0 3px 16px;position:relative;color:#4a5568}
+  .domain .points li:before{content:"▸";position:absolute;left:0;color:#667eea}
+  .domain .points li b{color:#2d3748}
+
+  /* Cert table */
+  .cert-table{width:100%;border-collapse:collapse;font-size:12px}
+  .cert-table th{background:#f7fafc;padding:8px 10px;text-align:left;font-weight:600;color:#4a5568;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+  .cert-table td{padding:8px 10px;border-bottom:1px solid #edf2f7;vertical-align:top}
+  .cert-table tr:hover td{background:#f7fafc}
+  .cert-table .plat{font-weight:600}
+  .plat-alibaba{color:#ff6a00}.plat-huawei{color:#cf0000}.plat-aliyun{color:#ff6a00}.plat-iflytek{color:#00b4a6}.plat-datawhale{color:#2d6cfd}
+
+  /* Formula box */
+  .formula-box{background:#fffbf0;border:1px solid #fbd38d;border-radius:6px;padding:12px 14px;margin-bottom:12px}
+  .formula-box h4{font-size:13px;font-weight:600;margin-bottom:6px;color:#b7791f}
+  .formula-box .formula{font-family:"SF Mono",Consolas,monospace;font-size:12px;background:#fff;padding:6px 10px;border-radius:4px;margin:4px 0;color:#2d3748}
+
+  /* Tag */
+  .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;margin-right:4px;font-weight:500}
+  .tag-select{background:#e6fffa;color:#2c7a7b}.tag-judge{background:#fff5f5;color:#c53030}
+  .tag-multi{background:#fffaf0;color:#c05621}.tag-practice{background:#f0fff4;color:#22543d}
+  .tag-free{background:#f0f0ff;color:#5a67d8}.tag-pay{background:#fff0f0;color:#c53030}
+
+  /* Detail card */
+  .detail-card{border:1px solid #e2e8f0;border-radius:8px;margin-bottom:14px;overflow:hidden}
+  .detail-card .dc-head{padding:10px 14px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .detail-card .dc-head .dc-meta{font-size:11px;font-weight:400;color:#718096}
+  .detail-card .dc-body{padding:0 14px;max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .detail-card.open .dc-body{padding:10px 14px;max-height:2000px;border-top:1px solid #edf2f7}
+  .dc-body h4{font-size:12px;font-weight:600;margin:8px 0 4px;color:#4a5568}
+  .dc-body ul{list-style:none;padding:0}
+  .dc-body li{font-size:12px;padding:2px 0 2px 14px;position:relative;color:#4a5568}
+  .dc-body li:before{content:"·";position:absolute;left:4px;color:#a0aec0;font-weight:700}
+
+  /* Tips */
+  .tip{font-size:12px;color:#718096;padding:8px 12px;background:#f7fafc;border-radius:6px;margin-top:8px}
+  .tip b{color:#4a5568}
+
+  @media(max-width:640px){
+    .cert-table{font-size:11px}
+    .cert-table th,.cert-table td{padding:6px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>20 大厂 AI 证书 · 考试知识库</h1>
+    <div class="sub">5 个平台 · 20 个证书 · 按知识域 + 逐证详情 · 2026-08-01 整理</div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav">
+    <a href="#overview">总览</a>
+    <a href="#domain-prompt">Prompt 工程</a>
+    <a href="#domain-finetune">微调 Fine-tuning</a>
+    <a href="#domain-agent">Agent 智能体</a>
+    <a href="#domain-rag">RAG 检索增强</a>
+    <a href="#domain-aigc">AIGC 设计</a>
+    <a href="#domain-cloud">云计算</a>
+    <a href="#domain-ai-fund">AI 基础</a>
+    <a href="#domain-ai-app">AI+应用</a>
+    <a href="#formulas">核心公式速记</a>
+    <a href="#detail">逐证详情</a>
+  </div>
+
+  <!-- Overview Table -->
+  <div class="section" id="overview">
+    <div class="section-title"><span class="icon">📊</span> 总览：20 证考试参数对比</div>
+    <div class="section-body" style="overflow-x:auto">
+      <table class="cert-table">
+        <thead>
+          <tr>
+            <th>#</th><th>平台</th><th>证书名称</th><th>题型</th><th>题量</th><th>及格</th><th>时长</th><th>费用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td class="plat plat-alibaba">阿里达摩院</td><td>人工智能训练师（初级）</td><td><span class="tag tag-select">单选</span><span class="tag tag-judge">判断</span><span class="tag tag-multi">多选</span></td><td>34题</td><td>~60分</td><td>60min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>2</td><td class="plat plat-alibaba">阿里达摩院</td><td>人工智能训练师（高级）</td><td><span class="tag tag-select">单选20</span><span class="tag tag-judge">判断10</span><span class="tag tag-multi">多选4</span></td><td>34题</td><td>~60分</td><td>90min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>3</td><td class="plat plat-alibaba">阿里达摩院</td><td>云计算工程师（初级）</td><td><span class="tag tag-select">选择类</span></td><td>未公布</td><td>未公布</td><td>45min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>4</td><td class="plat plat-huawei">华为云</td><td>DeepSeek搭建Agent智能助手</td><td><span class="tag tag-select">单选</span><span class="tag tag-judge">判断</span><span class="tag tag-multi">多选</span></td><td>20-50题</td><td>70分</td><td>在线</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>5</td><td class="plat plat-huawei">华为云</td><td>大模型的咒语-Prompt工程</td><td><span class="tag tag-select">单选</span><span class="tag tag-judge">判断</span><span class="tag tag-multi">多选</span></td><td>20-50题</td><td>70分</td><td>在线</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>6</td><td class="plat plat-aliyun">阿里云</td><td>VISION人工智能设计(入门)</td><td><span class="tag tag-select">单选</span><span class="tag tag-multi">多选</span></td><td>20题</td><td>60分</td><td>30min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>7</td><td class="plat plat-aliyun">阿里云</td><td>VISION人工智能设计(进阶)</td><td><span class="tag tag-select">单选</span><span class="tag tag-multi">多选</span></td><td>20题</td><td>60分</td><td>30min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>8</td><td class="plat plat-aliyun">阿里云</td><td>PAI ArtLab AIGC设计</td><td><span class="tag tag-select">单选</span><span class="tag tag-multi">多选</span></td><td>20题</td><td>60分</td><td>30min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>9</td><td class="plat plat-aliyun">阿里云</td><td>利用大模型提升内容生产能力</td><td><span class="tag tag-select">单选</span><span class="tag tag-multi">多选</span></td><td>20题</td><td>60分</td><td>30min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>10</td><td class="plat plat-iflytek">科大讯飞</td><td>Prompt工程师</td><td><span class="tag tag-select">选择</span><span class="tag tag-judge">判断</span></td><td>-</td><td>60分</td><td>120min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>11</td><td class="plat plat-iflytek">科大讯飞</td><td>微调工程师</td><td><span class="tag tag-select">单选</span></td><td>20题</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>12</td><td class="plat plat-iflytek">科大讯飞</td><td>智能体工程师</td><td><span class="tag tag-select">选择</span><span class="tag tag-practice">实操</span></td><td>-</td><td>60分</td><td>120min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>13</td><td class="plat plat-iflytek">科大讯飞</td><td>RAG工程师</td><td><span class="tag tag-select">选择</span><span class="tag tag-practice">实操</span></td><td>-</td><td>60分</td><td>120min</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>14</td><td class="plat plat-datawhale">Datawhale</td><td>Fine-tuning Engineer</td><td><span class="tag tag-select">单选</span></td><td>20题</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>15</td><td class="plat plat-datawhale">Datawhale</td><td>AI Prompt Engineer</td><td><span class="tag tag-select">选择</span></td><td>-</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>16</td><td class="plat plat-datawhale">Datawhale</td><td>AI Agent Engineer</td><td><span class="tag tag-select">选择</span></td><td>-</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>17</td><td class="plat plat-datawhale">Datawhale</td><td>Agent Engineer</td><td><span class="tag tag-select">单选</span></td><td>20题</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>18</td><td class="plat plat-datawhale">Datawhale</td><td>AI+编程能力</td><td><span class="tag tag-select">单选5</span><span class="tag tag-practice">应用题1</span></td><td>6题</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>19</td><td class="plat plat-datawhale">Datawhale</td><td>AI+数据分析</td><td><span class="tag tag-select">单选5</span><span class="tag tag-practice">应用题1</span></td><td>6题</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+          <tr><td>20</td><td class="plat plat-datawhale">Datawhale</td><td>大模型开发工程师</td><td><span class="tag tag-select">单选</span></td><td>20题</td><td>80分</td><td>不限</td><td><span class="tag tag-free">免费</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Domain: Prompt Engineering -->
+  <div class="section" id="domain-prompt">
+    <div class="section-title"><span class="icon">💬</span> 知识域一：Prompt 工程</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：华为云Prompt工程(#5) · 阿里云内容生产(#9) · 科大讯飞Prompt工程师(#10) · Datawhale AI Prompt Engineer(#15)</h3>
+        <div class="certs">4 个证书共享此知识域</div>
+        <ul class="points">
+          <li><b>大模型基础原理</b>：语言模型演进（SLM→NLM→PLM→LLM）、能力边界与局限性</li>
+          <li><b>采样参数</b>：Temperature（随机性控制）、Top-P（核采样）、Top-K、 их ныш解读</li>
+          <li><b>核心提示技巧</b>：
+            <ul style="margin-left:16px">
+              <li><b>Zero-shot</b>：不提供示例，直接指令</li>
+              <li><b>Few-shot</b>：提供 2-5 个示例引导输出格式</li>
+              <li><b>Chain-of-Thought (CoT)</b>：引导模型逐步推理，"Let's think step by step"</li>
+              <li><b>角色设定</b>：赋予模型专业身份（"你是一个资深数据分析师"）</li>
+              <li><b>指令设计</b>：明确任务、约束条件、输出格式</li>
+            </ul>
+          </li>
+          <li><b>结构化 Prompt 框架</b>：
+            <ul style="margin-left:16px">
+              <li><b>APE</b>：Action(行动) + Purpose(目的) + Expectation(期望)</li>
+              <li><b>CARE</b>：Context(背景) + Action(行动) + Result(结果) + Example(示例)</li>
+              <li><b>RACE</b>：Role(角色) + Action(行动) + Context(背景) + Expectation(期望)</li>
+              <li><b>COAST</b>：Context + Objective + Actions + Scenario + Task</li>
+              <li><b>CRISPE</b>：Capacity + Role + Insight + Statement + Personality + Experiment</li>
+              <li><b>RISE</b>：Role + Input + Steps + Expectation</li>
+              <li><b>TRACE</b>：Task + Request + Action + Context + Example</li>
+              <li><b>ROSES</b>：Role + Objective + Steps + Expected + Super</li>
+              <li><b>LangGPT</b>：结构化模板，# Role / # Profile / # Rules 等</li>
+            </ul>
+          </li>
+          <li><b>Prompt 最佳实践</b>（参考 OpenAI Cookbook）：清晰具体、拆分复杂任务、提供参考文本、减少臆测</li>
+          <li><b>星火/盘古平台实操</b>：Token 计数、效果对比、智能体创建</li>
+          <li><b>应用场景</b>：客服问答优化、文案生成、代码辅助、多模态生成</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: Fine-tuning -->
+  <div class="section" id="domain-finetune">
+    <div class="section-title"><span class="icon">🔧</span> 知识域二：微调 Fine-tuning</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：科大讯飞微调工程师(#11) · Datawhale Fine-tuning(#14) · Datawhale 大模型开发工程师(#20)</h3>
+        <div class="certs">3 个证书共享此知识域</div>
+        <ul class="points">
+          <li><b>微调原理</b>：在预训练模型基础上，用领域数据调整模型参数</li>
+          <li><b>微调方法对比</b>：
+            <ul style="margin-left:16px">
+              <li><b>全量微调 (Full Fine-tuning)</b>：更新所有参数，效果最好但成本高</li>
+              <li><b>LoRA</b>：冻结原始权重，训练低秩矩阵，显存占用减少 90%+</li>
+              <li><b>QLoRA</b>：在 LoRA 基础上量化基座模型到 4bit，进一步节省显存</li>
+              <li><b>SFT (Supervised Fine-Tuning)</b>：监督微调，用指令-回答对训练</li>
+              <li><b>DPO (Direct Preference Optimization)</b>：直接偏好优化，替代 RLHF</li>
+            </ul>
+          </li>
+          <li><b>数据集构建</b>：
+            <ul style="margin-left:16px">
+              <li>指令格式：{"instruction": "...", "input": "...", "output": "..."}</li>
+              <li>数据质量 > 数据数量；正负样本需均衡</li>
+              <li>噪音数据处理：清洗、去重、过滤低质量样本</li>
+              <li>标注规范：一致性检查、交叉标注质量校验</li>
+            </ul>
+          </li>
+          <li><b>训练超参数</b>：学习率（通常 1e-4 ~ 5e-5）、Batch Size、Epochs（通常 3-5）、Warmup</li>
+          <li><b>效果评估</b>：Loss 曲线、困惑度 (PPL)、BLEU/ROUGE、人工评估</li>
+          <li><b>过拟合/欠拟合</b>：训练集 Loss 持续下降但验证集 Loss 上升 → 过拟合</li>
+          <li><b>文生图微调</b>：Stable Diffusion + LoRA 风格化小模型、Checkpoint 选择</li>
+          <li><b>平台实操</b>：讯飞星辰 MaaS 平台（零代码/低代码微调界面）</li>
+          <li><b>RLHF 对齐</b>：RLHF 三阶段（SFT → RM → PPO），DPO 简化流程</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: Agent -->
+  <div class="section" id="domain-agent">
+    <div class="section-title"><span class="icon">🤖</span> 知识域三：Agent 智能体</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：华为云DeepSeek Agent(#4) · 科大讯飞智能体工程师(#12) · Datawhale AI Agent(#16) · Datawhale Agent(#17)</h3>
+        <div class="certs">4 个证书共享此知识域</div>
+        <ul class="points">
+          <li><b>Agent 定义</b>：能感知环境、自主决策、调用工具完成任务的 AI 系统</li>
+          <li><b>Agent vs Prompt</b>：Prompt 是静态指令；Agent 具备自主规划+执行能力</li>
+          <li><b>Agent 核心架构</b>（四要素）：
+            <ul style="margin-left:16px">
+              <li><b>感知 (Perception)</b>：接收用户输入/环境信息</li>
+              <li><b>规划 (Planning)</b>：任务分解、目标拆解、推理</li>
+              <li><b>执行 (Execution)</b>：调用工具/API 执行具体操作</li>
+              <li><b>记忆 (Memory)</b>：短期记忆（对话上下文）+ 长期记忆（向量存储）</li>
+            </ul>
+          </li>
+          <li><b>Agent 设计模式</b>：ReAct（推理+行动）、Plan-and-Execute、Reflection</li>
+          <li><b>工具调用 (Tool Use)</b>：Function Calling、API 集成、代码解释器</li>
+          <li><b>Multi-Agent 协作</b>：多角色分工、消息传递、任务分发</li>
+          <li><b>开源生态</b>：LangChain、AutoGPT、MetaGPT、CrewAI、Dify</li>
+          <li><b>节点类型</b>（讯飞智能体平台）：
+            <ul style="margin-left:16px">
+              <li><b>基础节点</b>：对话、问答</li>
+              <li><b>工具类节点</b>：API 调用、数据检索</li>
+              <li><b>逻辑节点</b>：条件分支、循环</li>
+              <li><b>转换节点</b>：格式转换、数据处理</li>
+            </ul>
+          </li>
+          <li><b>实战案例</b>：
+            <ul style="margin-left:16px">
+              <li>客服助手：意图分类 → 知识问答 → 资讯检索 → 闲聊</li>
+              <li>面试助手：数据集构建 → 意图识别 → 题库引用 → 答题分析</li>
+              <li>文献综述助手：基于 DeepSeek 的文献检索与综述生成</li>
+            </ul>
+          </li>
+          <li><b>支付宝百宝箱</b>：基于支付宝生态的 Agent 搭建实践（Datawhale #17 特色）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: RAG -->
+  <div class="section" id="domain-rag">
+    <div class="section-title"><span class="icon">📚</span> 知识域四：RAG 检索增强生成</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：科大讯飞RAG工程师(#13) · Datawhale 大模型开发工程师(#20)</h3>
+        <div class="certs">2 个证书共享此知识域</div>
+        <ul class="points">
+          <li><b>RAG 概念</b>：检索增强生成，先检索相关文档再喂给大模型生成回答，解决幻觉问题</li>
+          <li><b>RAG vs 纯 LLM</b>：RAG 可引用外部知识、回答可溯源、无需重新训练</li>
+          <li><b>RAG 全流程</b>：
+            <ul style="margin-left:16px">
+              <li><b>1. 数据导入与预处理</b>：文档加载 → 清洗 → 分块 (Chunking)</li>
+              <li><b>2. 嵌入 (Embedding)</b>：文本 → 向量（如 text-embedding-ada-002）</li>
+              <li><b>3. 向量存储与索引</b>：FAISS / Milvus / Pinecone / Chroma</li>
+              <li><b>4. 检索 (Retrieval)</b>：相似度搜索（余弦相似度、内积）</li>
+              <li><b>5. 信息整合与生成</b>：将检索结果拼入 Prompt → LLM 生成回答</li>
+            </ul>
+          </li>
+          <li><b>RAG 演进</b>：
+            <ul style="margin-left:16px">
+              <li><b>NaiveRAG</b>：基础检索+生成，简单但召回率有限</li>
+              <li><b>AdvancedRAG</b>：优化检索（重排序、查询扩展、混合检索）</li>
+              <li><b>ModularRAG</b>：模块化设计，可插拔组件</li>
+              <li><b>AgenticRAG</b>：结合 Agent 自主决策检索策略</li>
+            </ul>
+          </li>
+          <li><b>文档切分策略</b>：固定大小切分、按语义切分、滑动窗口、递归切分</li>
+          <li><b>评估指标</b>：
+            <ul style="margin-left:16px">
+              <li><b>检索质量</b>：Recall@K、Precision@K、MRR</li>
+              <li><b>生成质量</b>：Faithfulness（忠实度）、Answer Relevance（答案相关性）</li>
+              <li><b>端到端</b>：RAGAS 框架（检索+生成联合评估）</li>
+            </ul>
+          </li>
+          <li><b>常见问题</b>：召回不足、噪音文档干扰、上下文窗口超限、多轮对话状态管理</li>
+          <li><b>RAGFlow</b>：开源 RAG 引擎，支持本地部署</li>
+          <li><b>讯飞知识库</b>：API 接口调用、应用原型开发</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: AIGC Design -->
+  <div class="section" id="domain-aigc">
+    <div class="section-title"><span class="icon">🎨</span> 知识域五：AIGC 设计</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：阿里云VISION入门(#6) · VISION进阶(#7) · PAI ArtLab(#8) · 内容生产(#9)</h3>
+        <div class="certs">4 个证书共享此知识域（全部阿里云 Clouder 认证）</div>
+        <ul class="points">
+          <li><b>AIGC 概念</b>：AI Generated Content，人工智能生成内容（文本/图像/视频/音乐）</li>
+          <li><b>ComfyUI</b>：节点式 AIGC 工作流工具
+            <ul style="margin-left:16px">
+              <li>云端部署：计算巢运行 / PAI 运行</li>
+              <li>节点与工作流基础操作</li>
+              <li>文生图工作流 + Prompt 设计</li>
+              <li>图生图工作流 + LoRA 风格化</li>
+              <li>ControlNet 精准控图（姿态/边缘/深度）</li>
+              <li>图片高清放大</li>
+            </ul>
+          </li>
+          <li><b>Stable Diffusion WebUI</b>：
+            <ul style="margin-left:16px">
+              <li>基础参数：Steps / CFG Scale / Sampler / Seed</li>
+              <li>Checkpoint 模型选择</li>
+              <li>LoRA 微调小模型</li>
+              <li>ControlNet 精准控制</li>
+            </ul>
+          </li>
+          <li><b>Wan 万相模型</b>：
+            <ul style="margin-left:16px">
+              <li>Wan2.1：文生视频 / 图生视频 / 植物生长特效 / 360度动态素材</li>
+              <li>Wan2.2：视觉升级 / 粒子艺术 / 分镜与转场 / 声音设计</li>
+              <li>AI MTV：虚拟角色 + 歌词生成 + AI 音乐 + LIP-SYNC 嘴形同步</li>
+            </ul>
+          </li>
+          <li><b>提示词技巧（设计方向）</b>：
+            <ul style="margin-left:16px">
+              <li>结构：主体描述 + 风格 + 构图 + 光影 + 质量词</li>
+              <li>负面提示词 (Negative Prompt)：排除不需要的元素</li>
+              <li>权重控制：(keyword:1.5) 加权</li>
+            </ul>
+          </li>
+          <li><b>大模型辅助内容生产</b>：
+            <ul style="margin-left:16px">
+              <li>文案/营销内容生成</li>
+              <li>图文/海报制作</li>
+              <li>提示词优化：清晰具体、拆分任务、提供参考</li>
+            </ul>
+          </li>
+          <li><b>阿里云无影灵构</b>：部署专属 ComfyUI 镜像</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: Cloud Computing -->
+  <div class="section" id="domain-cloud">
+    <div class="section-title"><span class="icon">☁️</span> 知识域六：云计算</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：阿里达摩院云计算工程师初级(#3)</h3>
+        <div class="certs">1 个证书（11 模块，内容最广）</div>
+        <ul class="points">
+          <li><b>云计算概要</b>：部署形态（公有云/私有云/混合云）、服务分类（IaaS/PaaS/SaaS）、AZ/Region、Serverless 趋势</li>
+          <li><b>弹性计算</b>：ECS 云服务器 6 大组件（计算/存储/网络/安全/镜像/费用）、弹性伸缩</li>
+          <li><b>云存储</b>：对象存储 OSS、块存储 EBS、文件存储 NAS/CPFS、存储安全与数据保护</li>
+          <li><b>云网络</b>：VPC 专有网络、弹性公网 IP、SLB 负载均衡、NAT 网关、CEN 云企业网、GA 全球加速、VPN 网关</li>
+          <li><b>操作系统</b>：Linux 基本组成与功能、GNU 项目</li>
+          <li><b>云原生</b>：容器技术（Docker/K8s）、微服务、Serverless（基于 Serverless 部署个人网盘实操）</li>
+          <li><b>云数据库</b>：OLTP/OLAP/NoSQL/BigData 分类、SQL 基础（事务/索引/CRUD）、RDS</li>
+          <li><b>大数据</b>：Hadoop/Spark/Flink 三大计算框架、SQL/DataFrame/机器学习/可视化</li>
+          <li><b>物联网</b>：MQTT 协议、设备链接、物模型、云产品流转、数据可视化</li>
+          <li><b>云安全</b>：3 部安全法律、4 大安全理论、6 类攻击方式（密码破解/钓鱼/WIFI入侵）、DDoS 防护</li>
+          <li><b>CDN</b>：静态/动态加速、调度优化、网络优化、传输优化、内容优化、架构组成</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: AI Fundamentals -->
+  <div class="section" id="domain-ai-fund">
+    <div class="section-title"><span class="icon">🧠</span> 知识域七：AI 基础与训练师</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：阿里达摩院训练师初级(#1) · 训练师高级(#2)</h3>
+        <div class="certs">2 个证书共享此知识域</div>
+        <ul class="points">
+          <li><b>数据概念层级</b>：数据 → 信息 → 知识 → 智慧（DIKW 金字塔）</li>
+          <li><b>大数据特征</b>：规模性 (Volume) / 高速性 (Velocity) / 多样性 (Variety) / 价值性 (Value)</li>
+          <li><b>AI 三大驱动力</b>：算力 + 算法 + 大数据</li>
+          <li><b>机器学习类型</b>：
+            <ul style="margin-left:16px">
+              <li><b>监督学习</b>：有标签数据（分类、回归）</li>
+              <li><b>无监督学习</b>：无标签数据（聚类、降维）</li>
+              <li><b>强化学习</b>：奖惩机制（RLHF 的基础）</li>
+            </ul>
+          </li>
+          <li><b>数据标注</b>：
+            <ul style="margin-left:16px">
+              <li>标注类型：图像标注、语音标注、文本标注</li>
+              <li>标注规范：标注需求确认、交叉标注质量校验</li>
+              <li>标签构建原则：业务相关性、正负样本均衡</li>
+              <li>噪音数据：影响模型性能，需清洗过滤</li>
+            </ul>
+          </li>
+          <li><b>语音合成 TTS</b>：
+            <ul style="margin-left:16px">
+              <li>核心模块：文本归整 → 获取读音 → 停顿模型</li>
+              <li>SSML：W3C 标准，控制语速/语调/音量</li>
+              <li>常见错误：读音错误、停顿错误</li>
+              <li>TTS 千人千面（个性化语音）</li>
+            </ul>
+          </li>
+          <li><b>语音识别 ASR</b>：
+            <ul style="margin-left:16px">
+              <li>双模型架构：声学模型 (AM) + 语言模型 (LM)</li>
+              <li>三种错误类型：替换错误（字错误）、删除错误（漏识别）、插入错误（多识别）</li>
+              <li>ASR 不区分说话人</li>
+              <li>CER (Character Error Rate) 字符错误率</li>
+            </ul>
+          </li>
+          <li><b>文本生成</b>：
+            <ul style="margin-left:16px">
+              <li>常见任务：机器翻译、文本摘要、故事生成、对话生成、多模态生成</li>
+              <li>方法：概率统计、神经网络、规划生成、融合知识</li>
+              <li>评估指标：BLEU（精准率）、ROUGE（召回率）、METEOR、Distinct、PPL 困惑度</li>
+            </ul>
+          </li>
+          <li><b>意图识别与分类</b>：
+            <ul style="margin-left:16px">
+              <li>二分类 / 多分类 / 多标签分类</li>
+              <li>规则 vs 算法模型：适用场景判断</li>
+              <li>意图识别需负向样本</li>
+              <li>训练数据量影响因素：问题复杂度、特征维度、模型复杂度、数据质量、业务容错</li>
+            </ul>
+          </li>
+          <li><b>人工智能训练师职业</b>：共 5 个等级，数据标注+模型认知+工具使用能力</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Domain: AI+Applications -->
+  <div class="section" id="domain-ai-app">
+    <div class="section-title"><span class="icon">💻</span> 知识域八：AI+应用</div>
+    <div class="section-body">
+      <div class="domain">
+        <h3>涉及证书：Datawhale AI+编程(#18) · AI+数据分析(#19)</h3>
+        <div class="certs">2 个证书（均有实操题，需上传截图）</div>
+        <ul class="points">
+          <li><b>AI+编程</b>：
+            <ul style="margin-left:16px">
+              <li>入门：云 IDE 开发网页和游戏（建立兴趣）</li>
+              <li>基础：本地 IDE 开发网页游戏（AI 工具应用到编程实践）</li>
+              <li>进阶：AI 辅助刷题（算法理解和面试准备）</li>
+              <li>工具：豆包 MarsCode</li>
+              <li>实操题：上传通过 MarsCode 进行游戏开发/网页制作的实践截图</li>
+            </ul>
+          </li>
+          <li><b>AI+数据分析</b>：
+            <ul style="margin-left:16px">
+              <li>通识入门：定义与应用场景</li>
+              <li>动手学（入门/基础/进阶）</li>
+              <li>工具：商汤小浣熊家族（办公小浣熊）</li>
+              <li>实操题：上传通过商汤办公小浣熊进行数据分析的效果截图</li>
+              <li>注意：审核无效将撤销证书</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulas -->
+  <div class="section" id="formulas">
+    <div class="section-title"><span class="icon">📝</span> 核心公式与指标速记</div>
+    <div class="section-body">
+      <div class="formula-box">
+        <h4>分类评估指标（训练师高级 / 微调 / 大模型开发 必考）</h4>
+        <div class="formula">Precision (精准率) = TP / (TP + FP)  — 预测为正中真正为正的比例</div>
+        <div class="formula">Recall (召回率) = TP / (TP + FN)  — 实际为正中被正确预测的比例</div>
+        <div class="formula">Accuracy (准确率) = (TP + TN) / (TP + TN + FP + FN)</div>
+        <div class="formula">F1 Score = 2 × (Precision × Recall) / (Precision + Recall)</div>
+        <div class="formula">CER (字符错误率) = (S + D + I) / N  — S=替换 D=删除 I=插入 N=总数</div>
+      </div>
+
+      <div class="formula-box">
+        <h4>文本生成评估指标（训练师高级 必考）</h4>
+        <div class="formula">BLEU = 加权 n-gram 精准率 × BP（短句惩罚）  — 评估机器翻译</div>
+        <div class="formula">ROUGE = n-gram 召回率  — 评估文本摘要</div>
+        <div class="formula">PPL (Perplexity) = exp(-1/N × Σ log p(xi))  — 困惑度越低越好</div>
+        <div class="formula">Distinct-1/2 = 不同 n-gram 数量 / 总 n-gram 数量  — 多样性</div>
+      </div>
+
+      <div class="formula-box">
+        <h4>采样参数（Prompt 工程 / 大模型开发 必考）</h4>
+        <div class="formula">Temperature: 控制随机性。T→0 输出更确定，T→1 输出更多样</div>
+        <div class="formula">Top-P (核采样): 从概率累积 ≥ P 的词中采样。P=0.9 取前 90% 概率的词</div>
+        <div class="formula">Top-K: 只从概率最高的 K 个词中采样</div>
+      </div>
+
+      <div class="formula-box">
+        <h4>向量检索相似度（RAG 工程师 必考）</h4>
+        <div class="formula">余弦相似度 = (A·B) / (|A| × |B|)  — 值域 [-1, 1]</div>
+        <div class="formula">内积 = Σ(Ai × Bi)  — 未归一化时使用</div>
+        <div class="formula">Recall@K = 前 K 个结果中相关文档数 / 全部相关文档数</div>
+        <div class="formula">MRR = 1/|Q| × Σ 1/rank(i)  — 第一个相关结果的排名倒数</div>
+      </div>
+
+      <div class="formula-box">
+        <h4>LoRA 核心公式（微调工程师 必考）</h4>
+        <div class="formula">W = W₀ + ΔW = W₀ + B × A  — A∈ℝ^(r×k), B∈ℝ^(d×r), r << min(d,k)</div>
+        <div class="formula">QLoRA = 量化基座模型(4bit) + LoRA 微调  — 显存占用减少 75%+</div>
+        <div class="formula">SFT 损失 = -Σ log P(y|x)  — 给定输入 x，最大化目标输出 y 的概率</div>
+      </div>
+
+      <div class="formula-box">
+        <h4>大数据特征 / 知识层级（训练师初级 必考）</h4>
+        <div class="formula">大数据 4V: Volume(规模) + Velocity(速度) + Variety(多样) + Value(价值)</div>
+        <div class="formula">DIKW: Data → Information → Knowledge → Wisdom</div>
+        <div class="formula">AI 三驾马车: 算力 + 算法 + 大数据</div>
+      </div>
+
+      <div class="formula-box">
+        <h4>阿里云产品速记（云计算工程师 必考）</h4>
+        <div class="formula">计算: ECS · 存储: OSS/EBS/NAS · 网络: VPC/SLB/NAT/CEN</div>
+        <div class="formula">数据库: RDS(PolarDB) · 大数据: MaxCompute/EMR · 安全: WAF/DDoS</div>
+        <div class="formula">云原生: ACK(K8s) + Serverless(FC) · IoT: 物联网平台 · CDN: DCDN</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Cert Info -->
+  <div class="section" id="detail">
+    <div class="section-title"><span class="icon">📋</span> 逐证详情（点击展开）</div>
+    <div class="section-body">
+
+      <!-- Ali DAMO -->
+      <div class="detail-card open">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>① 阿里达摩院 · 人工智能训练师（初级）</span>
+          <span class="dc-meta">34题 · 60min · 单选+判断+多选 · ~73,000人已认证</span>
+        </div>
+        <div class="dc-body">
+          <h4>知识点</h4>
+          <ul>
+            <li>人工智能训练师职业定义与角色</li>
+            <li>数据概念：知识层级（数据→信息→知识）、大数据特征</li>
+            <li>数据标注：图像/语音/文本标注规范、交叉标注质量校验</li>
+            <li>机器学习三类型：监督/无监督/强化学习</li>
+            <li>NLP 不确定性：语法/语义/语音层面</li>
+            <li>AI 核心驱动力：算力、算法、大数据</li>
+            <li>训练师 5 级分级体系</li>
+          </ul>
+          <div class="tip"><b>备考</b>：1 门课程 1h18m，100% 学完解锁考试。支持 2 倍速。考试有 2 次机会，不过可看题析重考。CSDN/知乎有大量题库分享。</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>② 阿里达摩院 · 人工智能训练师（高级）</span>
+          <span class="dc-meta">34题 · 90min · 单选20×3分+判断10×2分+多选4×5分 · ~69,000人已认证</span>
+        </div>
+        <div class="dc-body">
+          <h4>4 门课程知识点</h4>
+          <ul>
+            <li><b>语音合成 TTS</b>：文本归整→获取读音→停顿模型、SSML 标记语言、常见错误类型</li>
+            <li><b>语音识别 ASR</b>：AM+LM 双模型架构、3 种错误类型（替换/删除/插入）、CER 指标</li>
+            <li><b>文本生成</b>：概率统计/神经网络/规划生成/融合知识、BLEU/ROUGE/METEOR/PPL 评估</li>
+            <li><b>意图识别和分类</b>：二分类/多分类/多标签分类、规则 vs 算法、Precision/Recall/CER 计算</li>
+          </ul>
+          <div class="tip"><b>高频考点</b>：①模型评估指标计算（Precision/Recall/Accuracy 公式）②分词规则（地名完整性）③数据质量优先于数量 ④样本均衡防过拟合/欠拟合</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>③ 阿里达摩院 · 云计算工程师（初级）</span>
+          <span class="dc-meta">11模块 · 45min考试 · 80%学完解锁 · ~1,362人已认证</span>
+        </div>
+        <div class="dc-body">
+          <h4>11 大模块</h4>
+          <ul>
+            <li>云计算概要（部署形态/服务分类/AZ Region/Serverless）</li>
+            <li>弹性计算（ECS 6大组件/弹性伸缩）</li>
+            <li>云存储（OSS/EBS/NAS/CPFS/数据保护）</li>
+            <li>云网络（VPC/EIP/SLB/NAT/CEN/GA/VPN）</li>
+            <li>操作系统基础（Linux/GNU）</li>
+            <li>云原生（Docker/K8s/微服务/Serverless 实操）</li>
+            <li>云数据库（OLTP/OLAP/NoSQL/SQL基础/RDS）</li>
+            <li>大数据（Hadoop/Spark/Flink/MaxCompute）</li>
+            <li>物联网（MQTT/物模型/数据可视化）</li>
+            <li>云安全（安全法律/攻击方式/DDoS防护）</li>
+            <li>CDN（静态/动态加速/调度优化/架构）</li>
+          </ul>
+          <div class="tip"><b>备考</b>：内容最广但深度为通识级，重点记产品名称+核心概念。网络题库参考阿里云 ACA 认证。</div>
+        </div>
+      </div>
+
+      <!-- Huawei -->
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>④ 华为云 · DeepSeek搭建Agent智能助手</span>
+          <span class="dc-meta">中级 · 5小节74min课程 + 90min实验 · 70分及格 · 证书有效期2年</span>
+        </div>
+        <div class="dc-body">
+          <h4>课程大纲</h4>
+          <ul>
+            <li>Prompt VS Agent（16min）：理解 Agent 优势</li>
+            <li>Agent 概述（24min）：Agent 原理（感知/规划/执行/记忆）</li>
+            <li>Agent 发展现状（14min）：LangChain/AutoGPT 等开源生态</li>
+            <li>DeepSeek+Agent 文献综述助手（6min+14min 实验）</li>
+          </ul>
+          <div class="tip"><b>注意</b>：需华为云个人账号+实名认证+摄像头监考。实验90min在沙箱实验室完成。推荐 Chrome。</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑤ 华为云 · 大模型的咒语-Prompt工程</span>
+          <span class="dc-meta">入门/中级 · 4小节54min课程 + 120min实验 · 70分及格</span>
+        </div>
+        <div class="dc-body">
+          <h4>课程大纲</h4>
+          <ul>
+            <li>语言模型能力和局限（21min）：采样参数 Temperature/Top-P</li>
+            <li>华为云盘古大模型套件（7min）</li>
+            <li>大语言模型提示词工程（14min）：Few-shot/CoT/角色设定</li>
+            <li>盘古大模型提示词工程实践（12min）+ 120min 实验</li>
+          </ul>
+          <div class="tip"><b>重点</b>：Temperature/Top-P 参数含义、Few-shot vs Zero-shot 区别、CoT 思维链原理。</div>
+        </div>
+      </div>
+
+      <!-- Aliyun -->
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑥ 阿里云 · VISION人工智能设计(入门)</span>
+          <span class="dc-meta">20题 · 30min · 60分及格 · 6章20课时 · 身份验证+摄像头</span>
+        </div>
+        <div class="dc-body">
+          <h4>课程大纲</h4>
+          <ul>
+            <li>Design 3.0 与 ComfyUI 设计工具</li>
+            <li>ComfyUI 云端部署与界面操作（计算巢/PAI）</li>
+            <li>基础文生图（Prompt/高清放大/海报/LoRA）</li>
+            <li>基础图生图（图生图+LoRA+ControlNet）</li>
+            <li>ComfyUI x Wan 设计（文生视频/图生视频/特效）</li>
+            <li>Wan 万相内容创作平台</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑦ 阿里云 · VISION人工智能设计(进阶)</span>
+          <span class="dc-meta">20题 · 30min · 60分及格 · 4章13课时</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>ComfyUI x Wan 进阶（角色视频/重塑影像/定制风格模型）</li>
+            <li>Wan2.2 全新升级（视觉/粒子艺术/叙事/分镜/转场/声音）</li>
+            <li>AI MTV 全流程（虚拟角色/歌词/AI音乐/LIP-SYNC）</li>
+            <li>阿里云无影灵构（ComfyUI镜像部署）</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑧ 阿里云 · PAI ArtLab AIGC设计</span>
+          <span class="dc-meta">20题 · 30min · 60分及格 · 3章3课时 · 最短</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>认识 AIGC</li>
+            <li>Stable Diffusion WebUI（Checkpoint/LoRA/ControlNet）</li>
+            <li>插画文字海报生成实践</li>
+          </ul>
+          <div class="tip"><b>参考</b>：CSDN 有备考文章 blog.csdn.net/zhiyilang/article/details/147801213</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑨ 阿里云 · 利用大模型提升内容生产能力</span>
+          <span class="dc-meta">20题 · 30min · 60分及格 · 已确认考试参数 · 2章3课时</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>优化提示词提升大模型表现（Prompt 技巧/最佳实践）</li>
+            <li>借助大模型辅助内容生产（场景应用）</li>
+          </ul>
+          <div class="tip"><b>参考</b>：CSDN 有真题回忆 blog.csdn.net/davidkorhenn/article/details/148059015</div>
+        </div>
+      </div>
+
+      <!-- iFlytek -->
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑩ 科大讯飞 · Prompt工程师</span>
+          <span class="dc-meta">选择+判断 · 60分及格 · 120min · 讯飞+Datawhale联合</span>
+        </div>
+        <div class="dc-body">
+          <h4>3 章课程</h4>
+          <ul>
+            <li>前言（3课时）：学习目标/证书/大纲</li>
+            <li>动手体验大模型（2课时）：体验AI大模型/创建智能体</li>
+            <li>Prompt 知识点（4课时）：使用场景/局限性/结构化框架/APE/CARE/COAST/CRISPE等</li>
+          </ul>
+          <div class="tip"><b>重点</b>：结构化 Prompt 框架（9种）、星火大模型 Prompt 调试平台实操</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑪ 科大讯飞 · 微调工程师</span>
+          <span class="dc-meta">20单选 × 5分 · 80分及格 · 不限时 · 讯飞星辰MaaS平台</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>微调理论：数据标注/损失函数/超参调优</li>
+            <li>工具实操：讯飞星辰微调工具（零代码/低代码/分布式训练/效果评估）</li>
+            <li>实战案例：信息抽取/多模态生成/指令遵循</li>
+            <li>核心技术：全量微调/LoRA/QLoRA</li>
+          </ul>
+          <div class="tip"><b>注意</b>：Datawhale 联合版本与讯飞独立版本考试可能不同，Datawhale 版 80 分及格+无限次</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑫ 科大讯飞 · 智能体工程师</span>
+          <span class="dc-meta">选择+实操 · 60分及格 · 120min · 4章21课时</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>引言（3课时）：Agent 概念/趋势/实践</li>
+            <li>动手搭建智能体（5课时）：基础/工具类/逻辑/转换节点</li>
+            <li>客服助手案例（7课时）：意图分类/知识问答/资讯检索/闲聊/调试发布</li>
+            <li>面试助手案例（6课时）：数据集构建/意图识别/题库/答题分析</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑬ 科大讯飞 · RAG工程师</span>
+          <span class="dc-meta">选择+实操 · 60分及格 · 120min · 7章~40课时 · 最全面</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>RAG 概念与背景（4课时）：LLM 局限性/RAG 定义/对比</li>
+            <li>工作流程与核心组件（7课时）：预处理/Embedding/向量存储/检索/生成</li>
+            <li>技术演变（7课时）：NaiveRAG→AdvancedRAG→ModularRAG→AgenticRAG</li>
+            <li>从零搭建 RAG 系统（6课时）：设计/环境/组件实现/评估</li>
+            <li>RAGFlow 部署（5课时）：安装/操作/架构</li>
+            <li>讯飞+星火知识库 RAG 系统（5课时）：API 调用/原型开发</li>
+            <li>优化与评估（6课时）：优化方向/指标/常见问题/案例</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Datawhale -->
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑭ Datawhale · Fine-tuning Engineer</span>
+          <span class="dc-meta">20单选 × 5分 · 80分及格 · 不限时 · 无限次 · 讯飞星辰联合</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>大模型零基础微调</li>
+            <li>大模型微调原理</li>
+            <li>文生图大模型微调</li>
+            <li>微调数据集构建</li>
+          </ul>
+          <div class="tip"><b>课程</b>：datawhale.cn/learn/summary/72</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑮ Datawhale · AI Prompt Engineer</span>
+          <span class="dc-meta">选择题 · 80分及格 · 不限时 · 无限次 · 讯飞星火联合</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>Prompt 基本概念和用法</li>
+            <li>使用场景与大模型局限性</li>
+            <li>结构化框架：APE/CARE/RACE/COAST/CRISPE/RISE/TRACE/ROSES/LangGPT</li>
+            <li>写好 Prompt 的法则（OpenAI Cookbook）</li>
+            <li>体验 AI 大模型对话、创建智能体</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑯ Datawhale · AI Agent Engineer</span>
+          <span class="dc-meta">选择题 · 80分及格 · 不限时 · 无限次 · 魔搭社区联合</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>AI Agent 基础概念与理论</li>
+            <li>Agent 工作原理与应用场景</li>
+            <li>Agent 开发技能与实践操作</li>
+          </ul>
+          <div class="tip"><b>课程</b>：《动手学Agent应用开发》飞书文档</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑰ Datawhale · Agent Engineer</span>
+          <span class="dc-meta">20单选 × 5分 · 80分及格 · 不限时 · 无限次 · 支付宝百宝箱联合</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>AI Agent 应用开发基础</li>
+            <li>Agent 设计模式与构建</li>
+            <li>基于支付宝百宝箱的 Agent 搭建实践</li>
+          </ul>
+          <div class="tip"><b>注意</b>：与⑯为不同版本（合作方不同），知识点有重叠</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑱ Datawhale · AI+编程能力</span>
+          <span class="dc-meta">5单选×10分 + 1应用题×50分 · 80分及格 · 豆包MarsCode联合</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>入门：云 IDE 开发网页和游戏</li>
+            <li>基础：本地 IDE 开发网页游戏</li>
+            <li>进阶：AI 辅助刷题（算法+面试）</li>
+          </ul>
+          <div class="tip"><b>实操题</b>：上传 MarsCode 游戏开发/网页制作截图，审核无效将撤销证书</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑲ Datawhale · AI+数据分析</span>
+          <span class="dc-meta">5单选×10分 + 1应用题×50分 · 80分及格 · 商汤小浣熊联合</span>
+        </div>
+        <div class="dc-body">
+          <ul>
+            <li>AI+数据分析通识入门</li>
+            <li>动手学（入门/基础/进阶）</li>
+            <li>实践后的思考和讨论</li>
+          </ul>
+          <div class="tip"><b>实操题</b>：上传商汤办公小浣熊数据分析效果截图，审核无效将撤销证书</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="dc-head" onclick="this.parentElement.classList.toggle('open')">
+          <span>⑳ Datawhale · 大模型开发工程师</span>
+          <span class="dc-meta">20单选 × 5分 · 80分及格 · 不限时 · 无限次 · 浪潮信息联合 · 知识面最广</span>
+        </div>
+        <div class="dc-body">
+          <h4>知识点范围</h4>
+          <ul>
+            <li>大模型基础：SLM→NLM→PLM→LLM 演进</li>
+            <li>大模型构建：预训练 → SFT → RLHF 对齐</li>
+            <li>开源/闭源大模型、源大模型体系（1.0/2.0/2.0-M32）</li>
+            <li>开发范式：Prompt 工程 / Embedding 知识库 / 参数高效微调</li>
+            <li>应用开发：客户端与服务端</li>
+            <li>部署实践 + RAG 实战</li>
+          </ul>
+          <div class="tip"><b>特点</b>：知识面覆盖 Prompt+微调+RAG+部署，是综合型考试，建议放最后考</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Exam Strategy -->
+  <div class="section">
+    <div class="section-title"><span class="icon">🎯</span> 考试策略速查</div>
+    <div class="section-body">
+      <div class="tip">
+        <b>知识复用路线</b>：Prompt 工程（华为云⑤+讯飞⑩+Datawhale⑮+阿里云⑨）→ 微调（讯飞⑪+Datawhale⑭+大模型⑳）→ Agent（华为云④+讯飞⑫+Datawhale⑯⑰）→ RAG（讯飞⑬+大模型⑳）→ 先学后考，Datawhale 7 证可免课程直接试考
+      </div>
+      <div class="tip">
+        <b>免课程直考</b>：Datawhale 7 个考试均不限时+无限次+免费，中高级水平可先直接试考，不过再针对性复习课程
+      </div>
+      <div class="tip">
+        <b>阿里云 4 证</b>：全部 20 题/30 分钟/60 分及格，不提供错题回顾。需身份证+摄像头。PAI ArtLab 最短（3 课时），建议先考
+      </div>
+      <div class="tip">
+        <b>华为云 2 证</b>：70 分及格（高于阿里云 60 分），需个人华为云账号+实名+摄像头。证书有效期 2 年
+      </div>
+      <div class="tip">
+        <b>达摩院 3 证</b>：需橙码平台实名（姓名+学校）。支持 2 倍速播放。考试 2 次机会，不过可看题析。CSDN/知乎有大量题库
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:20px 0;color:#a0aec0;font-size:12px">
+    数据来源：各平台官方考试页面 + 公开网络资料 · 整理时间：2026-08-01<br>
+    考试内容可能随平台更新变化，建议考前登录确认最新信息
+  </div>
+
+</div>
+</body>
+</html>
