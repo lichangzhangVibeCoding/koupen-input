@@ -51,19 +51,30 @@ exports.default = async function afterPack(context) {
     context.appOutDir
   ]
 
+  // Mac: libvips-cpp.42.dylib
+  // Win (sharp 0.32.x): libvips-cpp.dll / libvips-42.dll（无「-版本」中间段）
+  const isLibvips = (_full, name) =>
+    /^libvips-cpp\.\d+\.dylib$/i.test(name) ||
+    /^libvips-cpp(-\d+)?\.dll$/i.test(name) ||
+    /^libvips-\d+\.dll$/i.test(name) ||
+    (/^libvips/i.test(name) && /\.(dylib|dll|so)(\.\d+)*$/i.test(name))
+
   let libvips = null
   for (const root of searchRoots) {
-    libvips = walkFind(
-      root,
-      (_full, name) => /^libvips-cpp\.\d+\.dylib$/i.test(name) || /^libvips-cpp-\d+\.dll$/i.test(name)
-    )
+    libvips = walkFind(root, isLibvips)
     if (libvips) break
   }
 
   if (!libvips) {
+    // Help CI diagnose: list any sharp / vendor paths under appOutDir
+    const sharpHint = walkFind(
+      context.appOutDir,
+      (_full, name) => name === 'sharp' || name === 'vendor' || /\.node$/i.test(name)
+    )
     throw new Error(
       '[afterPack] sharp vendor/libvips missing from package — local suite install will crash. ' +
-        'Run: npm run ensure-sharp && ensure asarUnpack includes **/sharp/**/*'
+        'Run: npm run ensure-sharp && ensure asarUnpack includes **/sharp/**/* ' +
+        `(appOutDir=${context.appOutDir}; nearest hint=${sharpHint || 'none'})`
     )
   }
   console.log('[afterPack] sharp libvips present:', libvips)

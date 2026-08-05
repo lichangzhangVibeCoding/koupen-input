@@ -53,13 +53,14 @@
     },
     "asar": true,
     "asarUnpack": [
-      "**/*.{node,dylib}",
+      "**/*.{node,dylib,dll}",
       "**/better-sqlite3/**/*",
       "**/active-win/**/*",
       "**/uiohook-napi/**/*",
       "**/@xenova/transformers/**/*",
       "**/onnxruntime-node/**/*",
       "**/sharp/**/*",
+      "**/sharp/vendor/**/*",
       "**/ffmpeg-static/**/*"
     ],
     "npmRebuild": true,
