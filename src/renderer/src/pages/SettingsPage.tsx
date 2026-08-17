@@ -494,6 +494,20 @@ export default function SettingsPage() {
           />
           <div className="settings-divider" />
           <ToggleRow
+            checked={form.voiceStripFillersEnabled !== false}
+            onChange={(checked) => setForm({ ...form, voiceStripFillersEnabled: checked })}
+            title={t('settings.voiceStripFillers')}
+            hint={t('settings.voiceStripFillersHint')}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
+            checked={form.voiceFixSttTyposEnabled !== false}
+            onChange={(checked) => setForm({ ...form, voiceFixSttTyposEnabled: checked })}
+            title={t('settings.voiceFixTypos')}
+            hint={t('settings.voiceFixTyposHint')}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
             checked={form.screenAskEnabled !== false}
             onChange={(checked) => setForm({ ...form, screenAskEnabled: checked })}
             title={brand.screenAsk.name}

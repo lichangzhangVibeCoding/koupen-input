@@ -1,7 +1,7 @@
 # 即刻对话 · 语音触发键（可选）
 
 > 状态：**已落地**  
-> 按住增强提示词：见 `docs/design-prompt-enhance.md`（点按仍贴原话；按住 ≥400ms 才增强）。
+> 按住增强提示词：见 `docs/design-prompt-enhance.md`（点按贴口述，可选去水词/改错别字；按住 ≥400ms 才增强）。
 
 ## 目标
 
@@ -31,17 +31,39 @@ Windows 仍为 **Alt**（设置页不展示上述三选一）：点按贴原话�
 
 ## 设置入口
 
-设置 → **语音**卡片：
+设置 → **能力开关**（即刻对话旁）：
 
 1. 启用开关  
-2. **触发键**下拉（仅 Mac）：右 Command / 右 Option / Fn  
+2. **触发键**（快捷键表；仅 Mac）：右 Command / 右 Option / Fn  
 3. 一句话提示：选 Fn 时注明部分键盘可能无效  
+4. **自动去除水词**（默认开）：去掉嗯、啊、呃、那个、就是等口语填充，保留实义  
+5. **自动改错别字**（默认开）：按上下文修正转写错字（含中英混听，如 茶是→茶室），不扩写、不编造  
 
 首页指挥台 / 帮助页的快捷键文案随所选触发键更新。
+
+## 转写后处理（点按原话 / 按住增强共用）
+
+点按仍是「口述贴进输入框」，但可选做**校对**，不是提示词增强：
+
+| 开关 | 默认 | 行为 |
+|---|---|---|
+| `voiceStripFillersEnabled` | **开** | 去掉无意义水词；拿不准则保留 |
+| `voiceFixSttTyposEnabled` | **开** | 按上下文改 STT 错字；禁止发明新内容 |
+
+流水线（`src/main/voice-input.ts`，STT 之后）：
+
+1. 两开关都关 → 直接贴 STT 原文（点按）或原文进增强（按住）  
+2. 只开水词 → 本地规则去掉填充词，**不调文本模型**  
+3. 开了改错别字（可同时开水词）→ **一次**文字槽调用（`chatCompletion` / 回复模型），提示词收紧：只校对、输出同一句、不扩写。失败则回退到规则清洗或原文，不阻断粘贴  
+
+按住增强：校对发生在 **STT 之后、`enhancePromptForAi` 之前**，便于场景路由吃到正确词（如茶室而不是茶是）。不要把具体错词对写进场景包。
+
+会员：不新增能力码。只开水词不扣文本积分；改错别字走现有 `reply` 槽（官方会员扣 `replyCredits` 一次）。BYOK / 本地不扣官方积分。详见 `docs/design-membership.md`。
 
 ## 技术要点
 
 - 配置字段：`voiceTrigger: 'rightCommand' | 'rightOption' | 'fn'`，默认 `rightCommand`  
+- 转写校对：`voiceStripFillersEnabled` / `voiceFixSttTyposEnabled`，默认均为 `true`；写入 `settings.json`  
 - 监听仍走 `modifier-tap`（uIOhook）；Fn 使用 libuiohook `VC_FUNCTION`（`0x020E`）  
 - 保存设置后立即按新触发键生效，无需重装  
 - 按住增强的 400ms 判定、与双击的互斥见 `docs/design-prompt-enhance.md`  

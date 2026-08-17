@@ -1,5 +1,17 @@
 # 即刻对话 — 文档与产品变更日志
 
+## 0.5.9 — 2026-08-18
+
+- **即刻对话转写校对**：设置新增「自动去除水词」「自动改错别字」（默认开）。点按贴口述前校对；按住增强在进场景路由前同样校对。改错别字走现有 `reply` 槽，不新开会员能力。详见 `docs/design-voice-trigger.md`。
+- **官网**：顶栏显示当前安装包版本；macOS 下载改为「敬请期待」，Windows 仍为真实安装包。
+- Windows 安装包：`TalkNow-0.5.9-x64.exe`
+
+
+> 约定：凡改功能，**先改文档、记本日志，再改代码**。  
+> 用户可见快捷键按平台写：Mac 用 `Command` / `Option`；Windows 用 `Alt` / `Ctrl`。改一端勿动另一端默认行为。
+
+---
+
 ## 0.5.8 — 2026-08-18
 
 - 托盘 / 语音输入 / 修饰键触发体验改进
@@ -16,6 +28,11 @@
 
 ### 产品 / 文档
 
+- **场景包纠偏**：website 包去掉茶馆/茶室预约等试验口试，不再当通用模块；`ppt` 包约束下游生成 **HTML 分页幻灯**，禁止 .ppt/.pptx。黄金口试用通用「做公司官网」。详见 `docs/design-prompt-enhance.md`、`src/shared/prompt-scenes/`。
+- **与AI对话：场景包技术路线**：按住增强改为「管道冻结 + 场景路由」。首发四包 `website` / `ppt` / `debug` / `brief`（拿不准 `generic`），与官网四卡对齐。新场景只加包和口试，不加第五技能。详见 `docs/design-prompt-enhance.md`、`src/shared/prompt-scenes/`。
+- **宣传站权威源码迁回 lizhenning**：以后只改 `lizhenning.com/other/typenow/`；本仓库 `website/` 勿改。Cursor 规则 + `npm run sync:releases` / `sync:plans` 双写站侧。详见 `docs/design-marketing-site.md`、lizhenning `other/typenow/AGENTS.md`。
+- **官网场景「与AI对话」**：首页「语音转文字」下方新增四卡（做网站 / PPT / 写代码修 Bug / 写方案问 ChatGPT），讲清按住增强提示词；语音第 3 卡改回纯写稿。
+- **按住增强改为任务说明书**：有图时视觉模型只抽屏幕事实，文字模型再扩写（祈使句、编号模块、补全默认功能与验收、修口误）。空屏不再把口述原样抄回。屏幕上有报错/代码时仍贴地、不编路径。详见 `docs/design-prompt-enhance.md`。
 - **即刻对话按住增强提示词**：点按仍贴口述原话（完全不改）；按住语音触发键 ≥400ms 则静默整屏截图 + 录音，松手转写后 `enhancePromptForAi` 再贴入，不发送。进入按住即取消本会单击/双击。不新开技能、不改看屏幕/帮我对话、硬件 `Command+8` / `Win+8` 仍点按原话。Windows 为 Alt 点按原话、Alt 按住增强。详见 `docs/design-prompt-enhance.md`。
 - **官网说明书**：帮助页增加「即刻对话」点按 / 按住操作说明；首页能力与上手文案对齐。用户向文档 `docs/guide-prompt-enhance.md`。
 

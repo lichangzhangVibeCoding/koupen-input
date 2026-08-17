@@ -81,6 +81,12 @@ export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppS
   if (typeof merged.deAiToneEnabled !== 'boolean') {
     merged.deAiToneEnabled = true
   }
+  if (typeof merged.voiceStripFillersEnabled !== 'boolean') {
+    merged.voiceStripFillersEnabled = true
+  }
+  if (typeof merged.voiceFixSttTyposEnabled !== 'boolean') {
+    merged.voiceFixSttTyposEnabled = true
+  }
   if (!isPersonaPackId(merged.personaPackId)) {
     merged.personaPackId = 'none'
   }

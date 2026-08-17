@@ -39,7 +39,7 @@ Application Support / typenow/  ← Electron userData（appId `com.typenow.app`�
 
 属于「怎么跑」：
 
-- 快捷键、语音开关、上下文条数  
+- 快捷键、语音开关、去水词 / 改错别字、上下文条数  
 - 模型槽绑定（本地 / 硅基等）、Base URL、模型名  
 - **API Key**（敏感；导出时可勾选「是否包含密钥」）
 

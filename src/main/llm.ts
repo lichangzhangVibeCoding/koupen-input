@@ -20,6 +20,7 @@ import {
   usesMembershipCloud,
   type MembershipCapability
 } from './membership'
+import { formatPromptSceneBlock, matchPromptScene } from '../shared/prompt-scenes'
 import { getOllamaStatus } from './ollama'
 
 export type GenerateReplyResult = {
@@ -663,62 +664,213 @@ export async function answerScreenQuiz(
   return { answer, questionText }
 }
 
-/**
- * 按住即刻对话：整屏截图 + 口述 → 改写成可粘贴的 AI 提示词（不回答、不写私聊回复）。
- */
-export async function enhancePromptForAi(
+const EMPTY_SCREEN_CONTEXT = '无相关上下文'
+
+function unwrapPromptBody(raw: string): string {
+  let text = raw.trim()
+  const fenced = text.match(/^```[a-zA-Z0-9_-]*\s*\r?\n([\s\S]*?)\r?\n```$/i)
+  if (fenced?.[1]) text = fenced[1].trim()
+  if (
+    (text.startsWith('"') && text.endsWith('"')) ||
+    (text.startsWith('「') && text.endsWith('」'))
+  ) {
+    text = text.slice(1, -1).trim()
+  }
+  return text
+}
+
+/** 有图时：视觉模型只抽与写提示词有关的事实，不写说明书。 */
+async function extractPromptScreenContext(
   settings: AppSettings,
-  image: { base64: string; mime: string } | null,
-  spoken: string,
+  image: { base64: string; mime: string },
   signal?: AbortSignal
 ): Promise<string> {
   const runtime = resolveRuntime(settings)
-  const spokenText = spoken.trim()
-  if (!spokenText) throw new Error('没有听清你说的话，请再按住说一次')
+  const model = runtime.visionModelName || runtime.modelName
+  const prompt = `用户正要对屏幕上的 AI 输入框说话。请只根据截图列出对「写给那个 AI 的任务说明」有用的事实。
 
-  const rules = `你是提示词改写助手。用户正对着当前屏幕上的输入框说话（常见是 ChatGPT、编程助手、邮件、文档）。
-请根据用户口述${image ? '和整屏截图' : ''}，把口述改写成一条更清晰、可直接粘贴进当前输入框的提示词。
-
-规则：
-1. 只输出改写后的提示词正文，不要引号，不要分析过程，不要前后说明
-2. 保留用户意图；不要替那个 AI 回答问题，不要写成微信/QQ 私聊回复
-3. ${image ? '结合截图里能看到的文件名、报错、选中代码、对话或文档，把含糊处写具体；不要编造截图里没有的路径、报错或数据' : '没有截图，只根据口述把意图写清楚，不要编造具体文件名或报错'}
-4. 不要用 markdown 代码围栏包住整段（除非用户就是要一段代码）
-5. 使用与用户口述相同的语言
-6. 不要写「请发送」或催促回车`
-
-  const userText = `用户口述：
-${spokenText}`
-
-  const model = image
-    ? runtime.visionModelName || runtime.modelName
-    : runtime.modelName
-  const capability = image ? 'reply_vision' : 'reply'
-
-  const content = image
-    ? [
-        { type: 'text', text: `${rules}\n\n${userText}` },
-        {
-          type: 'image_url',
-          image_url: { url: `data:${image.mime};base64,${image.base64}` }
-        }
-      ]
-    : `${rules}\n\n${userText}`
+输出规则：
+1. 若有报错、文件路径、选中代码、表格数字、文档标题、对话里上一句 AI 回复：每条一行短事实
+2. 最多 10 条；忽略浏览器栏、桌面图标、与任务无关的壳
+3. 若只是空输入框、聊天软件界面、或与即将要做的事无关：只输出一行「${EMPTY_SCREEN_CONTEXT}」
+4. 不要回答用户、不要写提示词、不要猜测看不见的内容`
 
   const raw = await chatCompletion(
     settings,
     {
       model,
-      temperature: 0.4,
-      max_tokens: 1200,
-      messages: [{ role: 'user', content }]
+      temperature: 0.1,
+      max_tokens: 500,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: { url: `data:${image.mime};base64,${image.base64}` }
+            }
+          ]
+        }
+      ]
     },
     signal,
-    capability
+    'reply_vision'
   )
-  const out = raw.trim()
+  const notes = unwrapPromptBody(raw)
+  return notes || EMPTY_SCREEN_CONTEXT
+}
+
+async function rewriteSpokenAsAiPrompt(
+  settings: AppSettings,
+  spokenText: string,
+  screenNotes: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const runtime = resolveRuntime(settings)
+  const scene = matchPromptScene(spokenText, screenNotes)
+  const sceneBlock = formatPromptSceneBlock(scene)
+  const prompt = `你是给其它 AI（Cursor、ChatGPT、WorkBuddy 等）写任务说明书的助手。
+用户刚口述了一个意图。请改写成一条可直接粘贴给那个 AI 去执行的提示词。
+
+屏幕摘要：
+${screenNotes}
+
+用户口述：
+${spokenText}
+
+${sceneBlock}
+
+通用规则：
+1. 只输出提示词正文。不要开场白、不要「好的，提示词如下」、不要分析过程、不要用 markdown 代码围栏包住整段
+2. 不要替那个 AI 回答问题，不要写代码实现，不要写成微信/QQ 私聊回复
+3. 把「我是…我想做…」改成对 Agent 的祈使任务（请你 / 为我做 …）
+4. 按语境修正口误
+5. 屏幕摘要里若有报错、文件名、代码、表格：必须写进提示词，且这些细节不得编造
+6. 屏幕摘要为「${EMPTY_SCREEN_CONTEXT}」时不要编造路径或报错；不要编造用户没提过的品牌、具体数字
+7. 必须遵守上面的【本轮场景】骨架、允许补全与禁止；不要串用其它场景的模块（例如修 Bug 不要写购物车，做 PPT 不要写官网）
+8. 使用与用户口述相同的语言
+9. 不要写「请发送」或催促回车`
+
+  const raw = await chatCompletion(
+    settings,
+    {
+      model: runtime.modelName,
+      temperature: 0.65,
+      max_tokens: 1400,
+      messages: [{ role: 'user', content: prompt }]
+    },
+    signal,
+    'reply'
+  )
+  const out = unwrapPromptBody(raw)
   if (!out) throw new Error('提示词增强没有写出内容，请重试')
   return out
+}
+
+/**
+ * 按住即刻对话：口述（+ 可选整屏）→ 场景路由 + 场景包 → 可粘贴的 AI 任务说明书。
+ * 有图时先抽屏幕事实；文字模型按 website/ppt/debug/brief/generic 扩写。
+ */
+export async function enhancePromptForAi(
+  settings: AppSettings,
+  image: { base64: string; mime: string } | null,
+  spoken: string,
+  signal?: AbortSignal,
+  onPhase?: (phase: 'reading' | 'writing') => void
+): Promise<string> {
+  const spokenText = spoken.trim()
+  if (!spokenText) throw new Error('没有听清你说的话，请再按住说一次')
+
+  let screenNotes = EMPTY_SCREEN_CONTEXT
+  if (image) {
+    onPhase?.('reading')
+    try {
+      screenNotes = await extractPromptScreenContext(settings, image, signal)
+    } catch {
+      screenNotes = EMPTY_SCREEN_CONTEXT
+    }
+    if (settings.inferenceMode !== 'local') {
+      await sleep(800, signal)
+    }
+  }
+
+  onPhase?.('writing')
+  return rewriteSpokenAsAiPrompt(settings, spokenText, screenNotes, signal)
+}
+
+/** 口语水词：嗯/啊/呃 以及停顿里的「那个/就是」。有实义的指代不在此硬删，交给模型拿不准时保留。 */
+export function stripSpokenFillers(text: string): string {
+  let s = text.replace(/\u3000/g, ' ')
+  s = s.replace(/[嗯呃额唔唉]+/g, '')
+  s = s.replace(/(^|[^\u4e00-\u9fff])啊+(?=[^\u4e00-\u9fff]|$)/g, '$1')
+  s = s.replace(/(?:那个){2,}/g, '')
+  s = s.replace(/(?:就是){2,}/g, '')
+  s = s.replace(/(^|[\s，,。！？、；;：:])那个(?=[\s，,。！？、；;：:]|$)/g, '$1')
+  s = s.replace(/(^|[\s，,。！？、；;：:])就是(?=[\s，,。！？、；;：:]|$)/g, '$1')
+  s = s.replace(/[ \t]{2,}/g, ' ')
+  s = s.replace(/[，,]{2,}/g, '，')
+  s = s.replace(/^[，,\s]+|[，,\s]+$/g, '')
+  s = s.replace(/\s+([，。！？、；;])/g, '$1')
+  return s.trim()
+}
+
+/**
+ * 即刻对话转写后处理：去水词（规则）+ 改错别字（回复模型，可选）。
+ * 失败时回退，不抛错。两开关都关则原样返回。
+ */
+export async function cleanVoiceTranscript(
+  settings: AppSettings,
+  spoken: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const raw = spoken.trim()
+  if (!raw) return spoken
+
+  const strip = settings.voiceStripFillersEnabled !== false
+  const fix = settings.voiceFixSttTyposEnabled !== false
+  if (!strip && !fix) return spoken
+
+  const afterFillers = strip ? stripSpokenFillers(raw) : raw
+  const fallback = afterFillers.trim() ? afterFillers : raw
+  if (!fix) return fallback
+
+  try {
+    const runtime = resolveRuntime(settings)
+    const fillerRule = strip
+      ? '同时去掉口语水词（嗯、啊、呃、那个、就是等无意义填充）。「那个/就是」若有实义（指代、解释）必须保留。'
+      : '不要删减口语词，除非它明显是识别错误的一部分。'
+    const prompt = `你是语音转写校对器。只修正识别错误，不要扩写、不要解释、不要换语气。
+
+规则：
+1. 只输出校对后的原文，不要引号、不要前缀、不要 Markdown。
+2. 可改：同音错字、明显错别字、中英混听（把词听成别的字）。
+3. 禁止发明原文没有的信息、禁止补充细节、禁止改成书面语。
+4. 拿不准就保持原词。
+5. ${fillerRule}
+
+原文：
+${fallback}`
+    const maxTokens = Math.min(800, Math.max(64, Math.ceil(fallback.length * 1.5) + 32))
+    const out = unwrapPromptBody(
+      await chatCompletion(
+        settings,
+        {
+          model: runtime.modelName,
+          temperature: 0,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }]
+        },
+        signal,
+        'reply'
+      )
+    )
+    if (!out) return fallback
+    if (out.length > fallback.length * 1.4 + 24) return fallback
+    return out
+  } catch {
+    return fallback
+  }
 }
 
 export function isLocalMode(settings: AppSettings): boolean {

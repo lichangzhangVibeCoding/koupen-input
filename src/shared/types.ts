@@ -35,6 +35,14 @@ export interface AppSettings {
   /** 长文本语音转文字开关 */
   voiceInputEnabled: boolean
   /**
+   * 即刻对话：去掉嗯、啊、呃、那个、就是等口语水词（默认开）
+   */
+  voiceStripFillersEnabled: boolean
+  /**
+   * 即刻对话：按上下文修正转写错字，不扩写（默认开）
+   */
+  voiceFixSttTyposEnabled: boolean
+  /**
    * 即刻对话点按触发键（仅 Mac 生效）
    * rightCommand=右 Command（默认）；rightOption=右 Option；fn=Fn/地球键
    * Windows 忽略，仍用 Alt
@@ -319,6 +327,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localVisionModelName: LOCAL_DEFAULTS.visionModel,
   contextWindowSize: 40,
   voiceInputEnabled: true,
+  voiceStripFillersEnabled: true,
+  voiceFixSttTyposEnabled: true,
   voiceTrigger: 'rightCommand',
   deAiToneEnabled: true,
   personaPackId: 'none',

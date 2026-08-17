@@ -4,7 +4,7 @@ import { t } from '../shared/i18n'
 import { captureFullScreen } from './capture'
 import { getSettings } from './db'
 import { showHud } from './hud'
-import { enhancePromptForAi } from './llm'
+import { cleanVoiceTranscript, enhancePromptForAi } from './llm'
 import { pasteIntoFrontApp } from './paste'
 import {
   isScreenAskBusy,
@@ -148,7 +148,19 @@ export async function endVoiceHold(): Promise<void> {
     if (!buffer.length) throw new Error(t('screenAsk.errNoAudio'))
 
     const signal = beginNetworkWork()
-    const spoken = await transcribeAudio(settings, buffer, mime, signal)
+    const spokenRaw = await transcribeAudio(settings, buffer, mime, signal)
+    if (myRun !== runId) throw new TaskCancelledError()
+    const needsCleanup =
+      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled !== false
+    if (needsCleanup) {
+      showHud({
+        kind: 'transcribing',
+        text: t('voice.hud.cleaning'),
+        detail: t('voice.hud.cleaningDetail'),
+        icon: 'write'
+      })
+    }
+    const spoken = await cleanVoiceTranscript(settings, spokenRaw, signal)
     if (myRun !== runId) throw new TaskCancelledError()
 
     showHud({
@@ -157,7 +169,30 @@ export async function endVoiceHold(): Promise<void> {
       detail: t('voice.hud.enhancingDetail'),
       icon: 'think'
     })
-    const enhanced = await enhancePromptForAi(settings, holdImage, spoken, signal)
+    const enhanced = await enhancePromptForAi(
+      settings,
+      holdImage,
+      spoken,
+      signal,
+      (phase) => {
+        if (myRun !== runId) return
+        if (phase === 'reading') {
+          showHud({
+            kind: 'generating',
+            text: t('voice.hud.enhanceReading'),
+            detail: t('voice.hud.enhanceReadingDetail'),
+            icon: 'look'
+          })
+          return
+        }
+        showHud({
+          kind: 'generating',
+          text: t('voice.hud.enhancing'),
+          detail: t('voice.hud.enhancingDetail'),
+          icon: 'think'
+        })
+      }
+    )
     if (myRun !== runId) throw new TaskCancelledError()
 
     const result = await pasteIntoFrontApp(enhanced, 'keep-clipboard')
@@ -258,7 +293,19 @@ export async function toggleVoiceInput(): Promise<void> {
     if (!buffer.length) throw new Error(t('screenAsk.errNoAudio'))
 
     const signal = beginNetworkWork()
-    const text = await transcribeAudio(settings, buffer, mime, signal)
+    const textRaw = await transcribeAudio(settings, buffer, mime, signal)
+    if (myRun !== runId) throw new TaskCancelledError()
+    const needsCleanup =
+      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled !== false
+    if (needsCleanup) {
+      showHud({
+        kind: 'transcribing',
+        text: t('voice.hud.cleaning'),
+        detail: t('voice.hud.cleaningDetail'),
+        icon: 'write'
+      })
+    }
+    const text = await cleanVoiceTranscript(settings, textRaw, signal)
     if (myRun !== runId) throw new TaskCancelledError()
     const result = await pasteIntoFrontApp(text, 'keep-clipboard')
     if (myRun !== runId) throw new TaskCancelledError()

@@ -2,7 +2,7 @@
 
 本机对话助手，少打字、快回人。支持 macOS 与 Windows。  
 视觉体系：**墨色信号 VI**（见 [docs/design-vi-ink-signal.md](./docs/design-vi-ink-signal.md)）。  
-官网品牌域名：[www.talknow.cn](https://www.talknow.cn/)（源码 [`website/`](./website/)；DNS 启用前可用过渡部署）。中文名 **即刻对话**，英文名 **TalkNow**。  
+官网品牌域名：[www.talknow.cn](https://www.talknow.cn/)（权威源码在 **lizhenning.com** 仓库 [`other/typenow/`](../../lizhenning.com/other/typenow/)；本仓库 [`website/`](./website/) 仅镜像，勿改；DNS 启用前过渡路径 lizhenning.com/other/typenow/）。中文名 **即刻对话**，英文名 **TalkNow**。  
 下载：[GitHub Releases](https://github.com/lichangzhangVibeCoding/koupen-input/releases/latest)。  
 （曾用名：口喷输入）
 
@@ -10,7 +10,7 @@
 
 | 对外名 | 一句话 | macOS | Windows |
 |---|---|---|---|
-| **即刻对话**（语音） | 点按贴原话；按住按屏幕增强提示词再贴入（不发送） | 点按触发键开始/结束；按住 ≥0.4 秒松手增强 | 点按 **Alt** 贴原话；按住 Alt 增强 |
+| **即刻对话**（语音） | 点按贴口述（可去水词/改错别字）；按住按屏幕增强提示词再贴入（不发送） | 点按触发键开始/结束；按住 ≥0.4 秒松手增强 | 点按 **Alt** 贴口述；按住 Alt 增强 |
 | **帮我对话** | 看当前聊天截图，按人设生成回复并填入（不发送） | 快速双击左 **Command** | 快速双击 **Alt** |
 | **看屏幕** | 我看着整屏，你说要干什么，我按你说的办 | **Command+1** | **Win+1** |
 

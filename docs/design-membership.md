@@ -23,7 +23,7 @@
 |------|------|------|------|
 | 即刻对话（官方 ASR） | `voiceCreditsPerMinute` | **2** | `ceil(秒/60) * 单价`，不足 1 分钟按 1 分钟 |
 | 帮我对话 · 读屏 | `replyVisionCredits` | **5** | 截图识别 |
-| 帮我对话 · 生成 | `replyCredits` | **10** | 文本回复；与读屏合计约 **15**/次 |
+| 帮我对话 · 生成 | `replyCredits` | **10** | 文本回复；与读屏合计约 **15**/次。即刻对话「改错别字」复用此槽，不新增能力码 |
 | 看屏幕 | `screenAskCredits` | **25** | 整屏视觉 + 回答 |
 | 看屏幕答题（每步） | `screenQuizCredits` | **15** | 读题与作答各扣一次，约 **30**/整次 |
 
@@ -71,7 +71,7 @@ BYOK / 本地路径 **不扣**。
 默认本地 Node API：`http://127.0.0.1:8788`。  
 **正式环境（官网 PHP + MySQL）**：客户端 `membershipServerUrl` 默认  
 `https://www.lizhenning.com/other/typenow/talknowAPi/index.php`  
-（IIS PATH_INFO：`index.php/v1/...`；代码在 `website/talknowAPi/`，PHP 5.2）
+（IIS PATH_INFO：`index.php/v1/...`；代码在 lizhenning `other/typenow/talknowAPi/`，PHP 5.2）
 
 ---
 
@@ -120,6 +120,7 @@ BYOK / 本地路径 **不扣**。
 - 侧栏「会员」页：登录、余额、套餐、**Stripe 支付**、客服/付款说明、兑换码
 - 已开通用户：更高档「升级到此档」走 Stripe；更低档「申请换到此档」仍弹客服微信；当前档「续费延长」走 Stripe
 - 会员模式：`stt` / `llm` 走薄代理；本地与 BYOK 仍可用且不扣分
+- 即刻对话转写后处理：只开「去水词」走本地规则、**不扣**文本积分；开「改错别字」时一次 `reply` 校对（失败则回退原文）。不新增 `X-TalkNow-Capability`。规格见 `docs/design-voice-trigger.md`
 - HUD：积分不足时提示并引导打开会员页
 
 ---

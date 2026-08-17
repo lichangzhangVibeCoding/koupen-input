@@ -1,6 +1,6 @@
 {
   "name": "typenow",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "即刻对话 / TalkNow — local chat assistant · www.talknow.cn",
   "main": "./out/main/index.js",
   "author": "TalkNow",
@@ -20,6 +20,7 @@
     "dist:win:green": "npm run ensure-sharp && npm run ensure-clean && npm run build && electron-builder --win portable zip --publish never",
     "rebuild": "electron-rebuild -f -w better-sqlite3,uiohook-napi",
     "sync:plans": "node scripts/sync-plan-catalog.mjs",
+    "sync:releases": "node scripts/sync-releases.mjs",
     "postinstall": "(electron-rebuild -f -w better-sqlite3,uiohook-napi || true) && node scripts/ensure-sharp.mjs"
   },
   "dependencies": {
@@ -129,6 +130,7 @@
       "artifactName": "${productName}-${version}-绿色版-${arch}.${ext}"
     },
     "nsis": {
+      "artifactName": "TalkNow-${version}-${arch}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "即刻对话",

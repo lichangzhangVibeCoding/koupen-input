@@ -40,6 +40,10 @@ function walk(dir, depth = 0) {
       continue
     }
     if (st.isDirectory()) {
+      // 本地会员服务库，不进 Electron 安装包
+      if (name === 'data' && (relative(root, dir) === 'server' || dir.endsWith(`${join('server')}`))) {
+        continue
+      }
       if (name === 'config' && depth <= 2) {
         const settings = join(full, 'settings.json')
         if (existsSync(settings)) note(settings, '疑似用户配置文件，不可打进安装包')

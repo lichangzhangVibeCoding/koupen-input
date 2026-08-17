@@ -1,4 +1,4 @@
-/** 帮助页场景导览（与官网 website/js/i18n.js scenarios.* 对齐） */
+/** 帮助页场景导览（与官网 lizhenning other/typenow/js/i18n.js scenarios.* 对齐） */
 
 export type LocaleText = { zh: string; en: string }
 
@@ -31,8 +31,8 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
     name: L('语音转文字', 'Voice Input'),
     tag: L('说比打快', 'Faster than typing'),
     how: L(
-      '把光标放进输入框。点按快捷键 {hotkey} 开始/结束，贴的是你说的原话；按住说话、松手后会按当前屏幕增强成提示词再贴入（不会自动发送）。',
-      'Focus an input field. Tap {hotkey} to start/stop and paste verbatim; hold to speak, release to enhance a prompt from the screen (never auto-sends).'
+      '把光标放进输入框。点按快捷键 {hotkey} 开始/结束，贴的是你说的话（可去水词、改错别字）；按住说话、松手后会按当前屏幕增强成提示词再贴入（不会自动发送）。',
+      'Focus an input field. Tap {hotkey} to start/stop and paste what you said (optional filler-strip / typo-fix); hold to speak, release to enhance a prompt from the screen (never auto-sends).'
     ),
     cards: [
       {
