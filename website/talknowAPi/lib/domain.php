@@ -388,6 +388,46 @@ function tn_change_subscription($userId, $planId, $changeType, $note = '', $mont
   );
 }
 
+/**
+ * 将 pending 订单标为已付并履约（线下确认 / Stripe webhook 共用，幂等）。
+ * $opts: paymentNote, externalTradeNo, months, changeType
+ */
+function tn_fulfill_paid_order($id, $opts) {
+  if (!is_array($opts)) $opts = array();
+  $id = trim((string)$id);
+  if ($id === '') throw new Exception('id required');
+  $pdo = tn_db();
+  $st = $pdo->prepare('SELECT * FROM tn_orders WHERE id=?');
+  $st->execute(array($id));
+  $ord = $st->fetch();
+  if (!$ord) throw new Exception('order not found');
+  if ($ord['status'] === 'paid') return $ord;
+  if ($ord['status'] === 'rejected') throw new Exception('已拒绝的意向不可履约');
+
+  $note = isset($opts['paymentNote']) ? $opts['paymentNote'] : $ord['payment_note'];
+  $ext = isset($opts['externalTradeNo']) ? $opts['externalTradeNo'] : $ord['external_trade_no'];
+  $parsed = array('kind' => '', 'interval' => 'month', 'change' => 'open');
+  if (function_exists('tn_parse_stripe_note')) {
+    $parsed = tn_parse_stripe_note($ord['payment_note']);
+  }
+  $changeType = isset($opts['changeType']) && $opts['changeType'] !== '' ? $opts['changeType'] : $parsed['change'];
+  if ($changeType === '' || $changeType === 'topup') $changeType = 'open';
+  $months = isset($opts['months']) ? (int)$opts['months'] : 0;
+  if ($months < 1) $months = ($parsed['interval'] === 'year') ? 12 : 1;
+  $t = tn_now();
+  $pdo->prepare('UPDATE tn_orders SET status=?, payment_note=?, paid_at=?, external_trade_no=? WHERE id=?')
+    ->execute(array('paid', $note, $t, $ext, $id));
+  $uid = (int)$ord['user_id'];
+  if ($ord['plan_id'] !== '') {
+    tn_change_subscription($uid, $ord['plan_id'], $changeType, '履约 '.$id.' '.$note, $months, '', '');
+  } elseif ((int)$ord['credits'] > 0) {
+    $reason = ($ord['source'] === 'stripe') ? 'stripe_topup' : 'offline_topup';
+    tn_apply_credit($uid, (int)$ord['credits'], $reason, 'purchased', $id, $note);
+  }
+  $st->execute(array($id));
+  return $st->fetch();
+}
+
 /** 解析手机号/用户 ID，必要时建档 */
 function tn_resolve_user_id($userId, $phone) {
   $userId = (int)$userId;

@@ -54,6 +54,8 @@
     'scenarios.voice.s3.desc': '写方案、写稿子时嘴巴比手快，说完就是一篇初稿。',
     'scenarios.voice.s4.title': '随手记灵感',
     'scenarios.voice.s4.desc': '走路、做饭、通勤时灵感来了，张口说，自动记成文字。',
+    'scenarios.voice.s5.title': '对 AI 说提示词',
+    'scenarios.voice.s5.desc': '对着 ChatGPT、Cursor 按住说话，它看着屏幕把口述改写成更清楚的提示词。',
 
     'scenarios.chat.name': '帮我对话',
     'scenarios.chat.tag': '回不过来交给它',
@@ -88,11 +90,11 @@
 
     'caps.voice.name': '语音转文字',
     'caps.voice.when': '什么时候用',
-    'caps.voice.whenText': '聊天、写邮件、写稿子、记灵感——只要打字嫌慢的时候。',
+    'caps.voice.whenText': '聊天、写邮件、写稿子、对 AI 说提示词——只要打字嫌慢的时候。',
     'caps.voice.result': '结果',
-    'caps.voice.resultText': '实时上屏的中文文字，标点自动加，可以直接发出去或贴进去。',
+    'caps.voice.resultText': '点按贴原话；按住则按当前屏幕改写成提示词再贴入。都不会自动发送。',
     'caps.voice.shortcut': '快捷键',
-    'caps.voice.shortcutText': '按住说话键，松开即完成',
+    'caps.voice.shortcutText': 'Mac 点按/按住右 Command（可改）；Windows 为 Alt。点按贴原话，按住增强。',
 
     'caps.chat.name': '帮我对话',
     'caps.chat.when': '什么时候用',
@@ -143,7 +145,7 @@
     'howto.step2.desc': '首次打开按提示授权麦克风和屏幕访问，就这两项，用完可以关。',
     'howto.step3.title': '配置模型',
     'howto.step3.desc': '填入你的 API Key（OpenAI / 通义千问 / DeepSeek 等），选好模型就能用了。',
-    'howto.tip': '所有快捷键都可以在设置里改，默认按住对应键即可呼出。',
+    'howto.tip': '即刻对话：点按贴原话，按住超过约 0.4 秒松手后按屏幕增强提示词。快捷键可在设置里改。',
 
     /* section: 下载 */
     'download.eyebrow': '立即下载',
@@ -153,7 +155,7 @@
     'download.win': 'Windows',
     'download.version': '当前版本',
     'download.changelog': '查看更新日志',
-    'download.note': '下载即同意通过 GitHub Releases 获取安装包，开源仓库可自行编译。',
+    'download.note': '安装包由本站提供直链下载；亦可自行从开源仓库编译。',
 
     'pricing.badge': '自配 Key 永久免费 · 官方模式统一积分',
     'pricing.title': '订阅与套餐',
@@ -162,7 +164,7 @@
 
     'subscribe.badge': '自配 Key 永久免费 · 官方模式统一积分',
     'subscribe.title': '订阅与套餐',
-    'subscribe.subtitle': '与 App「个人中心」同一套档位。价格与积分以后台为准；开通请在客户端联系客服线下办理。',
+    'subscribe.subtitle': '与 App「个人中心」同一套档位。价格与积分以后台为准；付费档可用 Stripe 测试结算，也可线下联系客服。',
     'subscribe.billingMonth': '月付',
     'subscribe.billingYear': '年付更省',
     'subscribe.loading': '正在同步套餐…',
@@ -180,8 +182,21 @@
     'subscribe.rate.nPerMin': '约 {n} 积分 / 分钟',
     'subscribe.rate.nPerRun': '约 {n} 积分 / 次',
     'subscribe.rate.topupValue': '{credits} 积分 / ¥{yuan}',
-    'subscribe.note': '购买方式：下载 App → 个人中心登录 → 按付款说明转账并联系客服开通。自配 Key / 本地模型不消耗本产品积分。',
-    'subscribe.cta': '下载 App 开通',
+    'subscribe.note': '本页登录后可用 Stripe 支付开通；也可下载 App 在个人中心结算。自配 Key / 本地模型不消耗本产品积分。',
+    'subscribe.cta': '下载 App',
+    'subscribe.payStripe': 'Stripe 支付',
+    'subscribe.loginToPay': '登录后支付',
+    'subscribe.phone': '手机号',
+    'subscribe.code': '验证码',
+    'subscribe.sendCode': '获取验证码',
+    'subscribe.doLogin': '登录',
+    'subscribe.logout': '退出',
+    'subscribe.loggedIn': '已登录 {phone}',
+    'subscribe.needLogin': '请先用 App 同一手机号登录再支付',
+    'subscribe.opening': '正在打开 Stripe…',
+    'subscribe.successTitle': '支付已提交',
+    'subscribe.successBody': '若已完成付款，积分与套餐会在几秒内到账。请打开 App 个人中心刷新查看。',
+    'subscribe.backPlans': '返回套餐',
 
     'plan.popular': '推荐',
     'plan.price.free': '限时免费',
@@ -205,15 +220,42 @@
     'plan.feat.priority': '优先支持与容量保障',
 
     'help.title': '帮助',
-    'help.subtitle': '安装、权限、会员与常见问题',
+    'help.subtitle': '即刻对话怎么用、安装权限、会员与常见问题',
+    'help.meta.title': '帮助 · 即刻对话 TalkNow',
+    'help.meta.desc': '即刻对话帮助：点按贴原话、按住增强提示词、安装权限、官方会员与常见问题。',
+    'help.guide.title': '即刻对话怎么用',
+    'help.guide.lead': '同一颗键，两种手势：点按贴原话，按住按屏幕增强成提示词。都不会自动发送。',
+    'help.guide.keysMac': 'Mac 默认右 Command（可在设置改成右 Option / Fn）',
+    'help.guide.keysWin': 'Windows 为 Alt',
+    'help.guide.tapTitle': '点按：贴原话',
+    'help.guide.tapLead': '微信、备忘录、浏览器——只要嫌打字慢。',
+    'help.guide.tap1': '光标放进输入框',
+    'help.guide.tap2': '点一下触发键，开始录音',
+    'help.guide.tap3': '说完再点一下结束',
+    'help.guide.tap4': '原话贴进去，你自己决定发不发',
+    'help.guide.holdTitle': '按住：增强提示词',
+    'help.guide.holdLead': '对着 ChatGPT、Cursor 等 AI 输入框说话，它看着屏幕把你的话写清楚。',
+    'help.guide.hold1': '光标放进那个输入框，屏幕上留着相关内容',
+    'help.guide.hold2': '按住触发键超过约 0.4 秒，底部出现增强提示',
+    'help.guide.hold3': '说话，说完松手',
+    'help.guide.hold4': '改写后的提示词贴进去，看过再回车',
+    'help.guide.notesTitle': '注意',
+    'help.guide.note1': 'Mac 备用键右 Command+8、Windows 的 Win+8 只有点按贴原话，按住不会增强。',
+    'help.guide.note2': '已经在点按录音中，再按只结束并贴原话，不会改成增强。',
+    'help.guide.note3': '看屏幕正在听你说话时，点按仍是结束提问，不会开增强。',
+    'help.guide.note4': '按住时又按了别的键（例如复制），这次增强会取消。',
+    'help.guide.note5': '随时按 Esc 立刻停下。帮我对话是快速双击，看屏幕是另一套组合键。',
+    'help.faqTitle': '常见问题',
     'help.q1': '如何下载安装？',
-    'help.a1': '打开官网首页下载区，选择 macOS 或 Windows 安装包。包托管在 GitHub Releases。',
+    'help.a1': '打开官网首页下载区，选择 macOS 或 Windows 安装包。安装包由本站直链提供。',
     'help.q2': 'Mac 需要哪些权限？',
-    'help.a2': '麦克风（语音）、屏幕录制（帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。',
+    'help.a2': '麦克风（语音）、屏幕录制（按住增强 / 帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。',
+    'help.q7': '点按和按住有什么区别？',
+    'help.a7': '点按贴你说的原话；按住超过约 0.4 秒会看一眼整屏，把口述改写成提示词再贴入。两种都不会自动发送。详见本页上方说明书。',
     'help.q3': '官方会员和自配 Key 有什么区别？',
     'help.a3': '官方会员免填第三方 Key，按次扣统一积分；自配 Key / 本地模型不消耗本产品积分，费用按你的服务商账单。',
     'help.q4': '如何开通或更换套餐？',
-    'help.a4': '下载 App → 个人中心登录 → 选择档位联系客服线下开通。套餐说明见「订阅」页，与个人中心一致。',
+    'help.a4': '下载 App 或打开「订阅」页，登录后用 Stripe 支付开通；也可联系客服线下办理。套餐与个人中心一致。',
     'help.q5': '积分不够怎么办？',
     'help.a5': '可购买加量包，或升级更高档位；也可临时改用自配 Key / 本地模型继续使用。',
     'help.q6': '找不到更新日志？',
@@ -275,6 +317,8 @@
     'scenarios.voice.s3.desc': 'When writing a proposal, your mouth is faster than your hands. Speak it, get a draft.',
     'scenarios.voice.s4.title': 'Capture ideas on the go',
     'scenarios.voice.s4.desc': 'Walking, cooking, commuting — talk and it auto-transcribes your ideas to text.',
+    'scenarios.voice.s5.title': 'Talk prompts to an AI',
+    'scenarios.voice.s5.desc': 'Hold and speak into ChatGPT or Cursor — it looks at the screen and rewrites your words into a clearer prompt.',
 
     'scenarios.chat.name': 'Reply Helper',
     'scenarios.chat.tag': 'Let it draft for you',
@@ -308,11 +352,11 @@
 
     'caps.voice.name': 'Voice Input',
     'caps.voice.when': 'When to use',
-    'caps.voice.whenText': 'Chatting, writing emails, drafting documents, capturing ideas — whenever typing is too slow.',
+    'caps.voice.whenText': 'Chatting, writing emails, drafting documents, talking to an AI — whenever typing is too slow.',
     'caps.voice.result': 'Result',
-    'caps.voice.resultText': 'Real-time Chinese text on screen with auto-punctuation. Send or paste it directly.',
+    'caps.voice.resultText': 'Tap to paste verbatim. Hold to rewrite it into a prompt from the screen. Neither auto-sends.',
     'caps.voice.shortcut': 'Shortcut',
-    'caps.voice.shortcutText': 'Hold to talk, release to finish',
+    'caps.voice.shortcutText': 'Mac: tap or hold right Command (changeable). Windows: Alt. Tap = verbatim, hold = enhance.',
 
     'caps.chat.name': 'Reply Helper',
     'caps.chat.when': 'When to use',
@@ -361,7 +405,7 @@
     'howto.step2.desc': 'On first launch, allow microphone and screen access. Just two things — revocable anytime.',
     'howto.step3.title': 'Configure model',
     'howto.step3.desc': 'Enter your API key (OpenAI / Qwen / DeepSeek, etc.), pick a model, and you are set.',
-    'howto.tip': 'All shortcuts are customizable in settings. Default: hold the key to invoke.',
+    'howto.tip': 'TalkNow: tap to paste verbatim; hold about 0.4s and release to enhance a prompt from the screen. Shortcuts are customizable.',
 
     'download.eyebrow': 'Download',
     'download.title': 'Pick one, install and go',
@@ -370,7 +414,7 @@
     'download.win': 'Windows',
     'download.version': 'Current version',
     'download.changelog': 'View changelog',
-    'download.note': 'Downloads are served via GitHub Releases. The repo is open source — build it yourself anytime.',
+    'download.note': 'Installers are hosted under this site’s downloads folder. The repo is open source — build it yourself anytime.',
 
     'pricing.badge': 'BYOK forever free · Official mode uses unified credits',
     'pricing.title': 'Subscribe & plans',
@@ -379,7 +423,7 @@
 
     'subscribe.badge': 'BYOK forever free · Official mode uses unified credits',
     'subscribe.title': 'Subscribe & plans',
-    'subscribe.subtitle': 'Same tiers as in-app Account. Prices and credits follow the server; activate offline via support in the app.',
+    'subscribe.subtitle': 'Same tiers as in-app Account. Pay with Stripe Checkout (test) or activate offline via support.',
     'subscribe.billingMonth': 'Monthly',
     'subscribe.billingYear': 'Yearly (save more)',
     'subscribe.loading': 'Syncing plans…',
@@ -397,8 +441,21 @@
     'subscribe.rate.nPerMin': '~{n} credits / min',
     'subscribe.rate.nPerRun': '~{n} credits / run',
     'subscribe.rate.topupValue': '{credits} credits / ¥{yuan}',
-    'subscribe.note': 'Buy in the app Account page after login. BYOK / local models do not spend app credits.',
-    'subscribe.cta': 'Download app to subscribe',
+    'subscribe.note': 'Sign in on this page to pay with Stripe, or buy in the app. BYOK / local models do not spend app credits.',
+    'subscribe.cta': 'Download the app',
+    'subscribe.payStripe': 'Pay with Stripe',
+    'subscribe.loginToPay': 'Sign in to pay',
+    'subscribe.phone': 'Phone',
+    'subscribe.code': 'Code',
+    'subscribe.sendCode': 'Send code',
+    'subscribe.doLogin': 'Sign in',
+    'subscribe.logout': 'Sign out',
+    'subscribe.loggedIn': 'Signed in as {phone}',
+    'subscribe.needLogin': 'Sign in with the same phone as the app before paying',
+    'subscribe.opening': 'Opening Stripe…',
+    'subscribe.successTitle': 'Payment submitted',
+    'subscribe.successBody': 'If payment succeeded, credits and plan update in a few seconds. Open the app Account page and refresh.',
+    'subscribe.backPlans': 'Back to plans',
 
     'plan.popular': 'Popular',
     'plan.price.free': 'Limited free',
@@ -422,15 +479,42 @@
     'plan.feat.priority': 'Priority support & capacity',
 
     'help.title': 'Help',
-    'help.subtitle': 'Install, permissions, membership, FAQ',
+    'help.subtitle': 'How to use TalkNow, install, permissions, membership, FAQ',
+    'help.meta.title': 'Help · TalkNow',
+    'help.meta.desc': 'TalkNow help: tap to paste verbatim, hold to enhance a prompt, install, permissions, membership, FAQ.',
+    'help.guide.title': 'How to use TalkNow voice',
+    'help.guide.lead': 'One key, two gestures: tap to paste verbatim, hold to enhance a prompt from the screen. Neither auto-sends.',
+    'help.guide.keysMac': 'Mac default: right Command (changeable to right Option / Fn in Settings)',
+    'help.guide.keysWin': 'Windows: Alt',
+    'help.guide.tapTitle': 'Tap: paste verbatim',
+    'help.guide.tapLead': 'WeChat, notes, the browser — anywhere typing is slow.',
+    'help.guide.tap1': 'Put the cursor in an input field',
+    'help.guide.tap2': 'Tap the trigger key to start recording',
+    'help.guide.tap3': 'Tap again when you are done',
+    'help.guide.tap4': 'Your words are pasted — you decide whether to send',
+    'help.guide.holdTitle': 'Hold: enhance the prompt',
+    'help.guide.holdLead': 'Speak into ChatGPT, Cursor, or similar. It looks at the screen and rewrites what you said.',
+    'help.guide.hold1': 'Focus that input and keep related content on screen',
+    'help.guide.hold2': 'Hold the trigger over about 0.4s until the enhance hint appears',
+    'help.guide.hold3': 'Speak, then release',
+    'help.guide.hold4': 'The rewritten prompt is pasted — review, then press Enter yourself',
+    'help.guide.notesTitle': 'Notes',
+    'help.guide.note1': 'Hardware backups right Command+8 (Mac) and Win+8 (Windows) are tap-only — they never enhance.',
+    'help.guide.note2': 'If a tap-to-talk recording is already running, the next press only stops it and pastes verbatim.',
+    'help.guide.note3': 'If Screen Ask is listening, a tap still ends the question — it will not start enhance.',
+    'help.guide.note4': 'Pressing another key while holding (for example Copy) cancels this enhance.',
+    'help.guide.note5': 'Press Esc to stop immediately. Reply Assist is a double-tap; Screen Ask uses a different chord.',
+    'help.faqTitle': 'FAQ',
     'help.q1': 'How do I install?',
-    'help.a1': 'Use the download section on the home page for macOS or Windows. Packages are hosted on GitHub Releases.',
+    'help.a1': 'Use the download section on the home page for macOS or Windows. Packages are hosted on this site.',
     'help.q2': 'What permissions does Mac need?',
-    'help.a2': 'Microphone (voice), Screen Recording (reply / screen ask), Accessibility (global hotkeys & paste). If hotkeys fail after granting, fully quit and reopen the app.',
+    'help.a2': 'Microphone (voice), Screen Recording (hold-to-enhance / reply / screen ask), Accessibility (global hotkeys & paste). If hotkeys fail after granting, fully quit and reopen the app.',
+    'help.q7': 'Tap vs hold?',
+    'help.a7': 'Tap pastes what you said. Hold over about 0.4s looks at the screen and rewrites it into a prompt. Neither auto-sends. See the guide above.',
     'help.q3': 'Official membership vs BYOK?',
     'help.a3': 'Official mode needs no third-party key and spends unified credits. BYOK / local models do not spend app credits.',
     'help.q4': 'How do I subscribe or change plans?',
-    'help.a4': 'Install the app → Account → pick a tier and contact support offline. See Subscribe — same tiers as Account.',
+    'help.a4': 'Sign in on Subscribe or in the app Account page, then pay with Stripe. Offline support is still available. Same tiers everywhere.',
     'help.q5': 'Out of credits?',
     'help.a5': 'Buy a top-up pack, upgrade, or temporarily switch to BYOK / local models.',
     'help.q6': 'Where is the changelog?',
@@ -500,20 +584,31 @@
     document.documentElement.lang = getLang() === 'zh' ? 'zh-CN' : 'en';
   }
 
+  function withLangQuery(url) {
+    if (!url) return url;
+    var hash = '';
+    var hashIdx = url.indexOf('#');
+    if (hashIdx >= 0) {
+      hash = url.slice(hashIdx);
+      url = url.slice(0, hashIdx);
+    }
+    // Always rebuild as ?lang=… — never append &lang without a leading ?
+    // (assigning a.href absolutizes; a second pass used to produce /path/&lang=zh → IIS 404)
+    var base = url.split('?')[0];
+    return base + '?lang=' + getLang() + hash;
+  }
+
   function keepLangLinks() {
     var links = document.querySelectorAll('a[data-keep-lang]');
     for (var i = 0; i < links.length; i++) {
       var href = links[i].getAttribute('href');
-      if (!href) continue;
-      var sep = href.indexOf('?') >= 0 ? '&' : '?';
-      var base = href.split('?')[0];
-      links[i].href = base + sep + 'lang=' + getLang();
+      if (!href || href.charAt(0) === '#') continue;
+      links[i].setAttribute('href', withLangQuery(href));
     }
   }
 
   function withLang(url) {
-    var sep = url.indexOf('?') >= 0 ? '&' : '?';
-    return url + sep + 'lang=' + getLang();
+    return withLangQuery(url);
   }
 
   function toggleLang() {

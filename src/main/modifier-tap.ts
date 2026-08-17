@@ -11,6 +11,15 @@ export type ModifierTapHandlers = {
   onSingleTap?: () => void
   /** 快速双击回复修饰键 → 帮我对话 */
   onDoubleTap?: () => void
+  /**
+   * 语音键按住 ≥ HOLD_MS 且仍空闲时进入增强。
+   * 返回 false：不进入按住（点按录音中 / 看屏幕听音等），抬起仍走单击。
+   */
+  onVoiceHoldStart?: () => boolean
+  /** 按住后抬起 → 转写并增强提示词 */
+  onVoiceHoldEnd?: () => void
+  /** 按住过程中变成组合键 → 丢弃本次增强 */
+  onVoiceHoldCancel?: () => void
   /** 右 Command + Shift + 1 → 看屏幕 */
   onScreenAsk?: () => void
   /** 右 Command + Shift + 2 → 看屏幕答题 */
@@ -22,6 +31,8 @@ export type ModifierTapHandlers = {
 }
 
 const DOUBLE_MS = 380
+/** 按住增强：keydown 起算，满此时长且键仍按下才进入 */
+const HOLD_MS = 400
 /** libuiohook VC_FUNCTION（macOS only） */
 const FN_KEYCODE = 0x020e
 /** Apple kVK_Function，部分环境可能直接报这个 */
@@ -37,20 +48,24 @@ type TapLane = {
   chorded: boolean
   lastAloneTapAt: number
   singleTimer: ReturnType<typeof setTimeout> | null
+  holdTimer: ReturnType<typeof setTimeout> | null
+  /** 本会已进入按住增强，抬起不再走单击/双击 */
+  holding: boolean
 }
 
-const voiceLane: TapLane = {
-  down: false,
-  chorded: false,
-  lastAloneTapAt: 0,
-  singleTimer: null
+function emptyLane(): TapLane {
+  return {
+    down: false,
+    chorded: false,
+    lastAloneTapAt: 0,
+    singleTimer: null,
+    holdTimer: null,
+    holding: false
+  }
 }
-const replyLane: TapLane = {
-  down: false,
-  chorded: false,
-  lastAloneTapAt: 0,
-  singleTimer: null
-}
+
+const voiceLane: TapLane = emptyLane()
+const replyLane: TapLane = emptyLane()
 
 let shiftDown = false
 /** 右 Command 是否按下（组合键 / 硬件备用，与语音触发解耦） */
@@ -63,11 +78,48 @@ function clearLaneTimer(lane: TapLane): void {
   }
 }
 
+function clearHoldTimer(lane: TapLane): void {
+  if (lane.holdTimer) {
+    clearTimeout(lane.holdTimer)
+    lane.holdTimer = null
+  }
+}
+
 function resetLane(lane: TapLane): void {
   clearLaneTimer(lane)
+  clearHoldTimer(lane)
   lane.down = false
   lane.chorded = false
   lane.lastAloneTapAt = 0
+  lane.holding = false
+}
+
+function cancelPendingTaps(): void {
+  clearLaneTimer(voiceLane)
+  voiceLane.lastAloneTapAt = 0
+  if (voiceSharesReplyKey()) {
+    clearLaneTimer(replyLane)
+    replyLane.lastAloneTapAt = 0
+  }
+}
+
+function startVoiceHoldTimer(): void {
+  clearHoldTimer(voiceLane)
+  voiceLane.holdTimer = setTimeout(() => {
+    voiceLane.holdTimer = null
+    if (!voiceLane.down || voiceLane.chorded || voiceLane.holding) return
+    const ok = handlers.onVoiceHoldStart?.()
+    if (ok === false) return
+    voiceLane.holding = true
+    cancelPendingTaps()
+  }, HOLD_MS)
+}
+
+function cancelActiveHold(): void {
+  clearHoldTimer(voiceLane)
+  if (!voiceLane.holding) return
+  voiceLane.holding = false
+  handlers.onVoiceHoldCancel?.()
 }
 
 function isShiftKey(keycode: number): boolean {
@@ -160,6 +212,16 @@ function handleAloneKeyUp(lane: TapLane, mode: 'voiceOnly' | 'replyDouble' | 'sh
   }, DOUBLE_MS)
 }
 
+/** 语音键第一次按下：暂停待触发单击（保留 lastAloneTapAt 以便短按仍能双击），并开始按住计时 */
+function armVoicePress(): void {
+  if (voiceLane.down) return
+  voiceLane.down = true
+  voiceLane.chorded = false
+  voiceLane.holding = false
+  clearLaneTimer(voiceLane)
+  startVoiceHoldTimer()
+}
+
 function attachListeners(): void {
   if (listenersAttached) return
   listenersAttached = true
@@ -178,16 +240,15 @@ function attachListeners(): void {
     }
 
     if (voiceSharesReplyKey() && asVoice) {
-      voiceLane.down = true
-      voiceLane.chorded = false
-      replyLane.down = true
-      replyLane.chorded = false
-    } else {
-      if (asVoice) {
-        voiceLane.down = true
-        voiceLane.chorded = false
+      if (!voiceLane.down) {
+        armVoicePress()
+        replyLane.down = true
+        replyLane.chorded = false
+        clearLaneTimer(replyLane)
       }
-      if (asReply) {
+    } else {
+      if (asVoice) armVoicePress()
+      if (asReply && !replyLane.down) {
         replyLane.down = true
         replyLane.chorded = false
       }
@@ -195,39 +256,42 @@ function attachListeners(): void {
 
     // Mac：右 Command 组合键（分得出左右；globalShortcut 做不到）
     if (process.platform === 'darwin' && chordModDown) {
-      if (shiftDown && e.keycode === UiohookKey[1]) {
+      const fireChord = (fn?: () => void): void => {
         markChorded()
+        clearHoldTimer(voiceLane)
+        if (voiceLane.holding) {
+          cancelActiveHold()
+          return
+        }
         clearLaneTimer(voiceLane)
         clearLaneTimer(replyLane)
-        handlers.onScreenAsk?.()
+        fn?.()
+      }
+      if (shiftDown && e.keycode === UiohookKey[1]) {
+        fireChord(() => handlers.onScreenAsk?.())
         return
       }
       if (shiftDown && e.keycode === UiohookKey[2]) {
-        markChorded()
-        clearLaneTimer(voiceLane)
-        clearLaneTimer(replyLane)
-        handlers.onScreenQuiz?.()
+        fireChord(() => handlers.onScreenQuiz?.())
         return
       }
       if (e.keycode === UiohookKey[8]) {
-        markChorded()
-        clearLaneTimer(voiceLane)
-        clearLaneTimer(replyLane)
-        handlers.onHardwareVoice?.()
+        fireChord(() => handlers.onHardwareVoice?.())
         return
       }
       if (e.keycode === UiohookKey[0]) {
-        markChorded()
-        clearLaneTimer(voiceLane)
-        clearLaneTimer(replyLane)
-        handlers.onHardwareReply?.()
+        fireChord(() => handlers.onHardwareReply?.())
         return
       }
     }
 
-    // 其它键按下：若某修饰键正按着，记为组合，不触发单击/双击
+    // 其它键按下：若某修饰键正按着，记为组合，不触发单击/双击；已按住则取消增强
     if (!asVoice && !asReply && !asChord && !isShiftKey(e.keycode)) {
-      if (voiceLane.down) voiceLane.chorded = true
+      if (voiceLane.down) {
+        voiceLane.chorded = true
+        clearHoldTimer(voiceLane)
+        if (voiceLane.holding) cancelActiveHold()
+      }
       if (replyLane.down) replyLane.chorded = true
     }
   })
@@ -244,21 +308,35 @@ function attachListeners(): void {
     const asReply = isReplyDoubleKey(e.keycode)
 
     if (voiceSharesReplyKey() && asVoice) {
+      const wasHolding = voiceLane.holding
       const wasChorded = voiceLane.chorded || replyLane.chorded
+      clearHoldTimer(voiceLane)
       voiceLane.down = false
       replyLane.down = false
       voiceLane.chorded = false
       replyLane.chorded = false
+      voiceLane.holding = false
+      if (wasHolding) {
+        if (!wasChorded) handlers.onVoiceHoldEnd?.()
+        return
+      }
       if (wasChorded) return
       handleAloneKeyUp(voiceLane, 'shared')
       return
     }
 
     if (asVoice) {
+      const wasHolding = voiceLane.holding
       const wasChorded = voiceLane.chorded
+      clearHoldTimer(voiceLane)
       voiceLane.down = false
       voiceLane.chorded = false
-      if (!wasChorded) handleAloneKeyUp(voiceLane, 'voiceOnly')
+      voiceLane.holding = false
+      if (wasHolding) {
+        if (!wasChorded) handlers.onVoiceHoldEnd?.()
+      } else if (!wasChorded) {
+        handleAloneKeyUp(voiceLane, 'voiceOnly')
+      }
     }
 
     if (asReply) {

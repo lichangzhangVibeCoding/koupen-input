@@ -53,4 +53,5 @@
 - Mac 权限引导 / 包名 typenow：`docs/design-permission-guide.md`
 - 多语言（即刻对话 / TalkNow）：`docs/design-i18n.md`
 - 看屏幕问答 / 看屏幕答题：`docs/design-screen-ask.md`
+- 按住说 = 提示词增强：`docs/design-prompt-enhance.md` · 用户说明书 `docs/guide-prompt-enhance.md`
 - 官方会员 / 积分 / 薄代理：`docs/design-membership.md` · 服务端 `server/` · 线下 SOP `docs/ops-offline-membership.md`

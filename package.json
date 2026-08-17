@@ -1,6 +1,6 @@
 {
   "name": "typenow",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "即刻对话 / TalkNow — local chat assistant · www.talknow.cn",
   "main": "./out/main/index.js",
   "author": "TalkNow",

@@ -74,11 +74,17 @@ def make_app_icon(size: int = 1024) -> Image.Image:
 
 
 def make_tray_template(size: int = 32) -> Image.Image:
-    """Black glyph on transparent — macOS template."""
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    draw_ji_mark(d, size / 2, size / 2, size * 0.72, (0, 0, 0, 255))
-    return img
+    """Black silhouette from the current app icon — macOS template (alpha = shape)."""
+    icon_path = RES / "icon.png"
+    base = Image.open(icon_path).convert("RGBA")
+    inner = max(1, int(size * 0.82))
+    scaled = base.resize((inner, inner), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    off = (size - inner) // 2
+    canvas.paste(scaled, (off, off), scaled)
+    _r, _g, _b, a = canvas.split()
+    black = Image.new("L", (size, size), 0)
+    return Image.merge("RGBA", (black, black, black, a))
 
 
 def make_dmg_bg(w: int = 660, h: int = 400) -> Image.Image:
@@ -148,10 +154,10 @@ def main() -> None:
     # also copy for electron-builder default look
     shutil.copy(icon_path, BUILD / "icon.png")
 
-    tray = make_tray_template(32)
-    tray.save(RES / "trayTemplate.png")
     tray16 = make_tray_template(16)
-    # mac prefers @2x naming sometimes; keep 32 as main template
+    tray32 = make_tray_template(32)
+    tray16.save(RES / "trayTemplate.png")
+    tray32.save(RES / "trayTemplate@2x.png")
     tray16.save(RES / "trayTemplate-16.png")
     print("wrote tray templates")
 

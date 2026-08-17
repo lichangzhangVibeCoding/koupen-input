@@ -7,6 +7,27 @@ window.TYPENOW_RELEASES = {
   "siteUrl": "https://www.talknow.cn/",
   "releases": [
     {
+      "version": "0.5.8",
+      "date": "2026-08-18",
+      "title": "托盘、语音与站内下载加固",
+      "titleEn": "Tray, voice, and site download hardening",
+      "highlights": [
+        "托盘图标与菜单更稳；语音输入与修饰键触发体验改进",
+        "会员/账户相关能力与官网下载链路（Win 直链）修复",
+        "更新日志页链接与内容展示修复，避免 &lang= 导致 404"
+      ],
+      "highlightsEn": [
+        "More reliable tray icon/menu; improved voice input and modifier-key triggers",
+        "Membership/account updates and Windows site download link fixes",
+        "Changelog URL/lang query fix (no more &lang= 404) and SSR content"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.8-arm64.dmg",
+        "macX64": "即刻对话-0.5.8-x64.dmg",
+        "winX64": "TalkNow-0.5.8-x64.exe"
+      }
+    },
+    {
       "version": "0.5.7",
       "date": "2026-07-28",
       "title": "本地套件一键安装修复",
@@ -22,7 +43,7 @@ window.TYPENOW_RELEASES = {
       "downloads": {
         "macArm64": "即刻对话-0.5.7-arm64.dmg",
         "macX64": "即刻对话-0.5.7-x64.dmg",
-        "winX64": "即刻对话-0.5.7-x64.exe"
+        "winX64": "TalkNow-0.5.7-x64.exe"
       }
     },
     {
@@ -302,4 +323,4 @@ window.TYPENOW_RELEASES = {
       }
     }
   ]
-};
+}

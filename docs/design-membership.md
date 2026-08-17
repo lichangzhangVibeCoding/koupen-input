@@ -1,7 +1,7 @@
 # 即刻对话 · 官方会员与积分（设计）
 
-> 状态：**首版可落地（线下收款 + 管理后台 + 薄代理）**  
-> 在线微信/支付宝支付：**后置**（公司主体就绪后）  
+> 状态：**线下收款 + Stripe Checkout 测试结算 + 管理后台 + 薄代理**  
+> 微信/支付宝商户：**后置**（公司主体就绪后）  
 > 原则：自配 Key / 本地 = 永久免费；官方会员 = 免配 Key、统一扣积分
 
 ---
@@ -66,7 +66,7 @@ BYOK / 本地路径 **不扣**。
 
 - **自建**：`server/` — 账号、积分账本、管理后台、薄代理（鉴权 → 扣分 → 转发 OpenAI 兼容上游）
 - **不自建**：完整 AI 中转站；上游先用硅基流动，后台改 `baseUrl`/`apiKey`/`model` 即可换折扣渠道
-- **支付**：首版 `orders.source = offline`；预留 `wechat` / `alipay`
+- **支付**：`orders.source = offline` 仍可用；**Stripe Checkout**（`source=stripe`）走托管结算页 + webhook 履约；预留 `wechat` / `alipay`
 
 默认本地 Node API：`http://127.0.0.1:8788`。  
 **正式环境（官网 PHP + MySQL）**：客户端 `membershipServerUrl` 默认  
@@ -106,8 +106,9 @@ BYOK / 本地路径 **不扣**。
 | POST | `/v1/redeem` | 兑换码 |
 | POST | `/v1/proxy/audio/transcriptions` | 官方 ASR；按音频时长扣分 |
 | POST | `/v1/proxy/chat/completions` | 官方 chat/vision；Header `X-TalkNow-Capability: reply\|screen_ask\|screen_quiz` |
-| POST | `/v1/orders` | 创建订单（首版仅 `source=offline` 由后台确认） |
-| GET | `/v1/orders/:id` | 查单（为以后支付回调预留） |
+| POST | `/v1/orders` | 创建订单。`source=offline` 待后台确认；`source=stripe` 返回 `checkoutUrl` |
+| GET | `/v1/orders/:id` | 查单（支付回跳后可轮询） |
+| POST | `/v1/stripe/webhook` | Stripe 验签履约（`checkout.session.completed` / `async_payment_succeeded` / `invoice.paid`） |
 
 失败策略：上游失败 **不扣**（或预扣后回滚）；积分不足返回 `402` + 明确文案。
 
@@ -116,8 +117,8 @@ BYOK / 本地路径 **不扣**。
 ## 6. 客户端
 
 - 设置字段：`modelRoutingMode: 'byok' | 'membership'`、`membershipServerUrl`、`membershipAccessToken`
-- 侧栏「会员」页：登录、余额、套餐、客服/付款说明、兑换码；**无**微信/支付宝按钮（P5 再开）
-- 已开通用户：更高档显示「升级到此档」，更低档「申请换到此档」，当前档可「续费延长」；点击仅弹客服微信（不静默建意向）
+- 侧栏「会员」页：登录、余额、套餐、**Stripe 支付**、客服/付款说明、兑换码
+- 已开通用户：更高档「升级到此档」走 Stripe；更低档「申请换到此档」仍弹客服微信；当前档「续费延长」走 Stripe
 - 会员模式：`stt` / `llm` 走薄代理；本地与 BYOK 仍可用且不扣分
 - HUD：积分不足时提示并引导打开会员页
 
@@ -162,16 +163,41 @@ BYOK / 本地路径 **不扣**。
 
 ---
 
-## 8. 在线支付预留（P5 · 后置）
+## 8. 在线支付（Stripe · 测试结算）
 
-公司与微信/支付宝商户就绪后：
+公司主体未就绪前，**先用 Stripe 测试模式**接入订阅结算（沙盒账号「TalkNow 沙盒」）。微信/支付宝仍后置。
 
-1. `POST /v1/orders` 支持 `source=wechat|alipay`，返回支付参数  
-2. 支付 webhook 验签 → 订单 paid → 加积分 / 开订阅（与线下同一 `credit_ledger`）  
-3. 客户端会员页露出「微信支付 / 支付宝」与连续包月/包年  
-4. 数据结构已含 `orders.channel`、`external_trade_no`，**无需改账本模型**
+### 8.1 产品模型
 
-首版相关路由可返回 `501 Payment not enabled`，避免误用。
+每个付费档位一个 Stripe Product（标准 / 高级 / 旗舰），月付与年付各一条 Price；加量包单独 Product + 一次性 Price。  
+**不要**把不同档位挂在同一个 Product 上。
+
+测试环境结算币种用 **HKD**（香港账户；官网页仍展示 ¥ 标价，数值与档位表一致，上线前按主体改币种）。
+
+| 本地档位 | Stripe Product id | 月付 Price key | 年付 Price key |
+|----------|-------------------|----------------|----------------|
+| `standard` | `talknow_standard` | `standard_month` | `standard_year` |
+| `advanced` | `talknow_advanced` | `advanced_month` | `advanced_year` |
+| `flagship` | `talknow_flagship` | `flagship_month` | `flagship_year` |
+| 加量包 1000 分 | `talknow_topup` | `topup`（一次性） | — |
+
+### 8.2 结算路径
+
+1. 已登录用户 `POST /v1/orders`，`source=stripe`，带 `planId` + `interval=month|year`，或加量包 `credits` + `amountCents`  
+2. 服务端建 pending 订单，再创建 Checkout Session（套餐 `mode=subscription`，加量包 `mode=payment`），**不传** `payment_method_types`（动态支付方式）  
+3. 返回 `checkoutUrl`；App 用系统浏览器打开，官网订阅页直接跳转  
+4. **履约只认 webhook**（成功页不发积分）：  
+   - `checkout.session.completed` 且 `payment_status=paid`  
+   - `checkout.session.async_payment_succeeded`  
+   - `invoice.paid` 且 `billing_reason=subscription_cycle`（续费再发 1 账期）  
+5. 履约与线下同一套 `tn_change_subscription` / `credit_ledger`；`orders.external_trade_no` 存 Session / Invoice id，重复通知幂等
+
+配置：PHP `config.php` 的 `stripe_secret_key` / `stripe_webhook_secret` / `stripe_prices`；本地 Node 用环境变量 `STRIPE_*`。  
+Webhook 公网：`…/talknowAPi/index.php/v1/stripe/webhook`（Dashboard 或 `stripe listen`）。
+
+Customer Portal、Stripe Tax、微信/支付宝：**未做**。若向美欧收款，需另开 [Stripe Tax 登记](https://docs.stripe.com/billing/taxes/collect-taxes) 后再开 `automatic_tax`。
+
+`source=wechat|alipay` 仍返回 `501 Payment not enabled`。
 
 ---
 
@@ -189,4 +215,4 @@ BYOK / 本地路径 **不扣**。
 - [ ] 无客户端 Key、会员模式可完成一次语音 + 一次帮我对话并扣分  
 - [ ] 积分为 0 时官方路径被拦；切 BYOK 仍可用  
 - [ ] 线下开单有凭证备注；兑换码可用  
-- [ ] 官网定价页与档位数字一致，购买引导为联系客服/线下  
+- [ ] 官网定价页与档位数字一致；付费档可 Stripe 结算（测试卡），线下客服仍可用  

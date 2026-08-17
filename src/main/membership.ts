@@ -177,6 +177,34 @@ export async function membershipCreateOfflineIntent(
   }
 }
 
+export async function membershipCreateStripeCheckout(
+  settings: AppSettings,
+  body: {
+    planId?: string
+    interval?: 'month' | 'year'
+    changeType?: string
+    credits?: number
+    amountCents?: number
+  }
+): Promise<{ id: string; checkoutUrl: string; sessionId: string }> {
+  const res = await membershipFetch(settings, '/v1/orders', {
+    method: 'POST',
+    body: JSON.stringify({ source: 'stripe', ...body })
+  })
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string
+    id?: string
+    checkoutUrl?: string
+    sessionId?: string
+  }
+  if (!res.ok || !data.checkoutUrl) throw new Error(data.error || '无法创建 Stripe 结算')
+  return {
+    id: data.id || '',
+    checkoutUrl: data.checkoutUrl,
+    sessionId: data.sessionId || ''
+  }
+}
+
 export function formatMembershipHttpError(status: number, body: string): string {
   try {
     const j = JSON.parse(body) as {

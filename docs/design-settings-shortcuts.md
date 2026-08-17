@@ -1,8 +1,8 @@
 # 设置页改版：快捷键表 + 分组
 
 > 状态：**已落地**  
-> 相关：`docs/design-voice-trigger.md`（即刻对话触发键三选一）  
-> **不做**：增强提示词开关（另开需求）
+> 相关：`docs/design-voice-trigger.md`（即刻对话触发键三选一）· `docs/design-prompt-enhance.md`（点按原话 / 按住增强）  
+> 不另加「增强提示词」开关或第五行快捷键：语音开着即有按住增强。
 
 ## 目标
 
@@ -27,7 +27,7 @@
 
 | 命令 | 按键绑定 | 操作 |
 |---|---|---|
-| 即刻对话 | Mac：右 Command / 右 Option / Fn 三选一（默认右 Command）；Win：Alt（只读） | Mac：修改；行内恢复默认 |
+| 即刻对话 | Mac：右 Command / 右 Option / Fn 三选一（默认右 Command）；Win：Alt（只读）。**点按贴原话，按住 ≥400ms 增强提示词** | Mac：修改；行内恢复默认 |
 | 帮我对话 | 推荐双击修饰键，或自定义组合 | 修改 · 恢复 |
 | 看屏幕 | 默认 `Command/Super+Shift+1` | 修改 · 恢复 |
 | 看屏幕答题 | 默认 `Command/Super+Shift+2` | 修改 · 恢复 |

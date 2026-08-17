@@ -76,7 +76,7 @@
     <div class="hero-text">
       <div class="hero-badge" data-i18n="hero.badge">Mac & Windows · 本机运行 · 数据不出门</div>
       <h1 class="hero-title" data-i18n="hero.title">说话就能办，看屏幕就能答</h1>
-      <p class="hero-subtitle" data-i18n="hero.subtitle">语音转文字、帮你回消息邮件、看屏幕帮你查价翻译解题——你的本机 AI 对话助手，说一声就来。</p>
+      <p class="hero-subtitle" data-i18n="hero.subtitle">点按贴原话，按住按屏幕增强提示词；还能帮你回消息、看屏幕查价翻译解题——本机助手，说一声就来。</p>
       <div class="hero-cta">
         <a href="#download" class="btn btn-primary" data-i18n="hero.cta.mac">下载 macOS 版</a>
         <a href="#download" class="btn btn-secondary" data-i18n="hero.cta.win">下载 Windows 版</a>
@@ -134,7 +134,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         </div>
         <h4 data-i18n="scenarios.voice.s1.title">微信聊天懒得打字</h4>
-        <p data-i18n="scenarios.voice.s1.desc">说一段话，自动变成消息发出去，比一条条敲字快太多。</p>
+        <p data-i18n="scenarios.voice.s1.desc">点按说话，原话贴进输入框，比一条条敲字快太多。不会自动发送。</p>
         <div class="scenario-tags"><span class="tag">微信</span></div>
       </div>
       <div class="scenario-card">
@@ -150,7 +150,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
         </div>
         <h4 data-i18n="scenarios.voice.s3.title">边想边说写初稿</h4>
-        <p data-i18n="scenarios.voice.s3.desc">写方案、写稿子时嘴巴比手快，说完就是一篇初稿。</p>
+        <p data-i18n="scenarios.voice.s3.desc">写方案、对 ChatGPT / Cursor 说话：点按贴原话；按住超过约 0.4 秒松手，按屏幕改写成提示词再贴入。</p>
         <div class="scenario-tags"><span class="tag">写稿</span><span class="tag">方案</span></div>
       </div>
       <div class="scenario-card">
@@ -279,15 +279,15 @@
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.voice.when">什么时候用</div>
-          <p data-i18n="caps.voice.whenText">聊天、写邮件、写稿子、记灵感——只要打字嫌慢的时候。</p>
+          <p data-i18n="caps.voice.whenText">聊天、写邮件、写稿子、对 AI 说提示词——只要打字嫌慢的时候。</p>
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.voice.result">结果</div>
-          <p data-i18n="caps.voice.resultText">实时上屏的中文文字，标点自动加，可以直接发出去或贴进去。</p>
+          <p data-i18n="caps.voice.resultText">点按：说完再点一下，贴的是原话。按住超过约 0.4 秒再松手：看着整屏把口述改写成提示词再贴入。两种都不会自动发送。</p>
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.voice.shortcut">快捷键</div>
-          <p data-i18n="caps.voice.shortcutText">按住说话键，松开即完成</p>
+          <p data-i18n="caps.voice.shortcutText">Mac 默认右 Command（可改右 Option / Fn）；Windows 为 Alt。备用 Command+8 / Win+8 只有点按原话。详见帮助页。</p>
         </div>
       </div>
     </div>
@@ -425,7 +425,7 @@
       <p data-i18n="howto.step3.desc">填入你的 API Key（OpenAI / 通义千问 / DeepSeek 等），选好模型就能用了。</p>
     </div>
   </div>
-  <p class="howto-tip" data-i18n="howto.tip">所有快捷键都可以在设置里改，默认按住对应键即可呼出。</p>
+  <p class="howto-tip" data-i18n="howto.tip">即刻对话：点按贴原话，按住超过约 0.4 秒松手后按屏幕增强提示词。快捷键可在设置里改。</p>
 </section>
 
 <!-- ═══════════════ 下载 ═══════════════ -->
@@ -485,24 +485,34 @@
 <script src="./js/releases.js"></script>
 <script>
   document.getElementById('footerYear').textContent = new Date().getFullYear();
-  // smooth scroll
-  document.querySelectorAll('a[href^="#"]').forEach(function(a) {
-    a.addEventListener('click', function(e) {
-      var target = document.querySelector(this.getAttribute('href'));
-      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
-    });
-  });
-  // nav scroll shadow
   var nav = document.getElementById('nav');
-  window.addEventListener('scroll', function() {
-    nav.classList.toggle('nav-scrolled', window.scrollY > 10);
-  });
-  // mobile burger
   var burger = document.getElementById('navBurger');
   var links = document.querySelector('.nav-links');
-  if (burger) {
+  // smooth scroll（跳过 href="#"，避免语言切换等按钮 querySelector('#') 抛错）
+  document.querySelectorAll('a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      var href = this.getAttribute('href') || '';
+      if (!href || href === '#') return;
+      var target = null;
+      try { target = document.querySelector(href); } catch (err) { return; }
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+        if (links) links.classList.remove('nav-links-open');
+      }
+    });
+  });
+  window.addEventListener('scroll', function() {
+    if (nav) nav.classList.toggle('nav-scrolled', window.scrollY > 10);
+  });
+  if (burger && links) {
     burger.addEventListener('click', function() {
       links.classList.toggle('nav-links-open');
+    });
+    links.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        links.classList.remove('nav-links-open');
+      });
     });
   }
 </script>

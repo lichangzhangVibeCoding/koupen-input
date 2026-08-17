@@ -1,12 +1,16 @@
 import { NativeImage } from 'electron'
 import type { Channel } from '../shared/types'
 
-/** 视觉模型输入：长边上限（像素） */
+/** 视觉模型输入：长边上限（像素）— 聊天窗 ROI */
 export const VISION_MAX_LONG_EDGE = 1024
+/** 整屏问答/答题：更清晰，减轻密集文字错绑（校名↔人数） */
+export const SCREEN_ASK_MAX_LONG_EDGE = 1600
 /** 截屏 thumbnail 长边上限（预处理前） */
-export const CAPTURE_MAX_LONG_EDGE = 1280
-/** JPEG 质量（省 token，文字识别够用） */
+export const CAPTURE_MAX_LONG_EDGE = 1600
+/** JPEG 质量（聊天窗） */
 export const VISION_JPEG_QUALITY = 75
+/** 整屏 JPEG：略提高，方便读小字 */
+export const SCREEN_ASK_JPEG_QUALITY = 88
 
 export type VisionImagePayload = {
   base64: string
@@ -83,11 +87,11 @@ export function preprocessCaptureForVision(
   }
 }
 
-/** 全屏问答：不裁 ROI，只限长边 + JPEG */
+/** 全屏问答：不裁 ROI；更高清晰度，减轻「名称↔数字」错绑 */
 export function preprocessFullScreenForVision(image: NativeImage): VisionImagePayload {
-  const next = resizeLongEdge(image, VISION_MAX_LONG_EDGE)
+  const next = resizeLongEdge(image, SCREEN_ASK_MAX_LONG_EDGE)
   return {
-    base64: next.toJPEG(VISION_JPEG_QUALITY).toString('base64'),
+    base64: next.toJPEG(SCREEN_ASK_JPEG_QUALITY).toString('base64'),
     mime: 'image/jpeg'
   }
 }

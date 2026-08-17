@@ -28,6 +28,57 @@ PASS = os.environ.get("FTP_PASS", "")
 REMOTE_ROOT = os.environ.get("FTP_ROOT", "/lizhenning/wwwroot/other/typenow")
 
 
+def escape_html(s: str) -> str:
+    return (
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
+def load_releases_catalog() -> dict:
+    raw = (WEB / "js/releases-data.js").read_text(encoding="utf-8")
+    m = re.search(r"window\.(?:TYPENOW|TALKNOW)_RELEASES\s*=\s*(\{[\s\S]*\})\s*;?\s*$", raw.strip())
+    if not m:
+        raise SystemExit("releases-data.js: catalog object not found")
+    # JSON-compatible object literal
+    import json
+
+    return json.loads(m.group(1))
+
+
+def render_changelog_html(catalog: dict) -> str:
+    parts: list[str] = []
+    for r in catalog.get("releases") or []:
+        title = escape_html(r.get("title") or "")
+        ver = escape_html(r.get("version") or "")
+        date = escape_html(r.get("date") or "")
+        items = "".join(f"<li>{escape_html(h)}</li>" for h in (r.get("highlights") or []))
+        parts.append(
+            '<article class="release">'
+            f'<div class="meta"><span class="ver">v{ver}</span>'
+            f'<span class="date">{date}</span><span>{title}</span></div>'
+            f"<ul>{items}</ul></article>"
+        )
+    return "\n".join(parts) if parts else '<p class="plain">暂无更新记录</p>'
+
+
+def inject_changelog(html: bytes, catalog: dict) -> bytes:
+    text = html.decode("utf-8")
+    body = render_changelog_html(catalog)
+    text2, n = re.subn(
+        r'(<div id="changelog">)([\s\S]*?)(</div>)',
+        rf"\1\n{body}\n  \3",
+        text,
+        count=1,
+    )
+    if n != 1:
+        raise SystemExit("changelog: #changelog container not found for SSR inject")
+    return text2.encode("utf-8")
+
+
 def build(path: Path, css_href: str, scripts: list[str], css: str, js_parts: list[str], icon_data: str) -> bytes:
     text = path.read_text(encoding="utf-8")
     css_pat = re.compile(
@@ -115,6 +166,10 @@ def main() -> int:
         [i18n, releases_data, releases],
         icon_data,
     )
+    catalog = load_releases_catalog()
+    chg = inject_changelog(chg, catalog)
+    if chg.decode("utf-8", errors="replace").count('class="release"') < 1:
+        raise SystemExit("changelog SSR inject produced no release articles")
     sub = build(
         WEB / "subscribe/index.html",
         "../css/ink-signal.css",

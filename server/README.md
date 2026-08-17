@@ -29,3 +29,8 @@ npm start
 ## 线下开单
 
 管理后台 → 用户 → 线下开单 → 选套餐或充值积分 → 填付款凭证备注 → 确认。
+
+## Stripe Checkout（测试）
+
+`.env` 填 `STRIPE_SECRET_KEY` 与 `STRIPE_WEBHOOK_SECRET`。本地可用 `stripe listen --forward-to localhost:8788/v1/stripe/webhook`。  
+`POST /v1/orders` 且 `source=stripe` 返回 `checkoutUrl`；履约只认 webhook。

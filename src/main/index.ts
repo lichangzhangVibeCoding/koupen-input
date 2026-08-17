@@ -17,6 +17,7 @@ import { destroyHud, showHud } from './hud'
 import { refreshProfileFromHistory, testConnection } from './llm'
 import {
   membershipCreateOfflineIntent,
+  membershipCreateStripeCheckout,
   membershipGetLedger,
   membershipGetMe,
   membershipUpdateProfile,
@@ -70,7 +71,7 @@ import {
 } from './user-config'
 import { disposeEscapeCancel, initEscapeCancel } from './escape-cancel'
 import { destroyRecorder } from './voice-recorder'
-import { toggleVoiceInput } from './voice-input'
+import { toggleVoiceInput, beginVoiceHold, endVoiceHold, cancelHoldVoiceInput } from './voice-input'
 import {
   hardwareReplyAccelerator,
   hardwareVoiceAccelerator,
@@ -122,6 +123,13 @@ const modifierTapHandlers = {
     if (isModifierDoubleHotkey(s.hotkey)) {
       void runCapturePipeline()
     }
+  },
+  onVoiceHoldStart: () => beginVoiceHold(),
+  onVoiceHoldEnd: () => {
+    void endVoiceHold()
+  },
+  onVoiceHoldCancel: () => {
+    cancelHoldVoiceInput()
   },
   onScreenAsk: () => {
     const s = getSettings()
@@ -480,6 +488,18 @@ function setupIpc(): void {
       (body || {}) as { planId?: string; credits?: number; amountCents?: number }
     )
   )
+  ipcMain.handle('membership:stripeCheckout', (_e, body: unknown) =>
+    membershipCreateStripeCheckout(
+      getSettings(),
+      (body || {}) as {
+        planId?: string
+        interval?: 'month' | 'year'
+        changeType?: string
+        credits?: number
+        amountCents?: number
+      }
+    )
+  )
   ipcMain.handle('pipeline:screenAsk', () => toggleScreenAsk())
   ipcMain.handle('pipeline:screenQuiz', () => runScreenQuiz())
   ipcMain.handle('screenAsk:askText', (_e, question: string) => askScreenWithText(String(question || '')))
@@ -624,6 +644,17 @@ app.whenReady().then(() => {
   initDb()
   const settings = getSettings()
   syncAppLocale(settings)
+  setupTray({
+    getMainWindow: () => mainWindow,
+    onVoice: () => void toggleVoiceInput(),
+    onReply: () => void runCapturePipeline(),
+    onScreenAsk: () => void toggleScreenAsk(),
+    onScreenQuiz: () => void runScreenQuiz(),
+    onQuit: () => {
+      appQuitting = true
+      app.quit()
+    }
+  })
   setupIpc()
   createWindow()
   setScreenAskUpdateHandler((sessionId) => {
@@ -637,18 +668,6 @@ app.whenReady().then(() => {
   initEscapeCancel()
 
   warmupCosyVoice()
-
-  setupTray({
-    getMainWindow: () => mainWindow,
-    onVoice: () => void toggleVoiceInput(),
-    onReply: () => void runCapturePipeline(),
-    onScreenAsk: () => void toggleScreenAsk(),
-    onScreenQuiz: () => void runScreenQuiz(),
-    onQuit: () => {
-      appQuitting = true
-      app.quit()
-    }
-  })
 
   app.on('activate', () => {
     if (!mainWindow) {

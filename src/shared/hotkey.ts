@@ -201,4 +201,16 @@ export function formatRecordingHudText(
   return t('hotkey.recordingMacNamed', { name, key })
 }
 
+/** 按住增强录音中 HUD */
+export function formatHoldRecordingHudText(
+  platform: NodeJS.Platform = process.platform,
+  trigger: VoiceTriggerId = DEFAULT_VOICE_TRIGGER
+): string {
+  if (platform === 'win32') {
+    return t('hotkey.holdRecordingWin')
+  }
+  const key = formatVoiceTriggerShortLabel(trigger, platform)
+  return t('hotkey.holdRecordingMacNamed', { key })
+}
+
 export type AppPlatform = 'darwin' | 'win32' | 'linux' | string

@@ -288,6 +288,31 @@
     .subscribe-cta .btn {
       min-width: 180px;
     }
+    .subscribe-login {
+      max-width: 520px;
+      margin: 18px auto 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(18, 20, 26, 0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.88);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+    .subscribe-login input {
+      border: 1px solid rgba(18, 20, 26, 0.12);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+      min-width: 140px;
+    }
+    .subscribe-login .btn { min-width: 0; padding: 8px 12px; font-size: 0.9rem; }
+    .price-card .pay-btn {
+      margin-top: 14px;
+      width: 100%;
+    }
   </style>
 </head>
 <body data-page="subscribe">
@@ -316,21 +341,22 @@
 <header class="pricing-hero">
   <div class="hero-badge" data-i18n="subscribe.badge">自配 Key 永久免费 · 官方模式统一积分</div>
   <h1 data-i18n="subscribe.title">订阅与套餐</h1>
-  <p data-i18n="subscribe.subtitle">与 App「个人中心」同一套档位。价格与积分以后台为准；开通请在客户端联系客服线下办理。</p>
+  <p data-i18n="subscribe.subtitle">与 App「个人中心」同一套档位。价格与积分以后台为准；付费档可用 Stripe 测试结算，也可线下联系客服。</p>
   <div class="billing-toggle" role="tablist">
     <button type="button" data-billing="month" class="active" data-i18n="subscribe.billingMonth">月付</button>
     <button type="button" data-billing="year" data-i18n="subscribe.billingYear">年付更省</button>
   </div>
   <p id="subscribeStatus" class="subscribe-status" hidden></p>
+  <div id="subscribeLogin" class="subscribe-login"></div>
 </header>
 
 <section id="subscribeGrid" class="pricing-grid" aria-live="polite"></section>
 <section id="subscribeRates" class="pricing-rates"></section>
 <p class="pricing-note" data-i18n="subscribe.note">
-  购买方式：下载 App → 个人中心登录 → 按付款说明转账并联系客服开通。自配 Key / 本地模型不消耗本产品积分。
+  本页登录后可用 Stripe 支付开通；也可下载 App 在个人中心结算。自配 Key / 本地模型不消耗本产品积分。
 </p>
 <div class="subscribe-cta">
-  <a href="../#download" class="btn btn-primary" data-i18n="subscribe.cta">下载 App 开通</a>
+  <a href="../#download" class="btn btn-primary" data-i18n="subscribe.cta">下载 App</a>
 </div>
 
 <footer class="footer">
@@ -360,6 +386,11 @@
   if (burger && links) {
     burger.addEventListener('click', function () {
       links.classList.toggle('nav-links-open');
+    });
+    links.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        links.classList.remove('nav-links-open');
+      });
     });
   }
 </script>

@@ -1,13 +1,17 @@
 ;(function () {
   var REPO = 'https://github.com/lichangzhangVibeCoding/koupen-input'
   var LATEST = REPO + '/releases/latest'
-  /** All downloads via GitHub Releases — no site-hosted installers. */
-  var SITE_HOSTED = {}
+  /** Filenames served from site ./dl/ (virtual host). Others → GitHub Releases.
+   *  Host WAF: /downloads/ path 404; .dmg blocked; .exe/.zip OK. */
+  var SITE_HOSTED = {
+    'TalkNow-0.5.8-x64.exe': true
+  }
+  var SITE_DL_DIR = 'dl/'
 
   function downloadUrl(version, filename) {
     if (!filename) return LATEST
     if (SITE_HOSTED[filename]) {
-      var base = document.body && document.body.getAttribute('data-page') === 'changelog' ? '../downloads/' : './downloads/'
+      var base = document.body && document.body.getAttribute('data-page') === 'changelog' ? '../' + SITE_DL_DIR : './' + SITE_DL_DIR
       return base + encodeURIComponent(filename)
     }
     return REPO + '/releases/download/v' + version + '/' + encodeURIComponent(filename)
@@ -44,10 +48,13 @@
     })
   }
 
+  function releasesCatalog() {
+    return window.TALKNOW_RELEASES || window.TYPENOW_RELEASES || null
+  }
+
   async function loadReleases() {
-    if (window.TALKNOW_RELEASES && typeof window.TALKNOW_RELEASES === 'object') {
-      return window.TALKNOW_RELEASES
-    }
+    var ready = releasesCatalog()
+    if (ready && typeof ready === 'object') return ready
     var base = document.currentScript ? document.currentScript.src : location.href
     var candidates = [
       new URL('./releases-data.js', base).href,
@@ -58,9 +65,8 @@
       try {
         if (url.endsWith('.js')) {
           await loadScript(url)
-          if (window.TALKNOW_RELEASES && typeof window.TALKNOW_RELEASES === 'object') {
-            return window.TALKNOW_RELEASES
-          }
+          ready = releasesCatalog()
+          if (ready && typeof ready === 'object') return ready
           continue
         }
         var res = await fetch(url)

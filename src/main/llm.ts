@@ -523,7 +523,8 @@ ${q}
 3. 若用户要总结/解释文档或代码，抓住要点即可
 4. 不要输出 JSON、不要套「作为 AI」之类开场白
 5. 回答使用与用户问题相同的语言（中文问就用中文答）
-6. 若与上文相关，可承接，但优先看清当前截图`
+6. 若与上文相关，可承接，但优先看清当前截图
+7. 读列表/卡片时：名称与旁边数字必须成对核对（禁止把 A 的人数安到 B 名下）。问「最多/最少」时，先在心里对照几条带数字的项，再给出结论；易混校名/机构名要逐字看清`
 
   return chatCompletion(
     settings,
@@ -566,7 +567,8 @@ export async function extractScreenQuizText(
 2. 多题按题号分行；看不清的字用【？】标出
 3. 忽略与题目无关的浏览器栏、广告、桌面图标
 4. 没有题目时只输出：屏幕上没有题目
-5. 用题目所用语言原样输出`
+5. 用题目所用语言原样输出
+6. 若屏幕是报名榜/统计表等非考题列表，原样转写「名称 + 对应数字」，名称与数字必须同一条目，勿错位`
 
   const raw = await chatCompletion(
     settings,
@@ -659,6 +661,64 @@ export async function answerScreenQuiz(
   }
   const answer = await answerScreenQuizFromText(settings, questionText, signal, knowledgeBase)
   return { answer, questionText }
+}
+
+/**
+ * 按住即刻对话：整屏截图 + 口述 → 改写成可粘贴的 AI 提示词（不回答、不写私聊回复）。
+ */
+export async function enhancePromptForAi(
+  settings: AppSettings,
+  image: { base64: string; mime: string } | null,
+  spoken: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const runtime = resolveRuntime(settings)
+  const spokenText = spoken.trim()
+  if (!spokenText) throw new Error('没有听清你说的话，请再按住说一次')
+
+  const rules = `你是提示词改写助手。用户正对着当前屏幕上的输入框说话（常见是 ChatGPT、编程助手、邮件、文档）。
+请根据用户口述${image ? '和整屏截图' : ''}，把口述改写成一条更清晰、可直接粘贴进当前输入框的提示词。
+
+规则：
+1. 只输出改写后的提示词正文，不要引号，不要分析过程，不要前后说明
+2. 保留用户意图；不要替那个 AI 回答问题，不要写成微信/QQ 私聊回复
+3. ${image ? '结合截图里能看到的文件名、报错、选中代码、对话或文档，把含糊处写具体；不要编造截图里没有的路径、报错或数据' : '没有截图，只根据口述把意图写清楚，不要编造具体文件名或报错'}
+4. 不要用 markdown 代码围栏包住整段（除非用户就是要一段代码）
+5. 使用与用户口述相同的语言
+6. 不要写「请发送」或催促回车`
+
+  const userText = `用户口述：
+${spokenText}`
+
+  const model = image
+    ? runtime.visionModelName || runtime.modelName
+    : runtime.modelName
+  const capability = image ? 'reply_vision' : 'reply'
+
+  const content = image
+    ? [
+        { type: 'text', text: `${rules}\n\n${userText}` },
+        {
+          type: 'image_url',
+          image_url: { url: `data:${image.mime};base64,${image.base64}` }
+        }
+      ]
+    : `${rules}\n\n${userText}`
+
+  const raw = await chatCompletion(
+    settings,
+    {
+      model,
+      temperature: 0.4,
+      max_tokens: 1200,
+      messages: [{ role: 'user', content }]
+    },
+    signal,
+    capability
+  )
+  const out = raw.trim()
+  if (!out) throw new Error('提示词增强没有写出内容，请重试')
+  return out
 }
 
 export function isLocalMode(settings: AppSettings): boolean {

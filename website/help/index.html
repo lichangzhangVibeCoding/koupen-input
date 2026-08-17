@@ -3,15 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>帮助 · 即刻对话 TalkNow</title>
-  <meta name="description" content="即刻对话帮助：安装下载、Mac 权限、官方会员与自配 Key、套餐开通、常见问题。">
+  <title data-i18n="help.meta.title">帮助 · 即刻对话 TalkNow</title>
+  <meta name="description" data-i18n="help.meta.desc" data-i18n-attr="content" content="即刻对话帮助：点按贴原话、按住增强提示词、安装权限、官方会员与常见问题。">
   <link rel="icon" href="../assets/icon.png" type="image/png">
   <link rel="canonical" href="https://www.talknow.cn/help/">
   <link rel="stylesheet" href="../css/ink-signal.css">
   <style>
-    .help-page { max-width: 720px; margin: 0 auto; padding: 120px 24px 80px; }
+    .help-page { max-width: 760px; margin: 0 auto; padding: 120px 24px 80px; }
     .help-page h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 0 0 8px; }
     .help-lead { color: rgba(0,0,0,.6); margin-bottom: 36px; line-height: 1.6; }
+    .help-guide { margin: 0 0 48px; }
+    .help-guide h2 { font-size: 1.35rem; margin: 0 0 8px; }
+    .help-guide-lead { color: rgba(0,0,0,.68); line-height: 1.7; margin: 0 0 20px; }
+    .help-keys { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 22px; font-size: 0.92rem; color: rgba(0,0,0,.72); }
+    .help-keys kbd {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      background: rgba(18,20,26,.08); font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .help-pair { display: grid; gap: 16px; margin-bottom: 22px; }
+    @media (min-width: 640px) { .help-pair { grid-template-columns: 1fr 1fr; } }
+    .help-card {
+      border: 1px solid rgba(0,0,0,.1); border-radius: 14px; padding: 16px 18px;
+      background: rgba(255,255,255,.55);
+    }
+    .help-card h3 { font-size: 1.05rem; margin: 0 0 6px; }
+    .help-card .help-card-lead { margin: 0 0 10px; font-size: 0.92rem; color: rgba(0,0,0,.62); line-height: 1.6; }
+    .help-card ol { margin: 0; padding-left: 1.2em; color: rgba(0,0,0,.78); }
+    .help-card li { margin: 0 0 6px; line-height: 1.55; }
+    .help-notes { margin: 0; padding-left: 1.2em; color: rgba(0,0,0,.7); }
+    .help-notes li { margin: 0 0 8px; line-height: 1.6; }
+    .help-faq-title { font-size: 1.2rem; margin: 8px 0 4px; }
     .help-item { border-top: 1px solid rgba(0,0,0,.1); padding: 20px 0; }
     .help-item:last-child { border-bottom: 1px solid rgba(0,0,0,.1); }
     .help-item h2 { font-size: 1.1rem; margin: 0 0 8px; }
@@ -44,7 +65,48 @@
 
 <main class="help-page">
   <h1 data-i18n="help.title">帮助</h1>
-  <p class="help-lead" data-i18n="help.subtitle">安装、权限、会员与常见问题</p>
+  <p class="help-lead" data-i18n="help.subtitle">即刻对话怎么用、安装权限、会员与常见问题</p>
+
+  <section class="help-guide" id="voice">
+    <h2 data-i18n="help.guide.title">即刻对话怎么用</h2>
+    <p class="help-guide-lead" data-i18n="help.guide.lead">同一颗键，两种手势：点按贴原话，按住按屏幕增强成提示词。都不会自动发送。</p>
+    <div class="help-keys">
+      <span data-i18n="help.guide.keysMac">Mac 默认右 Command（可在设置改成右 Option / Fn）</span>
+      <span data-i18n="help.guide.keysWin">Windows 为 Alt</span>
+    </div>
+    <div class="help-pair">
+      <div class="help-card">
+        <h3 data-i18n="help.guide.tapTitle">点按：贴原话</h3>
+        <p class="help-card-lead" data-i18n="help.guide.tapLead">微信、备忘录、浏览器——只要嫌打字慢。</p>
+        <ol>
+          <li data-i18n="help.guide.tap1">光标放进输入框</li>
+          <li data-i18n="help.guide.tap2">点一下触发键，开始录音</li>
+          <li data-i18n="help.guide.tap3">说完再点一下结束</li>
+          <li data-i18n="help.guide.tap4">原话贴进去，你自己决定发不发</li>
+        </ol>
+      </div>
+      <div class="help-card">
+        <h3 data-i18n="help.guide.holdTitle">按住：增强提示词</h3>
+        <p class="help-card-lead" data-i18n="help.guide.holdLead">对着 ChatGPT、Cursor 等 AI 输入框说话，它看着屏幕把你的话写清楚。</p>
+        <ol>
+          <li data-i18n="help.guide.hold1">光标放进那个输入框，屏幕上留着相关内容</li>
+          <li data-i18n="help.guide.hold2">按住触发键超过约 0.4 秒，底部出现增强提示</li>
+          <li data-i18n="help.guide.hold3">说话，说完松手</li>
+          <li data-i18n="help.guide.hold4">改写后的提示词贴进去，看过再回车</li>
+        </ol>
+      </div>
+    </div>
+    <h3 data-i18n="help.guide.notesTitle">注意</h3>
+    <ul class="help-notes">
+      <li data-i18n="help.guide.note1">Mac 备用键 右 Command+8、Windows 的 Win+8 只有点按贴原话，按住不会增强。</li>
+      <li data-i18n="help.guide.note2">已经在点按录音中，再按只结束并贴原话，不会改成增强。</li>
+      <li data-i18n="help.guide.note3">看屏幕正在听你说话时，点按仍是结束提问，不会开增强。</li>
+      <li data-i18n="help.guide.note4">按住时又按了别的键（例如复制），这次增强会取消。</li>
+      <li data-i18n="help.guide.note5">随时按 Esc 立刻停下。帮我对话是快速双击，看屏幕是另一套组合键。</li>
+    </ul>
+  </section>
+
+  <h2 class="help-faq-title" data-i18n="help.faqTitle">常见问题</h2>
 
   <div class="help-item">
     <h2 data-i18n="help.q1">如何下载安装？</h2>
@@ -52,7 +114,11 @@
   </div>
   <div class="help-item">
     <h2 data-i18n="help.q2">Mac 需要哪些权限？</h2>
-    <p data-i18n="help.a2">麦克风（语音）、屏幕录制（帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。</p>
+    <p data-i18n="help.a2">麦克风（语音）、屏幕录制（按住增强 / 帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。</p>
+  </div>
+  <div class="help-item">
+    <h2 data-i18n="help.q7">点按和按住有什么区别？</h2>
+    <p data-i18n="help.a7">点按贴你说的原话；按住超过约 0.4 秒会看一眼整屏，把口述改写成提示词再贴入。两种都不会自动发送。详见本页上方说明书。</p>
   </div>
   <div class="help-item">
     <h2 data-i18n="help.q3">官方会员和自配 Key 有什么区别？</h2>
@@ -103,6 +169,11 @@
   if (burger && links) {
     burger.addEventListener('click', function () {
       links.classList.toggle('nav-links-open');
+    });
+    links.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        links.classList.remove('nav-links-open');
+      });
     });
   }
 </script>

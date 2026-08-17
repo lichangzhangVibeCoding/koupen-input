@@ -152,7 +152,15 @@ const api = {
     credits?: number
     amountCents?: number
   }): Promise<{ paymentHint: string; supportContact: string; id: string }> =>
-    ipcRenderer.invoke('membership:offlineIntent', body)
+    ipcRenderer.invoke('membership:offlineIntent', body),
+  membershipCreateStripeCheckout: (body: {
+    planId?: string
+    interval?: 'month' | 'year'
+    changeType?: string
+    credits?: number
+    amountCents?: number
+  }): Promise<{ id: string; checkoutUrl: string; sessionId: string }> =>
+    ipcRenderer.invoke('membership:stripeCheckout', body)
 }
 
 contextBridge.exposeInMainWorld('vipChat', api)

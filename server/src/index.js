@@ -23,6 +23,12 @@ import {
   assignPlan,
   changeSubscription
 } from './credits.js'
+import {
+  createStripeCheckout,
+  fulfillPaidOrder,
+  handleStripeWebhook,
+  stripeConfigured
+} from './stripe.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const root = join(__dirname, '..')
@@ -32,6 +38,18 @@ const app = express()
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 40 * 1024 * 1024 } })
 
 app.use(cors())
+app.post('/v1/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body || '')
+    const result = await handleStripeWebhook(db, raw, req.headers['stripe-signature'] || '', {
+      applyCreditDelta,
+      changeSubscription
+    })
+    res.json(result)
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'webhook failed' })
+  }
+})
 app.use(express.json({ limit: '30mb' }))
 app.use('/admin', express.static(join(root, 'public', 'admin')))
 
@@ -144,6 +162,7 @@ app.get('/v1/plans', (_req, res) => {
     plans,
     prices: getPrices(db),
     topup: { credits: 1000, priceCents: 2000 },
+    stripeEnabled: stripeConfigured(),
     ops: {
       paymentHint: getAppSetting(db, 'ops_payment_hint'),
       supportContact: getAppSetting(db, 'ops_support_contact')
@@ -185,7 +204,7 @@ app.post('/v1/redeem', (req, res) => {
 })
 
 // Orders: offline stub for client; online payment returns 501
-app.post('/v1/orders', (req, res) => {
+app.post('/v1/orders', async (req, res) => {
   try {
     const user = requireUser(db, req)
     const source = String(req.body?.source || 'offline')
@@ -194,6 +213,11 @@ app.post('/v1/orders', (req, res) => {
         error: '在线支付尚未开通，请使用线下转账并由客服在后台入账',
         code: 'PAYMENT_NOT_ENABLED'
       })
+    }
+    if (source === 'stripe') {
+      return res.json(
+        await createStripeCheckout(db, user, req.body, { newToken, nowIso })
+      )
     }
     // Client may create a pending offline intent; fulfillment is admin-side
     const id = `intent_${newToken().slice(0, 12)}`
@@ -660,23 +684,17 @@ app.post('/v1/admin/orders-delete', requireAdmin, (req, res) => {
 function adminFulfillOrder(id, body, res) {
   id = String(id || '').trim()
   if (!id) return res.status(400).json({ error: 'id required' })
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(id)
-  if (!order) return res.status(404).json({ error: 'order not found' })
-  if (order.status === 'paid') return res.json({ ok: true, order })
-  if (order.status === 'rejected') return res.status(400).json({ error: '已拒绝的意向不可履约' })
-  const note = String(body?.paymentNote || order.payment_note || '')
-  const tx = db.transaction(() => {
-    if (order.plan_id) assignPlan(db, order.user_id, order.plan_id, `履约 ${order.id} ${note}`)
-    else if (order.credits > 0) {
-      applyCreditDelta(db, order.user_id, order.credits, 'offline_topup', 'purchased', order.id, note)
-    }
-    db.prepare(
-      `UPDATE orders SET status = 'paid', paid_at = ?, payment_note = ?, source = 'offline', channel = 'offline'
-       WHERE id = ?`
-    ).run(nowIso(), note, order.id)
-  })
-  tx()
-  res.json({ ok: true, order: db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id) })
+  try {
+    const order = fulfillPaidOrder(db, id, {
+      paymentNote: body?.paymentNote,
+      months: body?.months,
+      changeType: body?.changeType,
+      deps: { applyCreditDelta, changeSubscription }
+    })
+    res.json({ ok: true, order })
+  } catch (e) {
+    publicError(res, e)
+  }
 }
 
 // ── Internal KB + roadmap (private ops) ──

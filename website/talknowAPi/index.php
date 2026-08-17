@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
 require_once dirname(__FILE__) . '/lib/domain.php';
+require_once dirname(__FILE__) . '/lib/stripe.php';
 
 tn_cors();
 
@@ -129,6 +130,7 @@ function tn_route($method, $path) {
       'plans' => $mapped,
       'prices' => tn_prices(),
       'topup' => array('credits' => 1000, 'priceCents' => 2000),
+      'stripeEnabled' => tn_stripe_configured(),
       'ops' => array(
         'paymentHint' => tn_setting('ops_payment_hint'),
         'supportContact' => tn_setting('ops_support_contact'),
@@ -154,11 +156,37 @@ function tn_route($method, $path) {
     tn_json(array('ok' => true, 'credits' => (int)$row['credits'], 'me' => tn_me($user)));
   }
 
+  if ($method === 'POST' && ($path === '/v1/stripe/webhook' || $path === '/v1/webhooks/stripe')) {
+    tn_stripe_webhook();
+  }
+
+  if ($method === 'GET' && preg_match('#^/v1/orders/([^/]+)$#', $path, $m)) {
+    $user = tn_require_user();
+    $st = $pdo->prepare('SELECT * FROM tn_orders WHERE id=? AND user_id=?');
+    $st->execute(array($m[1], (int)$user['id']));
+    $ord = $st->fetch();
+    if (!$ord) tn_json(array('error' => 'not found'), 404);
+    tn_json($ord);
+  }
+
+  if ($method === 'GET' && $path === '/v1/order-get') {
+    $user = tn_require_user();
+    $oid = isset($_GET['id']) ? $_GET['id'] : '';
+    $st = $pdo->prepare('SELECT * FROM tn_orders WHERE id=? AND user_id=?');
+    $st->execute(array($oid, (int)$user['id']));
+    $ord = $st->fetch();
+    if (!$ord) tn_json(array('error' => 'not found'), 404);
+    tn_json($ord);
+  }
+
   if ($method === 'POST' && $path === '/v1/orders') {
     $user = tn_require_user();
     $source = isset($body['source']) ? $body['source'] : 'offline';
     if ($source === 'wechat' || $source === 'alipay') {
       tn_json(array('error' => '在线支付尚未开通', 'code' => 'PAYMENT_NOT_ENABLED'), 501);
+    }
+    if ($source === 'stripe') {
+      tn_stripe_create_checkout($user, $body);
     }
     $id = 'intent_' . substr(tn_token(), 0, 12);
     $t = tn_now();
@@ -793,25 +821,16 @@ function tn_proxy_chat() {
 function tn_admin_order_fulfill($id, $body) {
   $id = trim((string)$id);
   if ($id === '') tn_json(array('error' => 'id required'), 400);
-  $pdo = tn_db();
-  $st = $pdo->prepare('SELECT * FROM tn_orders WHERE id=?');
-  $st->execute(array($id));
-  $ord = $st->fetch();
-  if (!$ord) tn_json(array('error' => 'order not found'), 404);
-  if ($ord['status'] === 'paid') tn_json(array('ok' => true, 'order' => $ord));
-  if ($ord['status'] === 'rejected') tn_json(array('error' => '已拒绝的意向不可履约'), 400);
-  $note = isset($body['paymentNote']) ? $body['paymentNote'] : $ord['payment_note'];
-  $t = tn_now();
-  $pdo->prepare('UPDATE tn_orders SET status=?, payment_note=?, paid_at=? WHERE id=?')
-    ->execute(array('paid', $note, $t, $id));
-  $uid = (int)$ord['user_id'];
-  if ($ord['plan_id'] !== '') {
-    $months = isset($body['months']) ? (int)$body['months'] : 1;
-    $periodEnd = isset($body['periodEnd']) ? $body['periodEnd'] : '';
-    tn_assign_plan($uid, $ord['plan_id'], '履约 '.$id.' '.$note, $months, $periodEnd, 1);
-  } elseif ((int)$ord['credits'] > 0) {
-    tn_apply_credit($uid, (int)$ord['credits'], 'offline_topup', 'purchased', $id, $note);
+  try {
+    $opts = array();
+    if (isset($body['paymentNote']) && $body['paymentNote'] !== '') $opts['paymentNote'] = $body['paymentNote'];
+    if (isset($body['months'])) $opts['months'] = (int)$body['months'];
+    if (isset($body['changeType']) && $body['changeType'] !== '') $opts['changeType'] = $body['changeType'];
+    $ord = tn_fulfill_paid_order($id, $opts);
+  } catch (Exception $e) {
+    $msg = $e->getMessage();
+    $code = ($msg === 'order not found') ? 404 : 400;
+    tn_json(array('error' => $msg), $code);
   }
-  $st->execute(array($id));
-  tn_json(array('ok' => true, 'order' => $st->fetch()));
+  tn_json(array('ok' => true, 'order' => $ord));
 }

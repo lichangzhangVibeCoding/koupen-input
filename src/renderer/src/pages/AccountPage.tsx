@@ -40,6 +40,7 @@ type PlansPayload = {
   topup: { credits: number; priceCents: number }
   ops: { paymentHint: string; supportContact: string }
   prices: Record<string, number>
+  stripeEnabled?: boolean
 }
 
 function extractWechatId(contact: string): string {
@@ -445,6 +446,45 @@ export default function AccountPage() {
   }
 
   const requestIntent = openSupportModal
+
+  const startStripeCheckout = async (body: {
+    planId?: string
+    interval?: 'month' | 'year'
+    changeType?: string
+    credits?: number
+    amountCents?: number
+  }): Promise<void> => {
+    setBusy(true)
+    setMsg('')
+    try {
+      const res = await window.vipChat.membershipCreateStripeCheckout(body)
+      await window.vipChat.openExternal(res.checkoutUrl)
+      setMsg(t('membership.stripeOpened'))
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : t('membership.stripeFail'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const payOrSupport = (
+    kind: 'open' | 'upgrade' | 'downgrade' | 'renew',
+    plan?: PlanRow
+  ): void => {
+    if (kind === 'downgrade' || !plan || plan.priceMonthCents === 0) {
+      requestIntent(kind, plan?.name)
+      return
+    }
+    if (plans?.stripeEnabled === false) {
+      requestIntent(kind, plan.name)
+      return
+    }
+    void startStripeCheckout({
+      planId: plan.id,
+      interval: billing,
+      changeType: kind
+    })
+  }
 
   const supportModalTitle =
     supportIntent.kind === 'upgrade'
@@ -974,7 +1014,7 @@ export default function AccountPage() {
                 const targetRank = membershipPlanRank(p.id)
                 const hasPaid =
                   loggedIn && currentPlanId && membershipPlanRank(currentPlanId) > 0
-                let ctaLabel = t('membership.contactSupport')
+                let ctaLabel = isFree ? t('membership.contactSupport') : t('membership.payStripe')
                 let ctaKind: 'open' | 'upgrade' | 'downgrade' | 'renew' = 'open'
                 if (current) {
                   ctaLabel = t('membership.current')
@@ -989,7 +1029,7 @@ export default function AccountPage() {
                     ctaLabel = t('membership.switchTo')
                     ctaKind = 'downgrade'
                   } else {
-                    ctaLabel = t('membership.contactSupport')
+                    ctaLabel = t('membership.payStripe')
                     ctaKind = 'open'
                   }
                 }
@@ -1027,7 +1067,7 @@ export default function AccountPage() {
                           setMsg(t('membership.loginToBuy'))
                           return
                         }
-                        requestIntent(ctaKind, p.name)
+                        payOrSupport(ctaKind, p)
                       }}
                     >
                       {ctaLabel}
@@ -1037,7 +1077,7 @@ export default function AccountPage() {
                         type="button"
                         className="btn ghost sm ms-plan-renew"
                         disabled={busy}
-                        onClick={() => requestIntent('renew', p.name)}
+                        onClick={() => payOrSupport('renew', p)}
                       >
                         {t('membership.renewExtend')}
                       </button>
@@ -1137,9 +1177,22 @@ export default function AccountPage() {
               type="button"
               className="btn secondary"
               disabled={busy}
-              onClick={() => requestIntent('open')}
+              onClick={() => {
+                if (!loggedIn) {
+                  setMsg(t('membership.loginToBuy'))
+                  return
+                }
+                if (plans?.stripeEnabled === false) {
+                  requestIntent('open')
+                  return
+                }
+                void startStripeCheckout({
+                  credits: plans.topup.credits,
+                  amountCents: plans.topup.priceCents
+                })
+              }}
             >
-              {t('membership.contactSupport')}
+              {t('membership.topupStripe')}
             </button>
           </div>
         ) : null}

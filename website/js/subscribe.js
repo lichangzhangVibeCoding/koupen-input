@@ -133,7 +133,21 @@
           )
         })
         .join('') +
-      '</div>'
+      '</div>' +
+      (state.stripeEnabled
+        ? '<p style="text-align:center;margin-top:16px"><button type="button" class="btn btn-secondary" id="subTopupPay">' +
+          tr('subscribe.payStripe') +
+          ' · ' +
+          tr('subscribe.rate.topupLabel') +
+          '</button></p>'
+        : '')
+    var topupBtn = document.getElementById('subTopupPay')
+    if (topupBtn) {
+      topupBtn.addEventListener('click', function () {
+        var pack = state.topup || window.TalkNowPlans.topupFallback()
+        startPay({ credits: pack.credits, amountCents: pack.priceCents })
+      })
+    }
   }
 
   function renderGrid(plans, billing) {
@@ -193,13 +207,183 @@
               return '<li><span class="feat-check" aria-hidden="true"></span><span>' + f + '</span></li>'
             })
             .join('') +
-          '</ul></article>'
+          '</ul>' +
+          (p.priceMonthCents > 0
+            ? '<button type="button" class="btn btn-primary pay-btn" data-pay-plan="' +
+              p.id +
+              '">' +
+              tr('subscribe.payStripe') +
+              '</button>'
+            : '') +
+          '</article>'
         )
       })
       .join('')
+    grid.querySelectorAll('[data-pay-plan]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        startPay({ planId: btn.getAttribute('data-pay-plan'), interval: state.billing })
+      })
+    })
   }
 
-  var state = { plans: null, prices: null, topup: null, billing: 'month' }
+  var TOKEN_KEY = 'talknow_access_token'
+  var PHONE_KEY = 'talknow_phone'
+  var state = {
+    plans: null,
+    prices: null,
+    topup: null,
+    billing: 'month',
+    stripeEnabled: false,
+    token: '',
+    phone: ''
+  }
+
+  function apiRoot() {
+    var api = (window.TalkNowPlans && window.TalkNowPlans.PLANS_API) || ''
+    return api.replace(/\/v1\/plans\/?$/, '')
+  }
+
+  function loadSession() {
+    try {
+      state.token = sessionStorage.getItem(TOKEN_KEY) || ''
+      state.phone = sessionStorage.getItem(PHONE_KEY) || ''
+    } catch (e) {
+      state.token = ''
+      state.phone = ''
+    }
+  }
+
+  function saveSession(token, phone) {
+    state.token = token || ''
+    state.phone = phone || ''
+    try {
+      if (state.token) {
+        sessionStorage.setItem(TOKEN_KEY, state.token)
+        sessionStorage.setItem(PHONE_KEY, state.phone)
+      } else {
+        sessionStorage.removeItem(TOKEN_KEY)
+        sessionStorage.removeItem(PHONE_KEY)
+      }
+    } catch (e) {}
+  }
+
+  function renderLogin() {
+    var el = document.getElementById('subscribeLogin')
+    if (!el) return
+    if (state.token) {
+      el.innerHTML =
+        '<span>' +
+        tr('subscribe.loggedIn', { phone: state.phone || '' }) +
+        '</span><button type="button" class="btn btn-secondary" id="subLogout">' +
+        tr('subscribe.logout') +
+        '</button>'
+      var out = document.getElementById('subLogout')
+      if (out) {
+        out.addEventListener('click', function () {
+          saveSession('', '')
+          renderLogin()
+        })
+      }
+      return
+    }
+    el.innerHTML =
+      '<input id="subPhone" type="tel" autocomplete="tel" placeholder="' +
+      tr('subscribe.phone') +
+      '">' +
+      '<input id="subCode" type="text" inputmode="numeric" placeholder="' +
+      tr('subscribe.code') +
+      '">' +
+      '<button type="button" class="btn btn-secondary" id="subSend">' +
+      tr('subscribe.sendCode') +
+      '</button>' +
+      '<button type="button" class="btn btn-primary" id="subLogin">' +
+      tr('subscribe.doLogin') +
+      '</button>'
+    var send = document.getElementById('subSend')
+    var login = document.getElementById('subLogin')
+    if (send) send.addEventListener('click', requestCode)
+    if (login) login.addEventListener('click', doLogin)
+  }
+
+  function requestCode() {
+    var phone = ((document.getElementById('subPhone') || {}).value || '').replace(/\D+/g, '')
+    if (phone.length < 6) {
+      setStatus('warn', tr('subscribe.needLogin'))
+      return
+    }
+    fetch(apiRoot() + '/v1/auth/request-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone })
+    })
+      .then(function (r) {
+        return r.json()
+      })
+      .then(function (data) {
+        if (data.error) throw new Error(data.error)
+        setStatus('', data.devHint || tr('subscribe.sendCode'))
+      })
+      .catch(function (e) {
+        setStatus('warn', e.message || tr('subscribe.fallback'))
+      })
+  }
+
+  function doLogin() {
+    var phone = ((document.getElementById('subPhone') || {}).value || '').replace(/\D+/g, '')
+    var code = ((document.getElementById('subCode') || {}).value || '').trim()
+    if (!phone || !code) {
+      setStatus('warn', tr('subscribe.needLogin'))
+      return
+    }
+    fetch(apiRoot() + '/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: phone, code: code })
+    })
+      .then(function (r) {
+        return r.json()
+      })
+      .then(function (data) {
+        if (!data.accessToken) throw new Error(data.error || tr('subscribe.needLogin'))
+        saveSession(data.accessToken, phone)
+        setStatus('', '')
+        renderLogin()
+      })
+      .catch(function (e) {
+        setStatus('warn', e.message || tr('subscribe.needLogin'))
+      })
+  }
+
+  function startPay(body) {
+    if (!state.token) {
+      setStatus('warn', tr('subscribe.needLogin'))
+      return
+    }
+    setStatus('', tr('subscribe.opening'))
+    body = body || {}
+    body.source = 'stripe'
+    fetch(apiRoot() + '/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + state.token
+      },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) {
+        return r.json().then(function (data) {
+          if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status)
+          return data
+        })
+      })
+      .then(function (data) {
+        if (!data.checkoutUrl) throw new Error(data.error || tr('subscribe.fallback'))
+        location.href = data.checkoutUrl
+      })
+      .catch(function (e) {
+        setStatus('warn', e.message || tr('subscribe.fallback'))
+      })
+  }
 
   function paint() {
     var plans = state.plans || window.TalkNowPlans.fallbackPlans(lang())
@@ -232,6 +416,7 @@
         state.plans = data.plans || []
         state.prices = data.prices || null
         state.topup = data.topup || null
+        state.stripeEnabled = !!data.stripeEnabled
         setStatus('', '')
         paint()
       })
@@ -258,10 +443,13 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    loadSession()
+    renderLogin()
     bindBilling()
     load()
     document.addEventListener('talknow:lang', function () {
       paint()
+      renderLogin()
     })
   })
 })()

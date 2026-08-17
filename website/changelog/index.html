@@ -162,9 +162,14 @@
   document.getElementById('footerYear').textContent = new Date().getFullYear();
   var burger = document.getElementById('navBurger');
   var links = document.querySelector('.nav-links');
-  if (burger) {
+  if (burger && links) {
     burger.addEventListener('click', function() {
       links.classList.toggle('nav-links-open');
+    });
+    links.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        links.classList.remove('nav-links-open');
+      });
     });
   }
 </script>

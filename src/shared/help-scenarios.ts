@@ -31,8 +31,8 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
     name: L('语音转文字', 'Voice Input'),
     tag: L('说比打快', 'Faster than typing'),
     how: L(
-      '把光标放进微信 / 邮件 / 文档输入框，按住快捷键 {hotkey} 说话，松手后文字自动贴入。',
-      'Focus a WeChat / email / doc field, hold {hotkey} to speak, release to paste text.'
+      '把光标放进输入框。点按快捷键 {hotkey} 开始/结束，贴的是你说的原话；按住说话、松手后会按当前屏幕增强成提示词再贴入（不会自动发送）。',
+      'Focus an input field. Tap {hotkey} to start/stop and paste verbatim; hold to speak, release to enhance a prompt from the screen (never auto-sends).'
     ),
     cards: [
       {
@@ -66,6 +66,14 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
           'Walking, cooking, commuting — talk and it auto-transcribes your ideas to text.'
         ),
         tags: [L('灵感', 'Ideas'), L('通勤', 'Commute')]
+      },
+      {
+        title: L('对 AI 说提示词', 'Talk prompts to an AI'),
+        desc: L(
+          '对着 ChatGPT、Cursor 按住说话，它看着屏幕把口述改写成更清楚的提示词。',
+          'Hold and speak into ChatGPT or Cursor — it looks at the screen and rewrites your words into a clearer prompt.'
+        ),
+        tags: [L('ChatGPT', 'ChatGPT'), L('Cursor', 'Cursor')]
       }
     ]
   },

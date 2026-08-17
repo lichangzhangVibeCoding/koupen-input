@@ -59,9 +59,18 @@ function tn_json($data, $code = 200) {
   exit;
 }
 
+function tn_raw_body() {
+  static $raw = null;
+  if ($raw === null) {
+    $got = file_get_contents('php://input');
+    $raw = ($got === false) ? '' : $got;
+  }
+  return $raw;
+}
+
 function tn_read_json() {
-  $raw = file_get_contents('php://input');
-  if ($raw === false || $raw === '') return array();
+  $raw = tn_raw_body();
+  if ($raw === '') return array();
   $j = json_decode($raw, true);
   return is_array($j) ? $j : array();
 }

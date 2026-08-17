@@ -19,8 +19,8 @@
 | 路径 | 文件 | 说明 |
 |---|---|---|
 | `/` | `website/index.html` | **首页**：现有单页内容保留（场景 / 能力 / 信任 / 上手 / 下载） |
-| `/subscribe/` | `website/subscribe/index.html` | **订阅**：套餐与积分（与 App 个人中心统一） |
-| `/help/` | `website/help/index.html` | **帮助**：安装、权限、会员、常见问题 |
+| `/subscribe/` | `website/subscribe/index.html` | **订阅**：套餐与积分；已登录可 Stripe Checkout |
+| `/help/` | `website/help/index.html` | **帮助**：安装、权限、会员 FAQ；「即刻对话」点按 / 按住说明书（`docs/guide-prompt-enhance.md`） |
 | `/changelog/` | `website/changelog/index.html` | 更新日志（页脚入口，非主导航） |
 | `/pricing/` | 重定向 → `/subscribe/` | 旧链接兼容 |
 
