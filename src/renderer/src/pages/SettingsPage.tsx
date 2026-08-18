@@ -6,11 +6,11 @@ import {
   DEFAULT_VOICE_TRIGGER,
   defaultHotkeySettings,
   defaultScreenAskHotkey,
-  defaultScreenQuizHotkey,
   formatHotkeyLabel,
   formatMacCommandLabel,
+  formatVoiceHoldBindLabel,
+  formatVoiceTapBindLabel,
   formatVoiceTriggerLabel,
-  formatVoiceTriggerShortLabel,
   hotkeyLabelChips,
   isModifierDoubleHotkey,
   normalizeVoiceTrigger
@@ -22,7 +22,7 @@ import { AppSettings, DEFAULT_SETTINGS } from '../../../shared/types'
 import { ComboHotkeyCapture, VoiceTriggerCapture } from '../components/HotkeyCapture'
 import { useI18n } from '../i18n'
 
-type EditRow = null | 'voice' | 'reply' | 'screenAsk' | 'screenQuiz'
+type EditRow = null | 'voice' | 'reply' | 'screenAsk'
 
 function ToggleRow({
   checked,
@@ -76,6 +76,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState('')
   const [includeSecrets, setIncludeSecrets] = useState(false)
+  const [userDataPath, setUserDataPath] = useState('')
   const [editing, setEditing] = useState<EditRow>(null)
   const [macPerms, setMacPerms] = useState<{
     screen: string
@@ -94,6 +95,11 @@ export default function SettingsPage() {
       const p = await window.vipChat.getPlatform()
       setPlatform(p)
       setForm(await window.vipChat.getSettings())
+      try {
+        setUserDataPath(await window.vipChat.getUserDataPath())
+      } catch {
+        setUserDataPath('')
+      }
       if (p === 'darwin') {
         try {
           setMacPerms(await window.vipChat.getMacPermissions())
@@ -213,6 +219,20 @@ export default function SettingsPage() {
     }
   }
 
+  async function onOpenUserData() {
+    setBusy('openData')
+    try {
+      const res = await window.vipChat.openUserData()
+      if (!res.ok) {
+        setStatus({ type: 'err', text: t('settings.dataOpenFail') })
+      }
+    } catch (e) {
+      setStatus({ type: 'err', text: e instanceof Error ? e.message : t('settings.dataOpenFail') })
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function onResetAllHotkeys() {
     const ok = window.confirm(t('settings.hotkeys.resetAllConfirm'))
     if (!ok) return
@@ -229,8 +249,6 @@ export default function SettingsPage() {
       setForm({ ...form, hotkey: defaults.hotkey })
     } else if (row === 'screenAsk') {
       setForm({ ...form, screenAskHotkey: defaults.screenAskHotkey })
-    } else if (row === 'screenQuiz') {
-      setForm({ ...form, screenQuizHotkey: defaults.screenQuizHotkey })
     }
     setEditing(null)
   }
@@ -238,21 +256,22 @@ export default function SettingsPage() {
   const personaBlurb =
     listPersonaPackOptions().find((p) => p.id === (form.personaPackId || 'none'))?.blurb || ''
 
-  const voiceBindLabel = isWin
-    ? formatVoiceTriggerShortLabel(DEFAULT_VOICE_TRIGGER, 'win32')
-    : formatVoiceTriggerShortLabel(voiceTrigger, 'darwin')
+  const voiceTapBindLabel = formatVoiceTapBindLabel(
+    plat,
+    isWin ? DEFAULT_VOICE_TRIGGER : voiceTrigger
+  )
+  const voiceHoldBindLabel = formatVoiceHoldBindLabel(
+    plat,
+    isWin ? DEFAULT_VOICE_TRIGGER : voiceTrigger
+  )
   const replyBindLabel = formatHotkeyLabel(form.hotkey, plat)
   const askBindLabel = formatHotkeyLabel(
     form.screenAskHotkey || defaultScreenAskHotkey(plat),
     plat
   )
-  const quizBindLabel = formatHotkeyLabel(
-    form.screenQuizHotkey || defaultScreenQuizHotkey(plat),
-    plat
-  )
 
   const shortcutRows: {
-    id: Exclude<EditRow, null> | 'esc'
+    id: Exclude<EditRow, null> | 'esc' | 'aiTalk'
     name: string
     blurb: string
     editable: boolean
@@ -262,6 +281,12 @@ export default function SettingsPage() {
       name: brand.voice.name,
       blurb: brand.voice.blurb,
       editable: !isWin
+    },
+    {
+      id: 'aiTalk',
+      name: brand.aiTalk.name,
+      blurb: brand.aiTalk.blurb,
+      editable: false
     },
     {
       id: 'reply',
@@ -276,12 +301,6 @@ export default function SettingsPage() {
       editable: true
     },
     {
-      id: 'screenQuiz',
-      name: brand.screenQuiz.name,
-      blurb: brand.screenQuiz.blurb,
-      editable: true
-    },
-    {
       id: 'esc',
       name: t('settings.hotkeys.esc'),
       blurb: t('settings.hotkeys.escBlurb'),
@@ -290,10 +309,10 @@ export default function SettingsPage() {
   ]
 
   function bindLabelFor(id: (typeof shortcutRows)[number]['id']): string {
-    if (id === 'voice') return voiceBindLabel
+    if (id === 'voice') return voiceTapBindLabel
+    if (id === 'aiTalk') return voiceHoldBindLabel
     if (id === 'reply') return replyBindLabel
     if (id === 'screenAsk') return askBindLabel
-    if (id === 'screenQuiz') return quizBindLabel
     return 'Esc'
   }
 
@@ -391,23 +410,15 @@ export default function SettingsPage() {
                       />
                     ) : null}
 
-                    {isEdit && row.id === 'screenQuiz' ? (
-                      <ComboHotkeyCapture
-                        platform={plat}
-                        value={form.screenQuizHotkey || ''}
-                        onChange={(accel) => {
-                          setForm({ ...form, screenQuizHotkey: accel })
-                          setEditing(null)
-                        }}
-                        onCancel={() => setEditing(null)}
-                      />
-                    ) : null}
-
                     {!isEdit ? <KeyChips label={bindLabelFor(row.id)} /> : null}
                   </div>
                   <div className="settings-hotkey-actions" role="cell">
                     {row.id === 'esc' ? (
                       <span className="settings-hotkey-fixed">{t('settings.hotkeys.fixed')}</span>
+                    ) : row.id === 'aiTalk' ? (
+                      <span className="settings-hotkey-fixed">
+                        {t('settings.hotkeys.sameAsVoice')}
+                      </span>
                     ) : isEdit ? (
                       <>
                         <button
@@ -460,16 +471,12 @@ export default function SettingsPage() {
               ? t('settings.hotkey.mapWin', {
                   reply: brand.reply.name,
                   screenAsk: brand.screenAsk.name,
-                  screenQuiz: brand.screenQuiz.name,
-                  askKey: defaultScreenAskHotkey('win32'),
-                  quizKey: defaultScreenQuizHotkey('win32')
+                  askKey: formatHotkeyLabel(defaultScreenAskHotkey('win32'), 'win32')
                 })
               : t('settings.hotkey.mapMac', {
                   reply: brand.reply.name,
                   screenAsk: brand.screenAsk.name,
-                  screenQuiz: brand.screenQuiz.name,
-                  askKey: formatMacCommandLabel(defaultScreenAskHotkey('darwin')),
-                  quizKey: formatMacCommandLabel(defaultScreenQuizHotkey('darwin'))
+                  askKey: formatMacCommandLabel(defaultScreenAskHotkey('darwin'))
                 })}
           </p>
           {!isWin ? (
@@ -501,7 +508,7 @@ export default function SettingsPage() {
           />
           <div className="settings-divider" />
           <ToggleRow
-            checked={form.voiceFixSttTyposEnabled !== false}
+            checked={form.voiceFixSttTyposEnabled === true}
             onChange={(checked) => setForm({ ...form, voiceFixSttTyposEnabled: checked })}
             title={t('settings.voiceFixTypos')}
             hint={t('settings.voiceFixTyposHint')}
@@ -512,13 +519,6 @@ export default function SettingsPage() {
             onChange={(checked) => setForm({ ...form, screenAskEnabled: checked })}
             title={brand.screenAsk.name}
             hint={brand.screenAsk.blurb}
-          />
-          <div className="settings-divider" />
-          <ToggleRow
-            checked={form.screenQuizEnabled !== false}
-            onChange={(checked) => setForm({ ...form, screenQuizEnabled: checked })}
-            title={brand.screenQuiz.name}
-            hint={t('settings.screenQuiz.hint')}
           />
         </section>
 
@@ -600,8 +600,25 @@ export default function SettingsPage() {
         <section className="settings-card" id="settings-data">
           <div className="settings-card-head">
             <h3>{t('settings.group.data')}</h3>
-            <p>{t('settings.resetHint')}</p>
+            <p>{t('settings.dataPrivacy')}</p>
           </div>
+          {userDataPath ? (
+            <div className="settings-data-path">
+              <div>
+                <strong>{t('settings.dataPathLabel')}</strong>
+                <code>{userDataPath}</code>
+              </div>
+              <button
+                type="button"
+                className="btn secondary sm"
+                disabled={Boolean(busy)}
+                onClick={() => void onOpenUserData()}
+              >
+                {busy === 'openData' ? t('home.processing') : t('settings.dataOpenFolder')}
+              </button>
+            </div>
+          ) : null}
+          <p className="settings-hint">{t('settings.resetHint')}</p>
           <ToggleRow
             checked={includeSecrets}
             onChange={setIncludeSecrets}

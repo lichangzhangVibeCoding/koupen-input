@@ -4,7 +4,7 @@ import {
   formatMembershipHttpError,
   membershipAuthHeaders,
   membershipChatBase,
-  usesMembershipCloud
+  intendsOfficialMembership
 } from './membership'
 import { throwIfCancelled } from './task-cancel'
 
@@ -45,10 +45,14 @@ export function resolveSttConfig(settings: AppSettings): {
     return { baseUrl, apiKey: apiKey || 'local', model, isLocal: true, isBuiltin: false, isMembership: false }
   }
 
-  if (usesMembershipCloud(settings)) {
+  if (intendsOfficialMembership(settings) && settings.sttInferenceMode !== 'local') {
+    const token = settings.membershipAccessToken.trim()
+    if (!token) {
+      throw new Error('请先注册或登录官方会员，或到「模型」页改用自配 Key / 本地')
+    }
     return {
       baseUrl: membershipChatBase(settings),
-      apiKey: settings.membershipAccessToken.trim(),
+      apiKey: token,
       model: settings.sttModel.trim() || 'whisper-1',
       isLocal: false,
       isBuiltin: false,

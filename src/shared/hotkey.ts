@@ -159,6 +159,9 @@ export function formatHotkeyLabel(
   if (platform === 'darwin' && /Command/i.test(hotkey)) {
     return formatMacCommandLabel(hotkey)
   }
+  if (platform === 'win32') {
+    return hotkey.replace(/\bSuper\b/gi, 'Win')
+  }
   return hotkey
 }
 
@@ -176,6 +179,22 @@ export function formatVoiceTriggerShortLabel(
     default:
       return t('hotkey.voiceTrigger.rightCommand')
   }
+}
+
+/** 首页 / 设置：点按手势绑定文案 */
+export function formatVoiceTapBindLabel(
+  platform: NodeJS.Platform = process.platform,
+  trigger: VoiceTriggerId = DEFAULT_VOICE_TRIGGER
+): string {
+  return t('hotkey.tapBind', { key: formatVoiceTriggerShortLabel(trigger, platform) })
+}
+
+/** 首页 / 设置：按住手势绑定文案（与AI对话，同一键） */
+export function formatVoiceHoldBindLabel(
+  platform: NodeJS.Platform = process.platform,
+  trigger: VoiceTriggerId = DEFAULT_VOICE_TRIGGER
+): string {
+  return t('hotkey.holdBind', { key: formatVoiceTriggerShortLabel(trigger, platform) })
 }
 
 /** 语音触发说明（开始/结束） */

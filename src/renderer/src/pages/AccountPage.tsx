@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import type { AppSettings } from '../../../shared/types'
 import type {
   MembershipLedgerEntry,
   MembershipMe
 } from '../../../shared/membership'
 import {
+  clearMembershipSession,
   maskPhone,
   membershipAvatarGlyph,
   membershipDisplayLabel,
@@ -110,9 +111,10 @@ function reasonLabel(
 export default function AccountPage() {
   const { t } = useI18n()
   const location = useLocation()
+  const navigate = useNavigate()
   const [form, setForm] = useState<AppSettings | null>(null)
   const [me, setMe] = useState<MembershipMe | null>(null)
-  const [authTab, setAuthTab] = useState<AuthTab>('login')
+  const [authTab, setAuthTab] = useState<AuthTab>('register')
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [redeem, setRedeem] = useState('')
@@ -195,11 +197,7 @@ export default function AccountPage() {
       } catch (e) {
         setLedger([])
         if (isAuthError(e)) {
-          const next = {
-            ...s,
-            membershipAccessToken: '',
-            modelRoutingMode: 'byok' as const
-          }
+          const next = clearMembershipSession(s)
           await window.vipChat.saveSettings(next)
           setForm(next)
           setMe(null)
@@ -362,6 +360,9 @@ export default function AccountPage() {
       setMsg(authTab === 'register' ? t('account.registerOk') : t('account.loginOk'))
       await refresh(next)
       window.dispatchEvent(new CustomEvent('typenow:account-changed'))
+      if (!next.skillGuideCompleted) {
+        navigate('/onboarding', { replace: true })
+      }
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))
     } finally {
@@ -370,7 +371,7 @@ export default function AccountPage() {
   }
 
   const logout = async (): Promise<void> => {
-    await savePatch({ membershipAccessToken: '', modelRoutingMode: 'byok' })
+    await savePatch(clearMembershipSession(form as AppSettings))
     setMe(null)
     setLedger([])
     setEditingNick(false)
@@ -475,7 +476,7 @@ export default function AccountPage() {
       requestIntent(kind, plan?.name)
       return
     }
-    if (plans?.stripeEnabled === false) {
+    if (!plans?.stripeEnabled) {
       requestIntent(kind, plan.name)
       return
     }
@@ -642,7 +643,7 @@ export default function AccountPage() {
                 <input
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="13800138000"
+                  placeholder={t('account.phonePlaceholder')}
                   autoComplete="tel"
                 />
               </label>
@@ -652,7 +653,7 @@ export default function AccountPage() {
                   <input
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="888888"
+                    placeholder={t('account.codePlaceholder')}
                     autoComplete="one-time-code"
                   />
                   <button
@@ -1182,7 +1183,7 @@ export default function AccountPage() {
                   setMsg(t('membership.loginToBuy'))
                   return
                 }
-                if (plans?.stripeEnabled === false) {
+                if (!plans?.stripeEnabled) {
                   requestIntent('open')
                   return
                 }

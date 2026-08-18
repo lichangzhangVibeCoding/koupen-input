@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BRAND_SITE } from '../../../shared/brand'
 import {
   HELP_SCENARIO_GROUPS,
@@ -7,7 +7,8 @@ import {
 } from '../../../shared/help-scenarios'
 import {
   formatHotkeyLabel,
-  formatVoiceTriggerLabel
+  formatVoiceHoldBindLabel,
+  formatVoiceTapBindLabel
 } from '../../../shared/hotkey'
 import {
   compareSemver,
@@ -27,30 +28,34 @@ function openUrl(url: string): void {
 export default function HelpPage() {
   const { t, locale, brand } = useI18n()
   const location = useLocation()
+  const navigate = useNavigate()
   const [version, setVersion] = useState('')
   const [catalog, setCatalog] = useState<ReleasesCatalog | null>(null)
   const [hotkeys, setHotkeys] = useState({
     voice: '—',
+    aiTalk: '—',
     reply: '—',
-    screenAsk: '—',
-    screenQuiz: '—'
+    screenAsk: '—'
   })
+  const [userDataPath, setUserDataPath] = useState('')
 
   useEffect(() => {
     void (async () => {
-      const [v, c, s, p] = await Promise.all([
+      const [v, c, s, p, dataPath] = await Promise.all([
         window.vipChat.getVersion(),
         window.vipChat.getReleasesCatalog(),
         window.vipChat.getSettings(),
-        window.vipChat.getPlatform()
+        window.vipChat.getPlatform(),
+        window.vipChat.getUserDataPath().catch(() => '')
       ])
       setVersion(v)
       setCatalog(c)
+      setUserDataPath(dataPath)
       setHotkeys({
-        voice: formatVoiceTriggerLabel(p, s.voiceTrigger),
+        voice: formatVoiceTapBindLabel(p, s.voiceTrigger),
+        aiTalk: formatVoiceHoldBindLabel(p, s.voiceTrigger),
         reply: formatHotkeyLabel(s.hotkey, p),
-        screenAsk: formatHotkeyLabel(s.screenAskHotkey, p),
-        screenQuiz: formatHotkeyLabel(s.screenQuizHotkey, p)
+        screenAsk: formatHotkeyLabel(s.screenAskHotkey, p)
       })
     })()
   }, [])
@@ -78,18 +83,18 @@ export default function HelpPage() {
     () =>
       ({
         voice: brand.voice.name,
+        aiTalk: brand.aiTalk.name,
         reply: brand.reply.name,
-        screen: brand.screenAsk.name,
-        quiz: brand.screenQuiz.name
+        screen: brand.screenAsk.name
       }) as Record<string, string>,
     [brand]
   )
 
   const hotkeyById: Record<string, string> = {
     voice: hotkeys.voice,
+    aiTalk: hotkeys.aiTalk,
     reply: hotkeys.reply,
-    screen: hotkeys.screenAsk,
-    quiz: hotkeys.screenQuiz
+    screen: hotkeys.screenAsk
   }
 
   return (
@@ -98,6 +103,13 @@ export default function HelpPage() {
       <p className="page-desc">{t('help.desc')}</p>
 
       <div className="help-actions" role="navigation" aria-label={t('help.actionsLabel')}>
+        <button
+          type="button"
+          className="btn help-action-btn"
+          onClick={() => navigate('/onboarding')}
+        >
+          {t('help.openOnboarding')}
+        </button>
         <a
           className="btn help-action-btn"
           href="#changelog"
@@ -162,6 +174,68 @@ export default function HelpPage() {
             </div>
           </li>
         </ol>
+      </div>
+
+      <div className="help-cap-table-wrap">
+        <h2 className="help-section-title">{t('help.capTableTitle')}</h2>
+        <p className="help-section-sub">{t('help.capTableSub')}</p>
+        <div className="help-cap-table-scroll">
+          <table className="help-cap-table">
+            <thead>
+              <tr>
+                <th>{t('help.capTable.th1')}</th>
+                <th>{t('help.capTable.th2')}</th>
+                <th>{t('help.capTable.th3')}</th>
+                <th>{t('help.capTable.th4')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{t('help.capTable.r1a')}</td>
+                <td>{t('help.capTable.r1b')}</td>
+                <td>{t('help.capTable.r1c')}</td>
+                <td>{t('help.capTable.r1d')}</td>
+              </tr>
+              <tr>
+                <td>{t('help.capTable.r2a')}</td>
+                <td>{t('help.capTable.r2b')}</td>
+                <td>{t('help.capTable.r2c')}</td>
+                <td>{t('help.capTable.r2d')}</td>
+              </tr>
+              <tr>
+                <td>{t('help.capTable.r3a')}</td>
+                <td>{t('help.capTable.r3b')}</td>
+                <td>{t('help.capTable.r3c')}</td>
+                <td>{t('help.capTable.r3d')}</td>
+              </tr>
+              <tr>
+                <td>{t('help.capTable.r4a')}</td>
+                <td>{t('help.capTable.r4b')}</td>
+                <td>{t('help.capTable.r4c')}</td>
+                <td>{t('help.capTable.r4d')}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="help-privacy">
+        <h2 className="help-section-title">{t('help.privacyTitle')}</h2>
+        <p className="help-section-sub">{t('help.privacySub')}</p>
+        <div className="help-privacy-cards">
+          <article className="help-privacy-card">
+            <h3>{t('help.privacyLocalTitle')}</h3>
+            <p>{t('help.privacyLocalBody')}</p>
+          </article>
+          <article className="help-privacy-card">
+            <h3>{t('help.privacyNosendTitle')}</h3>
+            <p>{t('help.privacyNosendBody')}</p>
+          </article>
+          <article className="help-privacy-card">
+            <h3>{t('help.privacyPathTitle')}</h3>
+            <p>{t('help.privacyPathBody', { path: userDataPath || '—' })}</p>
+          </article>
+        </div>
       </div>
 
       <div className="help-scenarios">

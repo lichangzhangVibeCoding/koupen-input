@@ -4,6 +4,8 @@
   /** Filenames served from site ./dl/ (virtual host). Others → GitHub Releases.
    *  Host WAF: /downloads/ path 404; .dmg blocked; .exe/.zip OK. */
   var SITE_HOSTED = {
+    'TalkNow-0.5.10-x64.exe': true,
+    'TalkNow-0.5.9-x64.exe': true,
     'TalkNow-0.5.8-x64.exe': true
   }
   var SITE_DL_DIR = 'dl/'

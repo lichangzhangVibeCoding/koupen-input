@@ -17,4 +17,5 @@
 - npm / 工程名：`typenow`（原 `streamer-vip-chat` / 仓库曾用 koupen-input）  
 - appId：`com.typenow.app`  
 - 产品显示名仍为 **即刻对话**  
-- 首次启动若新 userData 为空，尝试从旧目录迁移配置与数据库。
+- 用户数据目录：Mac `~/Library/Application Support/typenow/`；Windows `%APPDATA%\typenow\`  
+- 首次启动若新 userData 为空，尝试从旧目录迁移配置与数据库（`streamer-vip-chat` / `口喷输入` / `即刻对话` / `koupen-input`）。

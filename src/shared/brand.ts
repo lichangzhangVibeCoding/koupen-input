@@ -39,6 +39,9 @@ export const BRAND = {
   get voice(): { name: string; blurb: string } {
     return getBrand().voice
   },
+  get aiTalk(): { name: string; blurb: string } {
+    return getBrand().aiTalk
+  },
   get reply(): { name: string; blurb: string } {
     return getBrand().reply
   },

@@ -15,6 +15,9 @@ const api = {
   getPlatform: (): Promise<string> => ipcRenderer.invoke('app:platform'),
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
   isDev: (): Promise<boolean> => ipcRenderer.invoke('app:isDev'),
+  getUserDataPath: (): Promise<string> => ipcRenderer.invoke('app:userDataPath'),
+  openUserData: (): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('app:openUserData'),
   getReleasesCatalog: (): Promise<ReleasesCatalog> => ipcRenderer.invoke('updates:catalog'),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
   getMacPermissions: (): Promise<{
@@ -75,7 +78,6 @@ const api = {
     ipcRenderer.invoke('messages:list', contactId, query),
   runPipeline: (): Promise<boolean> => ipcRenderer.invoke('pipeline:run'),
   runScreenAsk: (): Promise<void> => ipcRenderer.invoke('pipeline:screenAsk'),
-  runScreenQuiz: (): Promise<void> => ipcRenderer.invoke('pipeline:screenQuiz'),
   askScreenText: (question: string): Promise<boolean> =>
     ipcRenderer.invoke('screenAsk:askText', question),
   listScreenAskSessions: (): Promise<ScreenAskSession[]> =>
@@ -100,7 +102,14 @@ const api = {
     ipcRenderer.on('screenAsk:updated', listener)
     return () => ipcRenderer.removeListener('screenAsk:updated', listener)
   },
+  onSkillGuideStep: (cb: (step: { id: string; ok: boolean }) => void): (() => void) => {
+    const listener = (_: Electron.IpcRendererEvent, step: { id: string; ok: boolean }): void =>
+      cb(step)
+    ipcRenderer.on('skill-guide:step', listener)
+    return () => ipcRenderer.removeListener('skill-guide:step', listener)
+  },
   toggleVoiceInput: (): Promise<boolean> => ipcRenderer.invoke('voice:toggle'),
+  toggleVoiceHold: (): Promise<'started' | 'finished'> => ipcRenderer.invoke('voice:toggleHold'),
   getModelDashboard: () => ipcRenderer.invoke('models:dashboard'),
   applySiliconflow: (apiKey: string) => ipcRenderer.invoke('models:applySiliconflow', apiKey),
   installLocalSuite: () => ipcRenderer.invoke('models:installLocalSuite'),

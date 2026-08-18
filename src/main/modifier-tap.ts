@@ -22,8 +22,6 @@ export type ModifierTapHandlers = {
   onVoiceHoldCancel?: () => void
   /** 右 Command + Shift + 1 → 看屏幕 */
   onScreenAsk?: () => void
-  /** 右 Command + Shift + 2 → 看屏幕答题 */
-  onScreenQuiz?: () => void
   /** 右 Command + 8 → 语音（硬件备用） */
   onHardwareVoice?: () => void
   /** 右 Command + 0 → 帮我对话（硬件备用） */
@@ -269,10 +267,6 @@ function attachListeners(): void {
       }
       if (shiftDown && e.keycode === UiohookKey[1]) {
         fireChord(() => handlers.onScreenAsk?.())
-        return
-      }
-      if (shiftDown && e.keycode === UiohookKey[2]) {
-        fireChord(() => handlers.onScreenQuiz?.())
         return
       }
       if (e.keycode === UiohookKey[8]) {

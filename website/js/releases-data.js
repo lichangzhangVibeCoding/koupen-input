@@ -7,6 +7,48 @@ window.TYPENOW_RELEASES = {
   "siteUrl": "https://www.talknow.cn/",
   "releases": [
     {
+      "version": "0.5.10",
+      "date": "2026-08-19",
+      "title": "看屏幕与设置体验更新",
+      "titleEn": "Screen-ask and settings polish",
+      "highlights": [
+        "看屏幕问答与首页/设置/帮助文案与交互改进",
+        "语音与会员相关能力继续打磨",
+        "Windows 安装包直链更新"
+      ],
+      "highlightsEn": [
+        "Screen-ask plus home/settings/help UX polish",
+        "Continued voice and membership refinements",
+        "Updated Windows installer download link"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.10-arm64.dmg",
+        "macX64": "即刻对话-0.5.10-x64.dmg",
+        "winX64": "TalkNow-0.5.10-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.9",
+      "date": "2026-08-18",
+      "title": "口述校对：去水词与改错别字",
+      "titleEn": "Dictation cleanup: fillers and STT typos",
+      "highlights": [
+        "即刻对话可自动去掉嗯啊呃等水词，并按上下文改正转写错字（设置里可关）",
+        "点按贴口述、按住增强都会先校对；不把具体错词写进场景包",
+        "官网顶栏显示当前版本；macOS 下载改为敬请期待，Windows 安装包照常提供"
+      ],
+      "highlightsEn": [
+        "TalkNow can strip spoken fillers and fix STT typos from context (toggles in Settings)",
+        "Tap-to-paste and hold-to-enhance both clean the transcript first; no scene-pack hardcoding",
+        "Site header shows the current version; macOS download is coming soon, Windows installer stays live"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.9-arm64.dmg",
+        "macX64": "即刻对话-0.5.9-x64.dmg",
+        "winX64": "TalkNow-0.5.9-x64.exe"
+      }
+    },
+    {
       "version": "0.5.8",
       "date": "2026-08-18",
       "title": "托盘、语音与站内下载加固",
@@ -43,7 +85,7 @@ window.TYPENOW_RELEASES = {
       "downloads": {
         "macArm64": "即刻对话-0.5.7-arm64.dmg",
         "macX64": "即刻对话-0.5.7-x64.dmg",
-        "winX64": "TalkNow-0.5.7-x64.exe"
+        "winX64": "即刻对话-0.5.7-x64.exe"
       }
     },
     {

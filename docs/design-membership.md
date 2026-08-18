@@ -2,7 +2,7 @@
 
 > 状态：**线下收款 + Stripe Checkout 测试结算 + 管理后台 + 薄代理**  
 > 微信/支付宝商户：**后置**（公司主体就绪后）  
-> 原则：自配 Key / 本地 = 永久免费；官方会员 = 免配 Key、统一扣积分
+> 原则：默认注册登录后走官方会员（免配 Key、扣积分）；自配 Key / 本地 = 永久免费备选
 
 ---
 
@@ -71,7 +71,7 @@ BYOK / 本地路径 **不扣**。
 默认本地 Node API：`http://127.0.0.1:8788`。  
 **正式环境（官网 PHP + MySQL）**：客户端 `membershipServerUrl` 默认  
 `https://www.lizhenning.com/other/typenow/talknowAPi/index.php`  
-（IIS PATH_INFO：`index.php/v1/...`；代码在 lizhenning `other/typenow/talknowAPi/`，PHP 5.2）
+（IIS PATH_INFO：`index.php/v1/...`；代码应在 lizhenning `other/typenow/talknowAPi/`。线上实测 PHP 7.0.33 + OpenResty/SDWAF：无 `index.php` 的 `/v1/...` 是 IIS 404 HTML；`OPTIONS`/`PUT` 会被 WAF 吃掉。`GET /v1/plans` 必须带布尔 `stripeEnabled`；未配置 Stripe 时 `POST /v1/orders source=stripe` 应 `501`，不可静默改成线下单。）
 
 ---
 
@@ -116,6 +116,9 @@ BYOK / 本地路径 **不扣**。
 
 ## 6. 客户端
 
+- **默认路径**：新安装 / 恢复默认 → `modelRoutingMode: 'membership'`。未登录时首页与首次打开引导去个人中心注册/登录；登录成功后同步官方三槽模型（免 Key），若尚未完成新手引导则进入训练场（`/onboarding`，见 [`design-onboarding.md`](design-onboarding.md)）。已填自配 Key 或已切本地的现有配置不强制改写。
+- **登录/注册表单**：手机号占位「请输入手机号」，不展示示例号（如 13800138000）。验证码短信尚未正式接入，点「获取验证码」后请输入 `888888`（开发态固定码仍有效）。
+- 退出登录或 token 失效：清 token，**仍留官方会员跑法**（需重新登录），不要默默退回空 Key 的 BYOK。
 - 设置字段：`modelRoutingMode: 'byok' | 'membership'`、`membershipServerUrl`、`membershipAccessToken`
 - 侧栏「会员」页：登录、余额、套餐、**Stripe 支付**、客服/付款说明、兑换码
 - 已开通用户：更高档「升级到此档」走 Stripe；更低档「申请换到此档」仍弹客服微信；当前档「续费延长」走 Stripe

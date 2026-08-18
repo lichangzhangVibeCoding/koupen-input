@@ -1,5 +1,7 @@
 /** Shared membership API types (client ↔ server payload) */
 
+import type { AppSettings } from './types'
+
 export type MembershipCapability =
   | 'reply'
   | 'reply_vision'
@@ -68,6 +70,15 @@ export type MembershipMe = {
     asr: string
     vision: string
     chat: string
+  }
+}
+
+/** 退出或 token 失效：清登录态，默认仍留官方会员（已切本地则不动跑法） */
+export function clearMembershipSession(settings: AppSettings): AppSettings {
+  return {
+    ...settings,
+    membershipAccessToken: '',
+    ...(settings.inferenceMode === 'local' ? {} : { modelRoutingMode: 'membership' as const })
   }
 }
 

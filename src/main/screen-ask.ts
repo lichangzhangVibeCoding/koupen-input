@@ -1,7 +1,8 @@
 import { clipboard } from 'electron'
 import { BRAND } from '../shared/brand'
 import { t } from '../shared/i18n'
-import { HudStatus, LOCAL_DEFAULTS } from '../shared/types'
+import { isScreenQuizIntent } from '../shared/screen-quiz-intent'
+import { AppSettings, HudStatus, LOCAL_DEFAULTS } from '../shared/types'
 import { notifyActivityChanged } from './activity-notify'
 import { captureFullScreen } from './capture'
 import { getSettings } from './db'
@@ -24,6 +25,7 @@ import {
   TaskCancelledError
 } from './task-cancel'
 import { discardMicRecording, startMicRecording, stopMicRecording } from './voice-recorder'
+import { notifySkillGuideStep } from './skill-guide'
 
 type Phase = 'idle' | 'capturing' | 'speaking' | 'listening' | 'transcribing' | 'thinking'
 
@@ -36,6 +38,7 @@ let onSessionUpdated: ((sessionId: number) => void) | null = null
 let lastHud: HudStatus | null = null
 let thinkPulseTimer: ReturnType<typeof setInterval> | null = null
 let runId = 0
+let screenAskFromUi = false
 
 export function setScreenAskUpdateHandler(fn: ((sessionId: number) => void) | null): void {
   onSessionUpdated = fn
@@ -114,6 +117,83 @@ export function showScreenAskProgressHud(): void {
   })
 }
 
+function archiveQuizQuestion(userQuestion: string, questionText: string): string {
+  const spoken = userQuestion.trim()
+  if (questionText.trim()) {
+    return `${spoken}\n\n（看屏幕答题·读题）\n${questionText.trim().slice(0, 2000)}`
+  }
+  return spoken || t('screenQuiz.autoQuestion')
+}
+
+async function completeQuizFromImage(
+  settings: AppSettings,
+  image: { base64: string; mime: string },
+  userQuestion: string,
+  myRun: number
+): Promise<{ answer: string; archivedQuestion: string }> {
+  let quizPhase: 'reading' | 'answering' = 'reading'
+  const showQuizHud = (wait = false) => {
+    if (quizPhase === 'reading') {
+      setPhaseHud({
+        kind: 'recognizing',
+        text: wait ? t('screenQuiz.readingWait') : t('screenQuiz.reading'),
+        detail: t('screenQuiz.readingDetail'),
+        icon: 'look'
+      })
+    } else {
+      setPhaseHud({
+        kind: 'generating',
+        text: wait ? t('screenQuiz.thinkingWait') : t('screenQuiz.thinking'),
+        detail: t('screenQuiz.thinkingDetail'),
+        icon: 'think'
+      })
+    }
+  }
+  showQuizHud()
+  let tick = 0
+  clearThinkPulse()
+  thinkPulseTimer = setInterval(() => {
+    if (myRun !== runId) {
+      clearThinkPulse()
+      return
+    }
+    tick += 1
+    showQuizHud(tick % 2 === 1)
+  }, 2800)
+
+  const signal = beginNetworkWork()
+  const knowledge = getExamKnowledgeBase()
+  const { answer, questionText } = await answerScreenQuiz(
+    settings,
+    image,
+    signal,
+    knowledge,
+    (p) => {
+      quizPhase = p
+      showQuizHud()
+    }
+  )
+  return {
+    answer,
+    archivedQuestion: archiveQuizQuestion(userQuestion, questionText)
+  }
+}
+
+async function resolveScreenAskAnswer(
+  settings: AppSettings,
+  image: { base64: string; mime: string },
+  question: string,
+  myRun: number
+): Promise<{ answer: string; archivedQuestion: string }> {
+  if (isScreenQuizIntent(question)) {
+    return completeQuizFromImage(settings, image, question, myRun)
+  }
+  const history = activeSessionId ? recentScreenAskTextHistory(activeSessionId, 12) : []
+  const signal = beginNetworkWork()
+  const answer = await answerScreenQuestion(settings, image, question, history, signal)
+  return { answer, archivedQuestion: question }
+}
+
 async function assertModelsReady(): Promise<void> {
   const settings = getSettings()
   if (isLocalMode(settings)) {
@@ -183,17 +263,18 @@ async function finishListening(): Promise<void> {
       })
     }, 2800)
 
-    const history = activeSessionId
-      ? recentScreenAskTextHistory(activeSessionId, 12)
-      : []
-    const signal2 = beginNetworkWork()
-    const answer = await answerScreenQuestion(settings, image, question, history, signal2)
+    const { answer, archivedQuestion } = await resolveScreenAskAnswer(
+      settings,
+      image,
+      question,
+      myRun
+    )
     if (myRun !== runId) throw new TaskCancelledError()
     clearThinkPulse()
 
     const saved = appendScreenAskTurn({
       sessionId: activeSessionId,
-      question,
+      question: archivedQuestion,
       answer,
       image
     })
@@ -204,6 +285,7 @@ async function finishListening(): Promise<void> {
     lastHud = { kind: 'answer', text: answer }
     showHud({ kind: 'answer', text: answer })
     void speakText(`${t('screenAsk.answerSpeakPrefix')}${answer}`, { maxLen: 280 })
+    if (!screenAskFromUi) notifySkillGuideStep('screenAsk', true)
   } catch (err) {
     clearThinkPulse()
     if (isTaskCancelled(err) || myRun !== runId) return
@@ -220,7 +302,7 @@ async function finishListening(): Promise<void> {
 }
 
 /** 快捷键：第一次截屏并开听；第二次结束并回答。听的过程中也可由语音单击结束。 */
-export async function toggleScreenAsk(): Promise<void> {
+export async function toggleScreenAsk(opts?: { fromUi?: boolean }): Promise<void> {
   const settings = getSettings()
   if (settings.screenAskEnabled === false) {
     showHud({ kind: 'error', text: t('screenAsk.disabled', { name: BRAND.screenAsk.name }) })
@@ -237,6 +319,7 @@ export async function toggleScreenAsk(): Promise<void> {
     return
   }
 
+  screenAskFromUi = Boolean(opts?.fromUi)
   phase = 'capturing'
   const myRun = ++runId
   notifyActivityChanged()
@@ -316,13 +399,12 @@ export async function stopScreenAskIfListening(): Promise<boolean> {
 }
 
 /**
- * 看屏幕答题：截整屏 → 直接给正确答案（不开麦、不解释）。
- * 与「看屏幕」共用 busy 相位，互斥。
+ * 内部：无口述的答题流水线（已并入看屏幕意图路由；不再作为独立技能入口）。
  */
 export async function runScreenQuiz(): Promise<void> {
   const settings = getSettings()
-  if (settings.screenQuizEnabled === false) {
-    showHud({ kind: 'error', text: t('screenQuiz.disabled', { name: BRAND.screenQuiz.name }) })
+  if (settings.screenAskEnabled === false) {
+    showHud({ kind: 'error', text: t('screenAsk.disabled', { name: BRAND.screenAsk.name }) })
     return
   }
   if (phase !== 'idle') {
@@ -351,56 +433,18 @@ export async function runScreenQuiz(): Promise<void> {
 
     phase = 'thinking'
     notifyActivityChanged()
-    let quizPhase: 'reading' | 'answering' = 'reading'
-    const showQuizHud = (wait = false) => {
-      if (quizPhase === 'reading') {
-        setPhaseHud({
-          kind: 'recognizing',
-          text: wait ? t('screenQuiz.readingWait') : t('screenQuiz.reading'),
-          detail: t('screenQuiz.readingDetail'),
-          icon: 'look'
-        })
-      } else {
-        setPhaseHud({
-          kind: 'generating',
-          text: wait ? t('screenQuiz.thinkingWait') : t('screenQuiz.thinking'),
-          detail: t('screenQuiz.thinkingDetail'),
-          icon: 'think'
-        })
-      }
-    }
-    showQuizHud()
-    let tick = 0
-    clearThinkPulse()
-    thinkPulseTimer = setInterval(() => {
-      if (myRun !== runId) {
-        clearThinkPulse()
-        return
-      }
-      tick += 1
-      showQuizHud(tick % 2 === 1)
-    }, 2800)
-
-    const signal = beginNetworkWork()
-    const knowledge = getExamKnowledgeBase()
-    const { answer, questionText } = await answerScreenQuiz(
+    const { answer, archivedQuestion } = await completeQuizFromImage(
       settings,
       shot.visionImage,
-      signal,
-      knowledge,
-      (p) => {
-        quizPhase = p
-        showQuizHud()
-      }
+      t('screenQuiz.autoQuestion'),
+      myRun
     )
     if (myRun !== runId) throw new TaskCancelledError()
     clearThinkPulse()
 
     const saved = appendScreenAskTurn({
       sessionId: activeSessionId,
-      question: questionText
-        ? `（看屏幕答题·读题）\n${questionText.slice(0, 2000)}`
-        : t('screenQuiz.autoQuestion'),
+      question: archivedQuestion,
       answer,
       image: shot.visionImage
     })
@@ -411,6 +455,7 @@ export async function runScreenQuiz(): Promise<void> {
     lastHud = { kind: 'answer', text: answer }
     showHud({ kind: 'answer', text: answer })
     void speakText(answer, { maxLen: 200 })
+    if (!screenAskFromUi) notifySkillGuideStep('screenAsk', true)
   } catch (err) {
     clearThinkPulse()
     if (isTaskCancelled(err) || myRun !== runId) return
@@ -486,23 +531,18 @@ export async function askScreenWithText(questionRaw: string): Promise<boolean> {
       })
     }, 2800)
 
-    const history = activeSessionId
-      ? recentScreenAskTextHistory(activeSessionId, 12)
-      : []
-    const signal = beginNetworkWork()
-    const answer = await answerScreenQuestion(
+    const { answer, archivedQuestion } = await resolveScreenAskAnswer(
       settings,
       shot.visionImage,
       question,
-      history,
-      signal
+      myRun
     )
     if (myRun !== runId) throw new TaskCancelledError()
     clearThinkPulse()
 
     const saved = appendScreenAskTurn({
       sessionId: activeSessionId,
-      question,
+      question: archivedQuestion,
       answer,
       image: shot.visionImage
     })

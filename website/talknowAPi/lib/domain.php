@@ -172,6 +172,7 @@ function tn_seed() {
     array('howto-offline-order', '教程：线下开单与履约', '功能教程', "搜用户 → 线下开单（套餐或加积分）→ 履约；或发兑换码。", 10),
     array('howto-client-models', '教程：客户端三种跑法', '功能教程', "模型页：官方会员 / 自配 Key / 本地。三槽跟方案走。", 20),
     array('deploy-ftp', '运维：正式环境与 FTP', '运维部署', "后台用 admin/index.php 并强制刷新。\ndeploy-ftp.py 上传；改 JS/CSS 需重建内联 HTML。\n健康检查：index.php?r=/health", 10),
+    array('ai-prompt-scenes', '与AI对话：场景包技术路线', '核心架构', "与AI对话 = 即刻对话「按住说」：对着任意 AI 输入框，口述加成可执行提示词再贴入（不发送）。\n\n【核心竞争力】管道只维护一次；好用靠场景包变多变准。不加第五技能、不按 App 名硬编码。\n\n【技术路线】\n按住 → 截屏+录音 → STT\n  → 读屏摘要（视觉）\n  → 场景路由 website | ppt | debug | brief | generic\n  → 套场景包（骨架 / 允许补全 / 禁止）\n  → 文字模型写提示词 → 粘贴\n\n【首发四包】与官网四卡对齐\n- website 做网站：页面模块；用户点到的功能再展开；禁写成 HTML 幻灯\n- ppt 做 PPT：HTML 分页幻灯（第 N 页 + 要点）；禁止 .ppt/.pptx\n- debug 修 Bug：现象/复现/期望/范围；屏幕报错原文；禁新开产品需求\n- brief 写方案：目标、约束、输出格式\n- generic 回落：轻度扩写，禁止套建站电商模块。Debug 与建站同时像时 debug 优先。\n\n【黄金口试】公司官网→website；十页融资PPT→ppt（HTML 幻灯）；对着红字修这个→debug；周报结构→brief；含糊弄一下→generic\n\n【演进】P0 四包+路由（本期）；P1 跟进句 followup；P2 继续加包，每包两条口试。\n\n规格：docs/design-prompt-enhance.md\n代码：src/shared/prompt-scenes/", 50),
   );
   for ($i = 0; $i < count($tpl); $i++) {
     $row = $tpl[$i];
@@ -193,6 +194,7 @@ function tn_seed() {
       array('P5', '微信/支付宝支付', '后置', 'deferred', 60),
       array('P6', '官网定价页', '', 'done', 70),
       array('工程', 'PHP+MySQL 正式部署', 'talknowAPi PHP5.2', 'done', 5),
+      array('产品', '与AI对话场景包', '管道+website/ppt/debug/brief', 'building', 85),
       array('产品', '技能模块', '', 'pending', 90),
     );
     foreach ($items as $it) {

@@ -17,7 +17,7 @@ import {
   formatMembershipHttpError,
   membershipAuthHeaders,
   membershipChatBase,
-  usesMembershipCloud,
+  intendsOfficialMembership,
   type MembershipCapability
 } from './membership'
 import { formatPromptSceneBlock, matchPromptScene } from '../shared/prompt-scenes'
@@ -47,7 +47,7 @@ function resolveRuntime(settings: AppSettings): {
       isMembership: false
     }
   }
-  if (usesMembershipCloud(settings)) {
+  if (intendsOfficialMembership(settings)) {
     return {
       baseUrl: membershipChatBase(settings),
       apiKey: settings.membershipAccessToken.trim(),
@@ -130,7 +130,7 @@ async function chatCompletion(
     }
   } else if (runtime.isMembership) {
     if (!runtime.apiKey.trim()) {
-      throw new Error('请先在「会员」页登录，或改回自配 Key')
+      throw new Error('请先注册或登录官方会员，或到「模型」页改用自配 Key / 本地')
     }
   } else if (!runtime.apiKey.trim()) {
     throw new Error('请先在设置里配置 API Key，或改用免费本地模型 / 官方会员')
@@ -828,7 +828,7 @@ export async function cleanVoiceTranscript(
   if (!raw) return spoken
 
   const strip = settings.voiceStripFillersEnabled !== false
-  const fix = settings.voiceFixSttTyposEnabled !== false
+  const fix = settings.voiceFixSttTyposEnabled === true
   if (!strip && !fix) return spoken
 
   const afterFillers = strip ? stripSpokenFillers(raw) : raw

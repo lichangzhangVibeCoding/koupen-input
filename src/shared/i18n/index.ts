@@ -69,6 +69,7 @@ export type BrandCopy = {
   tagline: string
   site: string
   voice: { name: string; blurb: string }
+  aiTalk: { name: string; blurb: string }
   reply: { name: string; blurb: string }
   screenAsk: { name: string; blurb: string }
   screenQuiz: { name: string; blurb: string }
@@ -83,6 +84,7 @@ export function getBrand(): BrandCopy {
     tagline: t('brand.tagline'),
     site: t('brand.site'),
     voice: { name: t('brand.voice.name'), blurb: t('brand.voice.blurb') },
+    aiTalk: { name: t('brand.aiTalk.name'), blurb: t('brand.aiTalk.blurb') },
     reply: { name: t('brand.reply.name'), blurb: t('brand.reply.blurb') },
     screenAsk: {
       name: t('brand.screenAsk.name'),

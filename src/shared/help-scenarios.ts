@@ -1,4 +1,4 @@
-/** 帮助页场景导览（与官网 lizhenning other/typenow/js/i18n.js scenarios.* 对齐） */
+/** 帮助页场景导览（与官网 lizhenning other/typenow 四能力口径对齐；内部清单 docs/ops-copy-sync.md） */
 
 export type LocaleText = { zh: string; en: string }
 
@@ -9,7 +9,7 @@ export type HelpScenarioCard = {
 }
 
 export type HelpScenarioGroup = {
-  id: 'voice' | 'reply' | 'screen' | 'quiz'
+  id: 'voice' | 'aiTalk' | 'reply' | 'screen'
   /** 对应 brand 能力名；页面用 brand.* 覆盖展示名 */
   name: LocaleText
   tag: LocaleText
@@ -28,11 +28,11 @@ function L(zh: string, en: string): LocaleText {
 export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
   {
     id: 'voice',
-    name: L('语音转文字', 'Voice Input'),
+    name: L('即刻对话', 'TalkNow'),
     tag: L('说比打快', 'Faster than typing'),
     how: L(
-      '把光标放进输入框。点按快捷键 {hotkey} 开始/结束，贴的是你说的话（可去水词、改错别字）；按住说话、松手后会按当前屏幕增强成提示词再贴入（不会自动发送）。',
-      'Focus an input field. Tap {hotkey} to start/stop and paste what you said (optional filler-strip / typo-fix); hold to speak, release to enhance a prompt from the screen (never auto-sends).'
+      '把光标放进输入框。点按快捷键 {hotkey} 开始/结束，贴的是你说的话（可去水词、改错别字，不会自动发送）。',
+      'Focus an input field. Tap {hotkey} to start/stop and paste what you said (optional filler-strip / typo-fix; never auto-sends).'
     ),
     cards: [
       {
@@ -60,20 +60,55 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
         tags: [L('写稿', 'Writing'), L('方案', 'Proposals')]
       },
       {
-        title: L('随手记灵感', 'Capture ideas on the go'),
+        title: L('对着 Cursor 说，别敲', 'Speak into Cursor instead of typing'),
         desc: L(
-          '走路、做饭、通勤时灵感来了，张口说，自动记成文字。',
-          'Walking, cooking, commuting — talk and it auto-transcribes your ideas to text.'
+          '在 Cursor、IDE 输入框里点按说话：注释、想改哪、给 AI 的一句指令，原话贴进去。这是贴原话，不是按住增强。',
+          'Tap in Cursor or an IDE: comments, what to change, a one-line instruction. Pastes verbatim — not hold-to-enhance.'
         ),
-        tags: [L('灵感', 'Ideas'), L('通勤', 'Commute')]
+        tags: [L('Cursor', 'Cursor'), L('IDE', 'IDE')]
+      }
+    ]
+  },
+  {
+    id: 'aiTalk',
+    name: L('与AI对话', 'Talk to AI'),
+    tag: L('按住增强提示词', 'Hold to enhance prompts'),
+    how: L(
+      '对着 WorkBuddy、豆包、Cursor、ChatGPT 等输入框，按住快捷键 {hotkey} 说话，松手后把口语整理成能执行的提示词再贴入（不会自动发送）。首页第二行也可点按开始、再点结束。',
+      'Focus WorkBuddy, Doubao, Cursor, or ChatGPT. Hold {hotkey} and speak; on release we turn speech into a prompt the AI can run (never auto-sends). The Home second row can tap to start / tap again to finish.'
+    ),
+    cards: [
+      {
+        title: L('做网站增强', 'Build a website faster'),
+        desc: L(
+          '对着 WorkBuddy、豆包、Cursor 按住说需求，松手后按屏幕整理成可执行的开发提示词。',
+          'Hold and speak into WorkBuddy, Doubao, or Cursor — spoken words become an executable build prompt from the screen.'
+        ),
+        tags: [L('WorkBuddy', 'WorkBuddy'), L('豆包', 'Doubao'), L('Cursor', 'Cursor')]
       },
       {
-        title: L('对 AI 说提示词', 'Talk prompts to an AI'),
+        title: L('做 PPT 增强', 'Make a better PPT brief'),
         desc: L(
-          '对着 ChatGPT、Cursor 按住说话，它看着屏幕把口述改写成更清楚的提示词。',
-          'Hold and speak into ChatGPT or Cursor — it looks at the screen and rewrites your words into a clearer prompt.'
+          '口述大纲与重点，增强成「按页结构生成幻灯片」的清晰指令。',
+          'Dictate the outline and key points; it becomes a clear “generate slides page by page” instruction.'
         ),
-        tags: [L('ChatGPT', 'ChatGPT'), L('Cursor', 'Cursor')]
+        tags: [L('PPT', 'PPT'), L('演示', 'Slides')]
+      },
+      {
+        title: L('写代码 / 修 Bug', 'Write code / fix a bug'),
+        desc: L(
+          '口语报错、改哪、期望结果，整理成 AI 能直接动手的调试提示。',
+          'Say the error, what to change, and the expected result — rewritten as a debug prompt the AI can act on.'
+        ),
+        tags: [L('代码', 'Code'), L('调试', 'Debug')]
+      },
+      {
+        title: L('写方案 / 问 ChatGPT', 'Brief ChatGPT for a proposal'),
+        desc: L(
+          '对着 ChatGPT、WorkBuddy 按住说散乱想法，改写成带目标、约束、输出格式的完整 brief。',
+          'Hold and dump messy ideas into ChatGPT or WorkBuddy; they become a brief with goal, constraints, and output format.'
+        ),
+        tags: [L('ChatGPT', 'ChatGPT'), L('WorkBuddy', 'WorkBuddy')]
       }
     ]
   },
@@ -125,17 +160,17 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
     name: L('看屏幕', 'Screen Reader'),
     tag: L('屏幕上啥都能问', 'Ask anything on screen'),
     how: L(
-      '按快捷键 {hotkey}，用语音说明要干什么（比价、翻译、解释……）。它看着整屏按你说的办。',
-      'Press {hotkey} and say what you need (price check, translate, explain…). It looks at the whole screen and follows.'
+      '按快捷键 {hotkey}，用语音说明要干什么。题目在屏幕上时可以说「请帮我看这道题选什么」。',
+      'Press {hotkey} and say what you need. If a question is on screen, say something like “which option should I pick?”.'
     ),
     cards: [
       {
-        title: L('商品比价', 'Price check'),
+        title: L('看屏幕答题', 'Screen quiz'),
         desc: L(
-          '屏幕上看到某个商品，问一句「这价格咋样」，AI 帮你看一眼。',
-          'See a product on screen? Ask "is this a good price?" and AI takes a look.'
+          '触发看屏幕后说「请帮我看这道题选什么」，它读题并给出正确答案。',
+          'After Screen Ask, say “which option should I pick?” — it reads the question and gives the answer.'
         ),
-        tags: [L('比价', 'Pricing'), L('购物', 'Shopping')]
+        tags: [L('答题', 'Quiz'), L('测验', 'Test')]
       },
       {
         title: L('即时翻译', 'Instant translation'),
@@ -162,20 +197,6 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
         tags: [L('作业', 'Homework'), L('教育', 'Education')]
       }
     ]
-  },
-  {
-    id: 'quiz',
-    name: L('看屏幕答题', 'Quiz Solver'),
-    tag: L('看一眼就出答案', 'Look and answer'),
-    how: L(
-      '题目开在屏幕上，按快捷键 {hotkey}。它读题后直接给出正确答案（可结合本机知识库）。',
-      'With the question on screen, press {hotkey}. It reads the question and gives the answer (optional local knowledge base).'
-    ),
-    banner: L(
-      '网课测验、选择判断、限时抢答——让 AI 看一眼屏幕，直接给你答案。',
-      'Online quizzes, multiple choice, timed tests — let AI look at the screen and give you the answer.'
-    ),
-    bannerTags: [L('网课', 'Courses'), L('测验', 'Quizzes'), L('抢答', 'Timed')]
   }
 ]
 

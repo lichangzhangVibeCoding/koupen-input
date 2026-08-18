@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   formatHotkeyLabel,
-  formatVoiceTriggerLabel
+  formatVoiceHoldBindLabel,
+  formatVoiceTapBindLabel
 } from '../../../shared/hotkey'
 import {
+  clearMembershipSession,
   maskPhone,
   membershipAvatarGlyph,
   membershipDisplayLabel,
@@ -16,7 +18,7 @@ import { useI18n } from '../i18n'
 
 type Dashboard = Awaited<ReturnType<typeof window.vipChat.getModelDashboard>>
 type Scheme = 'official' | 'byok' | 'local'
-type CmdId = 'voice' | 'reply' | 'screenAsk' | 'screenQuiz'
+type CmdId = 'voice' | 'aiTalk' | 'reply' | 'screenAsk'
 
 function deriveScheme(form: AppSettings, membershipActive: boolean): Scheme {
   if (form.inferenceMode === 'local' && form.sttInferenceMode === 'local') return 'local'
@@ -43,6 +45,14 @@ function CmdIcon({ id }: { id: CmdId }) {
           <path d="M12 18v3" />
         </svg>
       )
+    case 'aiTalk':
+      return (
+        <svg {...common}>
+          <path d="M12 3l1.2 3.6L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.4L12 3z" />
+          <path d="M19 13l.7 2.1L22 16l-2.3.7L19 19l-.7-2.3L16 16l2.3-.9L19 13z" />
+          <path d="M5 15h7a3 3 0 0 1 0 6H8l-3 2v-2H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z" />
+        </svg>
+      )
     case 'reply':
       return (
         <svg {...common}>
@@ -56,12 +66,6 @@ function CmdIcon({ id }: { id: CmdId }) {
           <path d="M8 21h8M12 17v4" />
         </svg>
       )
-    case 'screenQuiz':
-      return (
-        <svg {...common}>
-          <path d="M9 4h6M8 8h8M8 12h5M8 16h4M7 20h10" />
-        </svg>
-      )
   }
 }
 
@@ -72,11 +76,12 @@ export default function HomePage() {
   const [dash, setDash] = useState<Dashboard | null>(null)
   const [hotkeys, setHotkeys] = useState({
     voice: '',
+    aiTalk: '',
     reply: '',
-    screenAsk: '',
-    screenQuiz: ''
+    screenAsk: ''
   })
   const [busy, setBusy] = useState<CmdId | ''>('')
+  const [aiTalkLive, setAiTalkLive] = useState(false)
   const [msg, setMsg] = useState<{ id: CmdId; text: string; ok: boolean } | null>(null)
   const [account, setAccount] = useState<MembershipMe | null>(null)
   const [accountLoaded, setAccountLoaded] = useState(false)
@@ -91,10 +96,10 @@ export default function HomePage() {
     setSettings(s)
     setDash(d)
     setHotkeys({
-      voice: formatVoiceTriggerLabel(p, s.voiceTrigger),
+      voice: formatVoiceTapBindLabel(p, s.voiceTrigger),
+      aiTalk: formatVoiceHoldBindLabel(p, s.voiceTrigger),
       reply: formatHotkeyLabel(s.hotkey, p),
-      screenAsk: formatHotkeyLabel(s.screenAskHotkey, p),
-      screenQuiz: formatHotkeyLabel(s.screenQuizHotkey, p)
+      screenAsk: formatHotkeyLabel(s.screenAskHotkey, p)
     })
     if (s.membershipAccessToken) {
       try {
@@ -102,7 +107,7 @@ export default function HomePage() {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e || '')
         if (/401|UNAUTHORIZED/i.test(msg)) {
-          const next = { ...s, membershipAccessToken: '', modelRoutingMode: 'byok' as const }
+          const next = clearMembershipSession(s)
           await window.vipChat.saveSettings(next)
           setSettings(next)
           window.dispatchEvent(new CustomEvent('typenow:account-changed'))
@@ -143,9 +148,15 @@ export default function HomePage() {
 
   const scheme: Scheme = settings
     ? deriveScheme(settings, Boolean(dash?.membershipActive))
-    : 'byok'
+    : 'official'
+  const needLogin = Boolean(
+    settings &&
+      settings.modelRoutingMode === 'membership' &&
+      settings.inferenceMode !== 'local' &&
+      !settings.membershipAccessToken?.trim()
+  )
   const readyCount = dash?.readyCount ?? 0
-  const ready = readyCount >= 3
+  const ready = readyCount >= 3 && !needLogin
   const schemeLabel =
     scheme === 'official'
       ? t('home.schemeOfficial')
@@ -173,6 +184,36 @@ export default function HomePage() {
         void run('voice', () => window.vipChat.toggleVoiceInput(), t('home.cmd.voiceOk'))
     },
     {
+      id: 'aiTalk',
+      name: brand.aiTalk.name,
+      blurb: t('home.cmd.aiTalkBlurb'),
+      kbd: hotkeys.aiTalk,
+      runLabel: aiTalkLive ? t('home.cmd.aiTalkStop') : t('home.cmd.aiTalkRun'),
+      onRun: () =>
+        void (async () => {
+          setBusy('aiTalk')
+          setMsg(null)
+          try {
+            const phase = await window.vipChat.toggleVoiceHold()
+            setAiTalkLive(phase === 'started')
+            setMsg({
+              id: 'aiTalk',
+              text: phase === 'started' ? t('home.cmd.aiTalkStarted') : t('home.cmd.aiTalkOk'),
+              ok: true
+            })
+          } catch (e) {
+            setAiTalkLive(false)
+            setMsg({
+              id: 'aiTalk',
+              text: e instanceof Error ? e.message : String(e),
+              ok: false
+            })
+          } finally {
+            setBusy('')
+          }
+        })()
+    },
+    {
       id: 'reply',
       name: brand.reply.name,
       blurb: t('home.cmd.replyBlurb'),
@@ -196,19 +237,6 @@ export default function HomePage() {
           'screenAsk',
           () => window.vipChat.runScreenAsk(),
           t('home.screenAskTriggered', { name: brand.screenAsk.name })
-        )
-    },
-    {
-      id: 'screenQuiz',
-      name: brand.screenQuiz.name,
-      blurb: t('home.cmd.screenQuizBlurb'),
-      kbd: hotkeys.screenQuiz,
-      runLabel: t('home.cmd.screenQuizRun'),
-      onRun: () =>
-        void run(
-          'screenQuiz',
-          () => window.vipChat.runScreenQuiz(),
-          t('home.screenQuizTriggered', { name: brand.screenQuiz.name })
         )
     }
   ]
@@ -238,7 +266,11 @@ export default function HomePage() {
           <span className={`home-status-dot ${ready ? 'on' : 'off'}`} aria-hidden />
           <div>
             <strong>
-              {ready ? t('home.statusReady') : t('home.statusNeedSetup')}
+              {ready
+                ? t('home.statusReady')
+                : needLogin
+                  ? t('home.statusNeedLogin')
+                  : t('home.statusNeedSetup')}
               <em>
                 {' · '}
                 {schemeLabel}
@@ -246,16 +278,35 @@ export default function HomePage() {
               </em>
             </strong>
             <p>
-              {ready ? t('home.statusReadyHint') : t('home.statusSetupHint')}
+              {ready
+                ? t('home.statusReadyHint')
+                : needLogin
+                  ? t('home.statusLoginHint')
+                  : t('home.statusSetupHint')}
             </p>
           </div>
         </div>
         <div className="home-status-actions">
-          <Link className="btn secondary sm" to="/models">
-            {t('nav.models')}
-          </Link>
+          {needLogin ? (
+            <Link className="btn sm" to="/account">
+              {t('home.accountSignIn')}
+            </Link>
+          ) : (
+            <Link className="btn secondary sm" to="/models">
+              {t('nav.models')}
+            </Link>
+          )}
         </div>
       </div>
+
+      {accountLoaded && account && settings && !settings.skillGuideCompleted ? (
+        <div className="home-skill-hint">
+          <p>{t('home.skillGuideHint')}</p>
+          <Link className="btn sm" to="/onboarding">
+            {t('home.skillGuideCta')}
+          </Link>
+        </div>
+      ) : null}
 
       {accountLoaded ? (
         <div className={`home-account${account ? ' in' : ''}`}>
@@ -352,8 +403,8 @@ export default function HomePage() {
               <div>
                 <strong>{t('home.setupModelsTitle')}</strong>
                 <p>{t('home.setupModelsBody')}</p>
-                <Link className="btn sm" to="/models">
-                  {t('home.configModels')}
+                <Link className="btn sm" to={needLogin ? '/account' : '/models'}>
+                  {needLogin ? t('home.accountSignIn') : t('home.configModels')}
                 </Link>
               </div>
             </li>

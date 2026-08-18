@@ -12,12 +12,14 @@
 
 能力对外名随语言切换（须与一句话解释成对出现）：
 
-| 能力 | zh-CN | en-US |
-|---|---|---|
-| 语音转文字 | 即刻对话（点按原话 / 按住增强提示词，同一键） | TalkNow (tap = verbatim, hold = enhance prompt) |
-| 截图回复 | 帮我对话 | Reply Assist |
-| 看屏幕 | 看屏幕 | Screen Ask |
-| 看屏幕答题 | 看屏幕答题 | Screen Quiz |
+| # | 能力 | zh-CN | en-US |
+|---|---|---|---|
+| 1 | 即刻对话 | 即刻对话（点按贴口述） | TalkNow (tap = verbatim) |
+| 2 | 与AI对话 | 与AI对话（按住增强提示词，与即刻对话同一键） | Talk to AI (hold = enhance prompt, same key) |
+| 3 | 帮我对话 | 帮我对话 | Reply Assist |
+| 4 | 看屏幕 | 看屏幕 | Screen Ask（含口述「这道题选什么」答题） |
+
+对外口号：四个能力，一个助手 / Four capabilities, one assistant。答题并入 #4，不是第五能力。
 
 ## 原则
 

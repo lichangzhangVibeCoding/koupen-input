@@ -1,7 +1,55 @@
 # 用户配置与数据管理设计
 
 > 状态：**一期已落地**（`settings.json` + 导出配置 + 还原默认 + 打包干净检查；全量备份/清空放二期）  
-> 原则：个性化配置单独文件；可还原、可导出；打包安装包只含干净初始态，不含开发机上的用户数据。
+> 原则：个性化配置单独文件；可还原、可导出；打包安装包只含干净初始态，不含开发机上的用户数据。  
+> **用户可见路径与隐私口径从现在起在本仓库维护**（本文 + 设置「配置与数据」+ 帮助「数据与隐私」）。官网首页**不再主讲**信任/SaaS；页脚不再写隐私句。
+
+---
+
+## 0. 本机存储位置（勿编造）
+
+运行时目录 = Electron `app.getPath('userData')`。包名 `typenow`，appId `com.typenow.app`（显示名仍为「即刻对话」）。本机已核对：现用目录是 `typenow`，不是「即刻对话」。
+
+| 平台 | 典型路径 |
+|---|---|
+| **macOS** | `~/Library/Application Support/typenow/` |
+| **Windows（NSIS 安装版）** | `%APPDATA%\typenow\` → `C:\Users\<用户名>\AppData\Roaming\typenow\` |
+
+设置页展示**当前进程的实际路径**（绿色便携版若被安装器改到 exe 旁，以界面为准，不要写死）。
+
+### 目录里有什么
+
+```
+typenow/                          ← userData（运行时生成，不进安装包）
+├── config/settings.json          ← A. 个性化配置
+├── data/vip-chat.sqlite          ← B. 联系人 + 帮我对话消息 + 看屏幕会话
+├── data/screen-ask/              ← B. 看屏幕截图
+├── models/                       ← C. 本地 Whisper 等缓存（可重建）
+└── voice/                        ← C. 临时录音
+```
+
+Ollama 权重在 Ollama 自己的目录，不在这里。
+
+### 旧目录自动迁移
+
+`appId` / 包名改为 `typenow` 后路径会变。新目录若还没有 `config` / `data` / sqlite，会从同级旧名拷过来（只拷缺的）：
+
+`streamer-vip-chat` · `口喷输入` · `即刻对话` · `koupen-input`
+
+### 隐私口径（从官网迁入，以本文为准）
+
+官网首页已改讲语音搭子，不再展开信任四卡。以下口径给 App 设置/帮助与运营知识库用，勿再写成「任何服务器都不碰」：
+
+| 承诺 | 含义 |
+|---|---|
+| **本地优先** | 联系人、人设、聊天记忆、设置、看屏幕截图只写在上述本机目录，不把这些文件上传到即刻对话服务器 |
+| **粘贴不代发** | 点按 / 按住增强 / 帮我对话都只贴进当前输入框，**从不自动发送** |
+| **Esc 随时停** | 进行中任务按 Esc 立刻取消 |
+| **模型你做主** | 本地模型：推理不出机。自配 Key：发往你自己的服务商。官方会员：走薄代理再转发上游（会出网，不是「任何服务器都不碰」） |
+
+不要在官网上把「数据不出门 / 对话内容不上传任何服务器」当主标题。用户可见隐私文案用上表。
+
+设置「配置与数据」、帮助「数据与隐私」必须能看到路径 + 上述口径。
 
 ---
 
@@ -23,7 +71,9 @@
 ## 2. 数据分层（先分清再动手）
 
 ```
-Application Support / typenow/  ← Electron userData（appId `com.typenow.app`；运行时，不进安装包；旧目录会自动迁移）
+macOS:    ~/Library/Application Support/typenow/
+Windows:  %APPDATA%\typenow\
+          ← Electron userData（包名 typenow / appId `com.typenow.app`；运行时，不进安装包；旧目录会自动迁移）
 ├── config/
 │   └── settings.json                 ← A. 个性化配置（单独文件）
 ├── data/
@@ -62,7 +112,7 @@ Application Support / typenow/  ← Electron userData（appId `com.typenow.app`�
 
 ## 3. 产品能力（设置页「数据」区）
 
-入口建议：设置页底部新增一块 **「配置与数据」**（不塞进模型页）。
+入口：设置页 **「配置与数据」**（不塞进模型页）。卡片须展示本机目录（IPC `app:userDataPath`）并提供打开文件夹。
 
 | 能力 | 行为 | 确认文案要点 |
 |---|---|---|
@@ -105,9 +155,10 @@ vip-chat-backup-YYYYMMDD/
    - 启动时：若仅有旧 SQLite `settings` 表 → 迁移到文件后，DB 内 settings 可停用或删除  
 2. **SQLite 只保留业务表**（contacts / messages）  
 3. **IPC**  
-   - `data:exportSettings` / `data:exportAll`  
-   - `data:resetSettings` / `data:clearBusiness` / `data:factoryReset`  
-   - 使用 `dialog.showSaveDialog`（Mac）选路径  
+   - `settings:export` / `settings:resetDefaults`（一期已落地）  
+   - `app:userDataPath` / `app:openUserData`（设置与帮助展示/打开本机目录）  
+   - 二期：`data:exportAll` / `data:clearBusiness` / `data:factoryReset`  
+   - 使用 `dialog.showSaveDialog` 选导出路径  
 4. **敏感字段**  
    - `apiKey`、`sttApiKey`、`localSttApiKey`：导出默认置空；勾选后才写入明文  
 5. **还原后**  
@@ -152,10 +203,11 @@ vip-chat-backup-YYYYMMDD/
 
 ---
 
-## 6. UI 文案（Mac）
+## 6. UI 文案
 
-- 「导出配置…」「导出全部用户数据…」  
-- 「还原默认配置」「清空联系人与聊天」「全部初始化」  
+- 设置「配置与数据」：隐私一句 + 本机路径（运行时）+「打开所在文件夹」+「导出配置」「还原默认配置」  
+- 帮助「数据与隐私」：本地优先 / 不代发 / 文件位置（含 Mac 与 Windows 典型路径）  
+- Mac 文案写 `Command` / `Option`；Windows 写 `Alt` / `Ctrl` / `Win`（界面不写内部名 `Super`）  
 - 危险操作使用系统确认框，写清**会删什么、不会删什么**  
 
 不在模型页堆这些按钮，避免和「测一下 / 装模型」混淆。

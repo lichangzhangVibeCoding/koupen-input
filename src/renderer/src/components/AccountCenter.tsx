@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
+  clearMembershipSession,
   isTrialOrFreePlan,
   membershipAvatarGlyph,
   membershipDisplayLabel,
@@ -41,11 +42,7 @@ export default function AccountCenter() {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e || '')
         if (/401|UNAUTHORIZED/i.test(msg)) {
-          await window.vipChat.saveSettings({
-            ...s,
-            membershipAccessToken: '',
-            modelRoutingMode: 'byok'
-          })
+          await window.vipChat.saveSettings(clearMembershipSession(s))
           setLoggedIn(false)
           window.dispatchEvent(new CustomEvent('typenow:account-changed'))
         }

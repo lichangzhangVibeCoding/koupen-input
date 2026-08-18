@@ -39,7 +39,7 @@ export interface AppSettings {
    */
   voiceStripFillersEnabled: boolean
   /**
-   * 即刻对话：按上下文修正转写错字，不扩写（默认开）
+   * 即刻对话：按上下文修正转写错字，不扩写（默认关，避免多等一轮回复模型）
    */
   voiceFixSttTyposEnabled: boolean
   /**
@@ -59,15 +59,17 @@ export interface AppSettings {
   personaPackId: PersonaPackId
   /** Mac 权限引导是否已完成（开始使用 / 稍后再说） */
   permissionGuideCompleted: boolean
+  /** 新手训练场是否已完成或跳过（登录后按快捷键练四能力） */
+  skillGuideCompleted: boolean
   /** UI 语言：system | zh-CN | en-US */
   locale: LocalePreference
   /** 看屏幕问答开关 */
   screenAskEnabled: boolean
   /** 看屏幕问答快捷键（globalShortcut） */
   screenAskHotkey: string
-  /** 看屏幕答题：截屏后只给正确答案 */
+  /** 遗留：答题已并入看屏幕，字段仍读写以免升级丢配置，不再单独开关 */
   screenQuizEnabled: boolean
-  /** 看屏幕答题快捷键 */
+  /** 遗留：答题已并入看屏幕，不再注册此热键 */
   screenQuizHotkey: string
   /** 语音转文字运行方式：本地 / 在线（独立于智能回复） */
   sttInferenceMode: InferenceMode
@@ -316,7 +318,7 @@ export const STT_PROVIDER_PRESETS: SttProviderPreset[] = [
 export const DEFAULT_SETTINGS: AppSettings = {
   // Mac：快速双击右 Command（单击留给「即刻对话」语音）
   hotkey: 'DoubleCommand',
-  // 默认走在线硅基推荐（与模型页「硅基流动」快捷区一致）；本地套件需用户主动点安装
+  // 默认官方会员（需注册登录；三槽由服务端路由）。自配硅基 / 本地套件在模型页切换
   inferenceMode: 'cloud',
   provider: 'siliconflow',
   baseUrl: 'https://api.siliconflow.cn/v1',
@@ -328,11 +330,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   contextWindowSize: 40,
   voiceInputEnabled: true,
   voiceStripFillersEnabled: true,
-  voiceFixSttTyposEnabled: true,
+  voiceFixSttTyposEnabled: false,
   voiceTrigger: 'rightCommand',
   deAiToneEnabled: true,
   personaPackId: 'none',
   permissionGuideCompleted: false,
+  skillGuideCompleted: false,
   locale: 'system',
   screenAskEnabled: true,
   // 默认 Mac Command+Shift+1；Win 在 user-config 里校正为 Super+Shift+1
@@ -347,7 +350,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   localSttBaseUrl: LOCAL_DEFAULTS.sttBase,
   localSttApiKey: LOCAL_DEFAULTS.sttApiKey,
   localSttModel: LOCAL_DEFAULTS.sttModel,
-  modelRoutingMode: 'byok',
+  modelRoutingMode: 'membership',
   membershipServerUrl: 'https://www.lizhenning.com/other/typenow/talknowAPi/index.php',
   membershipAccessToken: ''
 }

@@ -5,7 +5,7 @@
  * status: done | building | deferred | planned
  */
 window.TALKNOW_KB = {
-  updatedAt: '2026-08-03',
+  updatedAt: '2026-08-18',
   product: {
     zh: {
       name: '即刻对话',
@@ -16,7 +16,8 @@ window.TALKNOW_KB = {
         '本地优先：联系人、人设、聊天记忆存在本机',
         '双轨模型：自配 Key / 本地永久免费；官方会员免配 Key、扣统一积分',
         '先文档后代码：docs/ 为规格源，官网知识库同步关键决策',
-        '不照抄竞品：统一积分（非时长+积分双账本）；线下入账优先于在线支付'
+        '不照抄竞品：统一积分（非时长+积分双账本）；线下入账优先于在线支付',
+        '与AI对话：管道冻结，场景包可扩展（website/ppt/debug/brief），这是增强提示词的长期竞争力'
       ]
     },
     en: {
@@ -28,7 +29,8 @@ window.TALKNOW_KB = {
         'Local-first: contacts, personas, and chat memory stay on device',
         'Dual track: BYOK/local forever free; official membership = no key + unified credits',
         'Docs first: docs/ is the spec; this KB mirrors key decisions',
-        'Not a clone: unified credits (not hours+credits); offline top-up before online pay'
+        'Not a clone: unified credits (not hours+credits); offline top-up before online pay',
+        'Talk-to-AI: freeze the pipe, grow scene packs (website/ppt/debug/brief) — that’s the prompt-enhance moat'
       ]
     }
   },
@@ -74,6 +76,18 @@ window.TALKNOW_KB = {
       status: 'done',
       zh: { title: '中英界面 / 宣传站', desc: 'App i18n + talknow.cn 双语站' },
       en: { title: 'ZH/EN UI & Site', desc: 'App i18n + bilingual marketing site' }
+    },
+    {
+      id: 'prompt-enhance',
+      status: 'building',
+      zh: {
+        title: '与AI对话（按住增强）',
+        desc: '管道冻结；场景包 website / ppt / debug / brief 路由后扩写；generic 回落。核心竞争力是持续加包'
+      },
+      en: {
+        title: 'Talk-to-AI (hold to enhance)',
+        desc: 'Frozen pipe; scene packs website/ppt/debug/brief; generic fallback. Moat = more packs'
+      }
     }
   ],
   roadmap: [
@@ -167,9 +181,46 @@ window.TALKNOW_KB = {
         title: 'Docs & pricing page',
         detail: 'design-membership.md + /pricing/ offline guidance'
       }
+    },
+    {
+      id: 'prompt-scenes-p0',
+      phase: '产品',
+      status: 'building',
+      zh: {
+        title: '与AI对话场景包 P0',
+        detail: '管道冻结；路由 website/ppt/debug/brief/generic。ppt 为 HTML 幻灯不是 .ppt 文件。黄金口试：公司官网→website。见 docs/design-prompt-enhance.md 与 src/shared/prompt-scenes/'
+      },
+      en: {
+        title: 'Talk-to-AI scene packs P0',
+        detail: 'Frozen pipe; route website/ppt/debug/brief/generic. PPT pack = HTML slides, not .ppt files. Gold test: company site → website. See design-prompt-enhance.md'
+      }
     }
   ],
   backlog: [
+    {
+      id: 'prompt-scenes-p1',
+      status: 'planned',
+      zh: {
+        title: '场景包 P1：跟进句',
+        detail: '屏幕上已有上一轮 AI 回复时走 followup：补约束，不重开项目'
+      },
+      en: {
+        title: 'Scene packs P1: follow-up',
+        detail: 'If the screen already shows the last AI reply, tighten constraints instead of starting a new project'
+      }
+    },
+    {
+      id: 'prompt-scenes-p2',
+      status: 'planned',
+      zh: {
+        title: '场景包持续加包',
+        detail: '翻译/汇总等新包；每包两条黄金口试；未过口试不上官网卡。这是与AI对话的长期竞争力'
+      },
+      en: {
+        title: 'Keep adding scene packs',
+        detail: 'Translate/summarize/etc. Two gold tests per pack; no site card until tests pass. This is the long-term moat'
+      }
+    },
     {
       id: 'skills',
       status: 'planned',
@@ -234,6 +285,12 @@ window.TALKNOW_KB = {
   links: [
     { href: '../pricing/', zh: '定价页', en: 'Pricing' },
     { href: '../changelog/', zh: '更新日志', en: 'Changelog' },
+    {
+      href: 'https://github.com/lichangzhangVibeCoding/koupen-input/blob/main/docs/design-prompt-enhance.md',
+      zh: '与AI对话 / 按住增强',
+      en: 'Talk-to-AI / hold enhance',
+      external: true
+    },
     {
       href: 'https://github.com/lichangzhangVibeCoding/koupen-input/blob/main/docs/design-membership.md',
       zh: '会员设计文档',

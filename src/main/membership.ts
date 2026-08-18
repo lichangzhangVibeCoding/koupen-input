@@ -8,15 +8,22 @@ import type {
 export type { MembershipCapability, MembershipMe }
 
 function serverBase(settings: AppSettings): string {
-  return (
+  let base = (
     settings.membershipServerUrl ||
     'https://www.lizhenning.com/other/typenow/talknowAPi/index.php'
   ).replace(/\/+$/, '')
+  // IIS has no rewrite: /talknowAPi/v1/... is a 404 HTML page; the front controller is index.php.
+  if (/\/talknowAPi$/i.test(base)) base += '/index.php'
+  return base
+}
+
+export function intendsOfficialMembership(settings: AppSettings): boolean {
+  return settings.modelRoutingMode === 'membership' && settings.inferenceMode !== 'local'
 }
 
 export function usesMembershipCloud(settings: AppSettings): boolean {
   return (
-    settings.modelRoutingMode === 'membership' &&
+    intendsOfficialMembership(settings) &&
     Boolean(settings.membershipAccessToken?.trim()) &&
     Boolean(serverBase(settings))
   )
@@ -139,6 +146,11 @@ export async function membershipGetPlans(settings: AppSettings): Promise<unknown
   const res = await membershipFetch(settings, '/v1/plans')
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error((data as { error?: string }).error || '获取套餐失败')
+  // Production PHP currently omits stripeEnabled; missing must not be treated as "try Stripe".
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const payload = data as { stripeEnabled?: unknown }
+    if (typeof payload.stripeEnabled !== 'boolean') payload.stripeEnabled = false
+  }
   return data
 }
 
@@ -197,12 +209,31 @@ export async function membershipCreateStripeCheckout(
     checkoutUrl?: string
     sessionId?: string
   }
-  if (!res.ok || !data.checkoutUrl) throw new Error(data.error || '无法创建 Stripe 结算')
+  if (!res.ok || !data.checkoutUrl) {
+    const source = (data as { source?: string }).source
+    if (source === 'offline' || (!data.error && (data as { paymentHint?: string }).paymentHint)) {
+      throw new Error('官方尚未开通 Stripe 结算，请改用客服开通')
+    }
+    throw new Error(data.error || '无法创建 Stripe 结算')
+  }
   return {
     id: data.id || '',
     checkoutUrl: data.checkoutUrl,
     sessionId: data.sessionId || ''
   }
+}
+
+function membershipErrorText(j: {
+  error?: string | { message?: string }
+  message?: string
+  detail?: string
+}): string {
+  const err = j.error
+  if (typeof err === 'string' && err.trim()) return err.trim()
+  if (err && typeof err === 'object' && err.message) return String(err.message).trim()
+  if (j.message) return String(j.message).trim()
+  if (j.detail) return String(j.detail).trim()
+  return ''
 }
 
 export function formatMembershipHttpError(status: number, body: string): string {
@@ -217,11 +248,17 @@ export function formatMembershipHttpError(status: number, body: string): string 
       const errText = typeof j.error === 'string' ? j.error : j.error?.message
       return errText || '官方积分不足，请充值或改回「自配 Key」'
     }
-    const errText =
-      (typeof j.error === 'string' ? j.error : j.error?.message) ||
-      j.message ||
-      j.detail
-    if (errText) return `会员服务请求失败 (${status}): ${String(errText).slice(0, 200)}`
+    const errText = membershipErrorText(j)
+    // PHP/Node wrap empty upstream bodies as { error: "upstream" } — not a claim that SiliconFlow is down.
+    if (/^upstream$/i.test(errText) || (status >= 500 && errText === 'empty response')) {
+      const detail = typeof j.detail === 'string' ? j.detail.trim() : ''
+      const extra =
+        detail && !/^upstream$/i.test(detail) && detail !== 'empty response'
+          ? `：${detail.slice(0, 120)}`
+          : ''
+      return `官方模型上游失败 (${status})${extra}。官方走硅基流动，请稍后重试或改回「自配 Key」`
+    }
+    if (errText) return `会员服务请求失败 (${status}): ${errText.slice(0, 200)}`
   } catch {
     /* ignore */
   }

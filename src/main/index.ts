@@ -46,7 +46,6 @@ import {
   setActiveScreenAskSessionId,
   setScreenAskUpdateHandler,
   startNewScreenAskSession,
-  runScreenQuiz,
   toggleScreenAsk
 } from './screen-ask'
 import {
@@ -71,7 +70,7 @@ import {
 } from './user-config'
 import { disposeEscapeCancel, initEscapeCancel } from './escape-cancel'
 import { destroyRecorder } from './voice-recorder'
-import { toggleVoiceInput, beginVoiceHold, endVoiceHold, cancelHoldVoiceInput } from './voice-input'
+import { toggleVoiceInput, beginVoiceHold, endVoiceHold, cancelHoldVoiceInput, toggleVoiceHold } from './voice-input'
 import {
   hardwareReplyAccelerator,
   hardwareVoiceAccelerator,
@@ -135,15 +134,11 @@ const modifierTapHandlers = {
     const s = getSettings()
     if (s.screenAskEnabled !== false) void toggleScreenAsk()
   },
-  onScreenQuiz: () => {
-    const s = getSettings()
-    if (s.screenQuizEnabled !== false) void runScreenQuiz()
-  },
   onHardwareVoice: () => {
-    void toggleVoiceInput()
+    void toggleVoiceInput({ fromUi: true })
   },
   onHardwareReply: () => {
-    void runCapturePipeline()
+    void runCapturePipeline({ fromUi: true })
   }
 }
 
@@ -330,6 +325,7 @@ function registerScreenAskHotkey(hotkey: string, enabled: boolean): boolean {
   return ok
 }
 
+/** 答题已并入看屏幕：只注销遗留热键，不再注册 */
 function registerScreenQuizHotkey(hotkey: string, enabled: boolean): boolean {
   if (registeredScreenQuizHotkey) {
     try {
@@ -339,31 +335,9 @@ function registerScreenQuizHotkey(hotkey: string, enabled: boolean): boolean {
     }
     registeredScreenQuizHotkey = ''
   }
-  if (!enabled || !hotkey.trim()) return true
-  if (isMacCommandAccelerator(hotkey)) {
-    registeredScreenQuizHotkey = hotkey
-    if (!usesRightCommandHotkeys()) {
-      console.warn('Mac Screen Quiz needs Accessibility (right Command only):', hotkey)
-    }
-    return true
-  }
-  if (isModifierDoubleHotkey(hotkey) || hardwareHotkeys.includes(hotkey)) {
-    console.warn('Screen Quiz hotkey reserved:', hotkey)
-    return false
-  }
-  if (registeredHotkey && hotkey === registeredHotkey) {
-    console.warn('Screen Quiz hotkey conflicts with reply:', hotkey)
-    return false
-  }
-  if (registeredScreenAskHotkey && hotkey === registeredScreenAskHotkey) {
-    console.warn('Screen Quiz hotkey conflicts with Screen Ask:', hotkey)
-    return false
-  }
-  const ok = globalShortcut.register(hotkey, () => {
-    void runScreenQuiz()
-  })
-  if (ok) registeredScreenQuizHotkey = hotkey
-  return ok
+  void hotkey
+  void enabled
+  return true
 }
 
 /** 硬件备用：Mac 只走右 Command+8/0（modifier-tap）；Win 用 Win+8/0 globalShortcut */
@@ -389,13 +363,13 @@ function registerHardwareHotkeys(): void {
   const replyAccel = hardwareReplyAccelerator()
 
   const voiceOk = globalShortcut.register(voiceAccel, () => {
-    void toggleVoiceInput()
+    void toggleVoiceInput({ fromUi: true })
   })
   if (voiceOk) hardwareHotkeys.push(voiceAccel)
   else console.warn('Failed to register hardware voice hotkey', voiceAccel)
 
   const replyOk = globalShortcut.register(replyAccel, () => {
-    void runCapturePipeline()
+    void runCapturePipeline({ fromUi: true })
   })
   if (replyOk) hardwareHotkeys.push(replyAccel)
   else console.warn('Failed to register hardware reply hotkey', replyAccel)
@@ -413,21 +387,25 @@ function applyAllHotkeys(settings: ReturnType<typeof getSettings>): boolean {
     settings.screenAskHotkey,
     settings.screenAskEnabled !== false
   )
-  const screenQuizOk = registerScreenQuizHotkey(
-    settings.screenQuizHotkey,
-    settings.screenQuizEnabled !== false
-  )
+  // 答题已并入看屏幕：注销遗留 Shift+2 热键，不再注册
+  registerScreenQuizHotkey(settings.screenQuizHotkey, false)
   if (!hookOk && process.platform === 'darwin' && macAccessibilityApisAllowed()) {
     maybeWarnAccessibilityOnce()
     startAccessibilityWatch()
   }
-  return ok && screenAskOk && screenQuizOk
+  return ok && screenAskOk
 }
 
 function setupIpc(): void {
   ipcMain.handle('app:platform', () => process.platform)
   ipcMain.handle('app:version', () => app.getVersion())
   ipcMain.handle('app:isDev', () => isDevBuild)
+  ipcMain.handle('app:userDataPath', () => app.getPath('userData'))
+  ipcMain.handle('app:openUserData', async () => {
+    const dir = app.getPath('userData')
+    const err = await shell.openPath(dir)
+    return err ? { ok: false as const, error: err } : { ok: true as const }
+  })
   ipcMain.handle('updates:catalog', () => getReleasesCatalog())
   ipcMain.handle('shell:openExternal', async (_e, url: string) => {
     if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
@@ -500,8 +478,7 @@ function setupIpc(): void {
       }
     )
   )
-  ipcMain.handle('pipeline:screenAsk', () => toggleScreenAsk())
-  ipcMain.handle('pipeline:screenQuiz', () => runScreenQuiz())
+  ipcMain.handle('pipeline:screenAsk', () => toggleScreenAsk({ fromUi: true }))
   ipcMain.handle('screenAsk:askText', (_e, question: string) => askScreenWithText(String(question || '')))
   ipcMain.handle('screenAsk:listSessions', () => listScreenAskSessions())
   ipcMain.handle('screenAsk:getSession', (_e, id: number) => getScreenAskSession(id))
@@ -593,13 +570,14 @@ function setupIpc(): void {
     listMessages(contactId, query || { limit: 2000 })
   )
   ipcMain.handle('pipeline:run', async () => {
-    await runCapturePipeline()
+    await runCapturePipeline({ fromUi: true })
     return true
   })
   ipcMain.handle('voice:toggle', async () => {
-    await toggleVoiceInput()
+    await toggleVoiceInput({ fromUi: true })
     return true
   })
+  ipcMain.handle('voice:toggleHold', async () => toggleVoiceHold())
 
   ipcMain.handle('models:dashboard', async () => getModelDashboard())
   ipcMain.handle('models:applySiliconflow', async (_e, apiKey: string) =>
@@ -646,10 +624,10 @@ app.whenReady().then(() => {
   syncAppLocale(settings)
   setupTray({
     getMainWindow: () => mainWindow,
-    onVoice: () => void toggleVoiceInput(),
-    onReply: () => void runCapturePipeline(),
-    onScreenAsk: () => void toggleScreenAsk(),
-    onScreenQuiz: () => void runScreenQuiz(),
+    onVoice: () => void toggleVoiceInput({ fromUi: true }),
+    onAiTalk: () => void toggleVoiceHold(),
+    onReply: () => void runCapturePipeline({ fromUi: true }),
+    onScreenAsk: () => void toggleScreenAsk({ fromUi: true }),
     onQuit: () => {
       appQuitting = true
       app.quit()

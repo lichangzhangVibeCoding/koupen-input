@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import brandIcon from './assets/brand-icon.png'
 import AccountCenter from './components/AccountCenter'
 import PermissionGuide from './components/PermissionGuide'
@@ -12,6 +12,7 @@ import ContactDetailPage from './pages/ContactDetailPage'
 import ScreenAskPage from './pages/ScreenAskPage'
 import AccountPage from './pages/AccountPage'
 import HelpPage from './pages/HelpPage'
+import OnboardingPage from './pages/OnboardingPage.tsx'
 
 const OPEN_PERMISSION_GUIDE = 'typenow:open-permission-guide'
 
@@ -76,8 +77,10 @@ function RailIcon({
 
 export default function App() {
   const { t, brand, isDev } = useI18n()
+  const navigate = useNavigate()
   const [version, setVersion] = useState('')
   const [guideOpen, setGuideOpen] = useState(false)
+  const bootRedirected = useRef(false)
 
   useEffect(() => {
     void window.vipChat.getVersion().then(setVersion)
@@ -93,11 +96,24 @@ export default function App() {
         if (platform === 'darwin' && !settings.permissionGuideCompleted) {
           setGuideOpen(true)
         }
+        const needsLogin =
+          !settings.membershipAccessToken?.trim() &&
+          settings.modelRoutingMode === 'membership' &&
+          settings.inferenceMode !== 'local'
+        const hashPath = window.location.hash.replace(/^#/, '') || '/'
+        if (
+          needsLogin &&
+          !bootRedirected.current &&
+          (hashPath === '/' || hashPath === '')
+        ) {
+          bootRedirected.current = true
+          navigate('/account', { replace: true })
+        }
       } catch {
         /* ignore */
       }
     })()
-  }, [])
+  }, [navigate])
 
   useEffect(() => {
     const onOpen = (): void => setGuideOpen(true)
@@ -162,6 +178,7 @@ export default function App() {
           <Route path="/membership" element={<Navigate to="/account" replace />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/help" element={<HelpPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/updates" element={<Navigate to={{ pathname: '/help', hash: 'changelog' }} replace />} />
           <Route path="/contacts" element={<ContactsPage />} />
           <Route path="/contacts/:id" element={<ContactDetailPage />} />

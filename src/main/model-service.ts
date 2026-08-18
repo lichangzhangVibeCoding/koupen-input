@@ -15,7 +15,7 @@ import {
   providerLabel
 } from '../shared/model-slots'
 import { AppSettings, LOCAL_DEFAULTS } from '../shared/types'
-import { membershipGetMe, usesMembershipCloud } from './membership'
+import { membershipGetMe, intendsOfficialMembership, usesMembershipCloud } from './membership'
 
 export interface ModelDashboard {
   slots: SlotStatus[]
@@ -34,6 +34,7 @@ export interface ModelDashboard {
 
 export async function getModelDashboard(): Promise<ModelDashboard> {
   let settings = getSettings()
+  const intendsOfficial = intendsOfficialMembership(settings)
   const membershipActive = usesMembershipCloud(settings)
 
   // 官方会员：把服务端三槽模型同步到本地，避免仍显示/请求自配模型名
@@ -64,8 +65,14 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
 
   const slotReady = (id: SlotId): { ready: boolean; detail: string } => {
     const b = bindings[id]
-    // 官方会员：云端槽位免 Key，由服务端路由；本地槽仍按本地就绪判断
-    if (membershipActive && b.providerId !== 'local') {
+    // 官方会员：云端槽位免 Key，由服务端路由；未登录则未就绪
+    if (intendsOfficial && b.providerId !== 'local') {
+      if (!membershipActive) {
+        return {
+          ready: false,
+          detail: '请先注册或登录官方会员'
+        }
+      }
       return {
         ready: true,
         detail: `官方套餐 · ${SLOT_META[id].label}`
@@ -149,7 +156,7 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
 
   const readyCount = slots.filter((s) => s.ready).length
   const allLocal = slots.every((s) => s.providerId === 'local')
-  const routingMode: ModelDashboard['routingMode'] = membershipActive
+  const routingMode: ModelDashboard['routingMode'] = intendsOfficial
     ? 'membership'
     : allLocal
       ? 'local-mixed'

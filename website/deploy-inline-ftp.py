@@ -94,7 +94,8 @@ def build(path: Path, css_href: str, scripts: list[str], css: str, js_parts: lis
     loose = r"\s*".join(re.escape(f'<script src="{s}"></script>') for s in scripts)
     script_pat = re.compile(loose)
     bundled = "\n".join(f"<script>\n{part}\n</script>" for part in js_parts)
-    text2, n2 = script_pat.subn(bundled, text, count=1)
+    # Use callable repl so JS backslashes (e.g. \D) are not treated as regex escapes
+    text2, n2 = script_pat.subn(lambda _m: bundled, text, count=1)
     if n2 != 1:
         raise SystemExit(f"script tags not found in {path}: {scripts}")
     text = text2
@@ -102,14 +103,14 @@ def build(path: Path, css_href: str, scripts: list[str], css: str, js_parts: lis
     # Favicon + all logo <img> (WAF 403 on standalone png)
     text = re.sub(
         r'<link\s+rel=["\']icon["\'][^>]*>',
-        f'<link rel="icon" href="{icon_data}" type="image/png">',
+        lambda _m: f'<link rel="icon" href="{icon_data}" type="image/png">',
         text,
         count=1,
         flags=re.I,
     )
     text = re.sub(
         r'(src=["\'])(?:\.\./|\./)?assets/icon\.png(["\'])',
-        rf'\1{icon_data}\2',
+        lambda m: f'{m.group(1)}{icon_data}{m.group(2)}',
         text,
         flags=re.I,
     )

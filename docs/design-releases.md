@@ -23,17 +23,26 @@
 
 **约定：每次有用户可见更新后，必须同步宣传站更新日志，并打出最新安装包。**
 
+宣传站权威目录：`lizhenning.com/other/typenow/`（本仓库 `website/` 勿改）。
+
 1. bump `package.json` version  
 2. 改 `docs/releases.json`（置顶新版本，**中英 title/highlights 一起写**）  
 3. 改根 `CHANGELOG.md` / `docs/CHANGELOG.md`  
-4. 同步三份 JSON + 站用 JS（WAF 拦 `*.json`，线上靠 JS）：
+4. 同步 App + 站用 JS（WAF 拦 `*.json`，线上靠 JS）：
 
 ```bash
-cp docs/releases.json website/releases.json src/shared/releases.json
-node -e "const fs=require('fs');const j=fs.readFileSync('docs/releases.json','utf8');fs.writeFileSync('website/js/releases-data.js','window.TYPENOW_RELEASES = '+j.trim()+'\n')"
+npm run sync:releases
 ```
 
+（写入 `src/shared/releases.json`，以及 lizhenning `other/typenow/js/releases-data.js`，变量名 `TALKNOW_RELEASES`。）
+
 5. `npm run dist`（Mac DMG）/ 需要时跑 Windows CI；产物名与 `downloads.*` 一致  
-6. 上传宣传站 `website/` 到 `wwwroot/other/typenow/`（只动该目录）  
+6. 部署宣传站：
+
+```bash
+cd /Users/tank/Downloads/lizhenning.com/other/typenow
+FTP_PASS='…' python3 deploy-inline-ftp.py
+```
+
 7. 打 tag `vX.Y.Z`；把产物传到 GitHub Releases（下载 CTA 指向这里）  
 

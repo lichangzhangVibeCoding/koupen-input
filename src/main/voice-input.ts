@@ -21,6 +21,7 @@ import {
   TaskCancelledError
 } from './task-cancel'
 import { notifyActivityChanged } from './activity-notify'
+import { notifySkillGuideStep } from './skill-guide'
 
 let recording = false
 let busy = false
@@ -28,6 +29,9 @@ let busy = false
 let holdMode = false
 let holdImage: { base64: string; mime: string } | null = null
 let holdReady: Promise<void> = Promise.resolve()
+/** 首页「与AI对话」点按开关（HUD 写再点一次结束，而非松手） */
+let holdFromUi = false
+let tapFromUi = false
 let requestId = ''
 let runId = 0
 
@@ -46,6 +50,7 @@ export function isVoiceHoldActive(): boolean {
 function resetHoldState(): void {
   holdMode = false
   holdImage = null
+  holdFromUi = false
 }
 
 /** Esc：立刻停下语音链路（点按与按住共用） */
@@ -78,13 +83,14 @@ export function cancelHoldVoiceInput(): boolean {
  * 语音键按住满 400ms 且仍空闲时进入增强。
  * 返回 false：不进入按住，抬起仍走点按（含点按录音中结束、看屏幕听音结束）。
  */
-export function beginVoiceHold(): boolean {
+export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
   if (isScreenAskListening() || isScreenAskBusy()) return false
   if (recording || busy || holdMode) return false
   const settings = getSettings()
   if (!settings.voiceInputEnabled) return false
 
   holdMode = true
+  holdFromUi = Boolean(opts?.fromUi)
   holdImage = null
   notifyActivityChanged()
   const myRun = ++runId
@@ -100,7 +106,9 @@ export function beginVoiceHold(): boolean {
         })
       showHud({
         kind: 'recording',
-        text: formatHoldRecordingHudText(process.platform, settings.voiceTrigger)
+        text: holdFromUi
+          ? t('hotkey.holdRecordingUi')
+          : formatHoldRecordingHudText(process.platform, settings.voiceTrigger)
       })
       requestId = await startMicRecording()
       if (myRun !== runId) {
@@ -151,7 +159,7 @@ export async function endVoiceHold(): Promise<void> {
     const spokenRaw = await transcribeAudio(settings, buffer, mime, signal)
     if (myRun !== runId) throw new TaskCancelledError()
     const needsCleanup =
-      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled !== false
+      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled === true
     if (needsCleanup) {
       showHud({
         kind: 'transcribing',
@@ -202,6 +210,7 @@ export async function endVoiceHold(): Promise<void> {
     } else {
       showHud({ kind: 'done', text: t('voice.hud.pasteFail') })
     }
+    if (!holdFromUi) notifySkillGuideStep('aiTalk', true)
   } catch (err) {
     if (isTaskCancelled(err) || myRun !== runId) {
       return
@@ -219,7 +228,44 @@ export async function endVoiceHold(): Promise<void> {
   }
 }
 
-export async function toggleVoiceInput(): Promise<void> {
+/** 首页「与AI对话」：点按开始增强录音，再点结束（等价按住松手） */
+export async function toggleVoiceHold(): Promise<'started' | 'finished'> {
+  if (isScreenAskListening() || isScreenAskBusy()) {
+    if (isScreenAskBusy()) showScreenAskProgressHud()
+    throw new Error(t('voice.hud.busy'))
+  }
+  if (recording && !holdMode) {
+    showHud({
+      kind: 'transcribing',
+      text: t('voice.hud.busy'),
+      detail: t('voice.hud.busyDetail'),
+      icon: 'write'
+    })
+    throw new Error(t('voice.hud.busy'))
+  }
+  if (holdMode) {
+    if (busy && !recording) {
+      showHud({
+        kind: 'transcribing',
+        text: t('voice.hud.busy'),
+        detail: t('voice.hud.busyDetail'),
+        icon: 'write'
+      })
+      throw new Error(t('voice.hud.busy'))
+    }
+    await endVoiceHold()
+    return 'finished'
+  }
+  const settings = getSettings()
+  if (!settings.voiceInputEnabled) {
+    throw new Error(t('voice.hud.disabled', { name: BRAND.voice.name }))
+  }
+  const ok = beginVoiceHold({ fromUi: true })
+  if (!ok) throw new Error(t('voice.hud.busy'))
+  return 'started'
+}
+
+export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<void> {
   // 看屏幕听音中：单击修饰键 = 结束提问
   if (isScreenAskListening()) {
     await stopScreenAskIfListening()
@@ -260,6 +306,7 @@ export async function toggleVoiceInput(): Promise<void> {
 
   if (!recording) {
     try {
+      tapFromUi = Boolean(opts?.fromUi)
       resolveSttConfig(settings)
       showHud({
         kind: 'recording',
@@ -296,7 +343,7 @@ export async function toggleVoiceInput(): Promise<void> {
     const textRaw = await transcribeAudio(settings, buffer, mime, signal)
     if (myRun !== runId) throw new TaskCancelledError()
     const needsCleanup =
-      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled !== false
+      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled === true
     if (needsCleanup) {
       showHud({
         kind: 'transcribing',
@@ -314,6 +361,7 @@ export async function toggleVoiceInput(): Promise<void> {
     } else {
       showHud({ kind: 'done', text: t('voice.hud.pasteFail') })
     }
+    if (!tapFromUi) notifySkillGuideStep('voice', true)
   } catch (err) {
     if (isTaskCancelled(err) || myRun !== runId) {
       // HUD 由 cancelAll 统一提示

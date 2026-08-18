@@ -3,7 +3,7 @@
  *
  * 数据源：`plan-catalog.json`（改数字回退 / 权益结构只改 JSON）
  * 价格与积分线上以 GET /v1/plans 为准。
- * 改 JSON 后执行：npm run sync:plans → website/js/plan-catalog.js
+ * 改 JSON 后执行：npm run sync:plans → lizhenning other/typenow/js/plan-catalog.js
  */
 
 import raw from './plan-catalog.json'

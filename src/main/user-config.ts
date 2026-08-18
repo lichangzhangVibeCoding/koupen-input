@@ -85,13 +85,16 @@ export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppS
     merged.voiceStripFillersEnabled = true
   }
   if (typeof merged.voiceFixSttTyposEnabled !== 'boolean') {
-    merged.voiceFixSttTyposEnabled = true
+    merged.voiceFixSttTyposEnabled = false
   }
   if (!isPersonaPackId(merged.personaPackId)) {
     merged.personaPackId = 'none'
   }
   if (typeof merged.permissionGuideCompleted !== 'boolean') {
     merged.permissionGuideCompleted = false
+  }
+  if (typeof merged.skillGuideCompleted !== 'boolean') {
+    merged.skillGuideCompleted = false
   }
   if (merged.locale !== 'system' && merged.locale !== 'zh-CN' && merged.locale !== 'en-US') {
     merged.locale = 'system'
@@ -131,7 +134,7 @@ export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppS
     merged.screenQuizHotkey = defaultScreenQuizHotkey('darwin')
   }
   if (merged.modelRoutingMode !== 'byok' && merged.modelRoutingMode !== 'membership') {
-    merged.modelRoutingMode = 'byok'
+    merged.modelRoutingMode = 'membership'
   }
   if (typeof merged.membershipServerUrl !== 'string' || !merged.membershipServerUrl.trim()) {
     merged.membershipServerUrl = 'https://www.lizhenning.com/other/typenow/talknowAPi/index.php'

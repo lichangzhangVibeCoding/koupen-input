@@ -1,14 +1,40 @@
 # 即刻对话 — 文档与产品变更日志
 
+## 0.5.10 — 2026-08-19
+
+- 看屏幕问答与设置/首页体验更新
+- Windows 安装包：`TalkNow-0.5.10-x64.exe`
+
+
 ## 0.5.9 — 2026-08-18
 
-- **即刻对话转写校对**：设置新增「自动去除水词」「自动改错别字」（默认开）。点按贴口述前校对；按住增强在进场景路由前同样校对。改错别字走现有 `reply` 槽，不新开会员能力。详见 `docs/design-voice-trigger.md`。
+- **会员 API 线上探测**：正式 PHP `GET /v1/plans` 未返回 `stripeEnabled`，且 `POST /v1/orders source=stripe` 会静默落成线下意向（无 `checkoutUrl`）。App 不再把缺字段当成「可走 Stripe」；`talknowAPi` 目录 URL 会补 `index.php`。线上需部署带 Stripe 分支的 PHP 后才会真正出收银台。详见 `docs/design-membership.md`。
+- **改错别字默认改为关**：去水词仍默认开、不调模型；改错别字会多等一轮回复模型，需要时在设置打开。详见 `docs/design-voice-trigger.md`。
+- **新手引导（训练场）**：登录成功后进入 `/onboarding`，用当前系统默认快捷键把四个能力各练一遍（点按 / 按住 / 双击 / 看屏幕组合键）。首页「运行」不计完成。帮助可再进。详见 `docs/design-onboarding.md`。
+- **个人中心登录/注册占位**：手机号改为「请输入手机号」，不再展示 `13800138000`。验证码短信尚未正式接入，提示点「获取验证码」后输入 `888888`。
+- **默认跑法改为官方会员**：新安装需注册/登录，登录后三槽走官方优化模型（免 Key、扣积分）。自配 Key / 本地仍可在模型页切换。已有自配 Key 的配置不强制改写。
+- **Win/Mac 界面分别对应现实**：用户可见快捷键按当前系统写；Windows 看屏幕等组合键展示为 `Win+…`，不写内部名 `Super`。
+- **App 首页/帮助按四能力对齐官网口径**（不对用户展示的内部清单：`docs/ops-copy-sync.md`）。不写入 `docs/releases.json`。
+- **官网帮助页扩成说明书**：从新手安装到四个能力、15 个案例模拟、排障与数据路径；Mac 写明内测不提供 dmg。App 帮助「官方帮助文档」改为指向该页。详见 `docs/design-marketing-site.md`。
+- **官网核心大卡去掉「蓄水池」**：`why.pool` 改为「把口语变成能执行的提示词」；正文讲对着屏幕按住说、随口话整理成做网站 / 做 PPT / 修 Bug / 写方案那种能执行的任务说明、贴入不代发。首页勿再用「蓄水池」「场景包」当卖点。详见 `docs/design-marketing-site.md`。
+- **官网帮助页导航与首页对齐**：帮助 / 订阅 / 更新日志顶栏补上「场景」「能力」，链回首页对应区块；当前页加粗。即刻对话能力与场景写入 vibe coding（Cursor / IDE 点按贴原话）。页脚去掉「装在本机 · 粘贴不代发 · 数据说明」。
+- **官网宣传按「AI 时代的语音搭子」重写 Hero**：小字「站在所有智能体前面」；副标题改成用豆包 / WorkBuddy / Cursor / ChatGPT 时别再打字、按住说出口语变提示词。第二屏改成「为什么需要」+ 蓄水池一核三辅；场景组与AI对话排第一。客户端指挥台顺序不动。详见 `docs/design-marketing-site.md`。
+- **官网 Hero 布局**：Windows 下载改为主按钮，macOS 内测为次按钮；版本号只贴在 Windows 按钮正下方，两钮顶对齐。
+- **官网 Windows 按钮标版本**：Hero / 下载区「下载 Windows 版」下方灰色小字显示当前版本号（如 v0.5.9）。
+- **官网 macOS 按钮**：Hero / 下载区由「敬请期待」改为「macOS 内测中」，仍禁用、不提供 dmg。
+- **文案「语音搭子」**：Hero 徽章「全平台语音搭子」及定位标题统一用「搭子」，不用「搭字」。
+- **官网「语音搭子」定位区上移**：从能力详解下方改到 Hero 之后、场景导览上方。详见 `docs/design-marketing-site.md`。
+- **官网底部从隐私改成语音搭子**：首页不再主讲「信任与隐私 / 不是云端 SaaS」。定位区：语音搭子，站在豆包、WorkBuddy、Cursor 等智能体前面；四卡为全平台语音输入 / 说完就是字 / 与AI对话蓄水池 / 让手里的 AI 更厉害。隐私只留页脚一句，详细路径仍在设置与帮助。详见 `docs/design-marketing-site.md`。
+- **与AI对话列入第二能力**：首页指挥台、设置快捷键表、帮助场景把「与AI对话」放到即刻对话之后、帮我对话之前。仍与即刻对话共用语音触发键（点按贴口述 / 按住增强）；不新开快捷键或开关。首页第二行可点按开始、再点结束。详见 `docs/design-branding.md`、`docs/design-prompt-enhance.md`。
+- **官网定位改为四个能力**：Hero / 能力详解从「三个能力，一个助手」改为「四个能力，一个助手」（英 Four capabilities, one assistant）。能力详解插入「与AI对话」为第二块（按住 ≥400ms 增强提示词，同一语音键）；顺序为即刻对话 → 与AI对话 → 帮我对话 → 看屏幕。副题仍可用「每个能力都有它最闪光的时刻」。答题仍并入看屏幕，不恢复独立技能。详见 `docs/design-marketing-site.md`。
+- **本机存储路径与隐私口径收进本仓库**：官网原先有「数据不出门」但没写路径、也没同步。现以 `docs/design-user-data.md` 为真源；设置「配置与数据」、帮助「数据与隐私」展示实际目录。Mac：`~/Library/Application Support/typenow/`；Windows：`%APPDATA%\typenow\`。未改 `website/`、未 FTP。
+- **即刻对话转写校对**：设置新增「自动去除水词」（默认开，本地规则）「自动改错别字」（默认关，避免点按多等一轮回复模型）。点按贴口述前校对；按住增强在进场景路由前同样校对。改错别字走现有 `reply` 槽，不新开会员能力。详见 `docs/design-voice-trigger.md`。
 - **官网**：顶栏显示当前安装包版本；macOS 下载改为「敬请期待」，Windows 仍为真实安装包。
 - Windows 安装包：`TalkNow-0.5.9-x64.exe`
 
 
 > 约定：凡改功能，**先改文档、记本日志，再改代码**。  
-> 用户可见快捷键按平台写：Mac 用 `Command` / `Option`；Windows 用 `Alt` / `Ctrl`。改一端勿动另一端默认行为。
+> 用户可见快捷键按平台写：Mac 用 `Command` / `Option`；Windows 用 `Alt` / `Ctrl` / `Win`（界面不写 `Super`）。改一端勿动另一端默认行为。
 
 ---
 
@@ -20,7 +46,7 @@
 
 
 > 约定：凡改功能，**先改文档、记本日志，再改代码**。  
-> 用户可见快捷键按平台写：Mac 用 `Command` / `Option`；Windows 用 `Alt` / `Ctrl`。改一端勿动另一端默认行为。
+> 用户可见快捷键按平台写：Mac 用 `Command` / `Option`；Windows 用 `Alt` / `Ctrl` / `Win`（界面不写 `Super`）。改一端勿动另一端默认行为。
 
 ---
 
@@ -28,6 +54,8 @@
 
 ### 产品 / 文档
 
+- **官网信息与本机路径改在 koupen-input 维护**：隐私/信任事实与 userData 路径写入 `docs/design-user-data.md`、`docs/design-marketing-site.md`、`docs/AGENTS.md`；App 设置与帮助展示运行时目录。lizhenning 与本仓库 `website/` 未改（线上站仍可能缺路径，需另 FTP）。详见 `docs/design-user-data.md`。
+- **看屏幕答题并入看屏幕**：不再作为第四技能（无独立快捷键 / 首页命令 / 设置开关）。触发看屏幕后口述或打字如「请帮我看这道题选什么」，走原有两步流水线（视觉读题 + 文字模型对照知识库）。官网看屏幕四卡用答题替换「商品比价」。详见 `docs/design-screen-ask.md`。
 - **场景包纠偏**：website 包去掉茶馆/茶室预约等试验口试，不再当通用模块；`ppt` 包约束下游生成 **HTML 分页幻灯**，禁止 .ppt/.pptx。黄金口试用通用「做公司官网」。详见 `docs/design-prompt-enhance.md`、`src/shared/prompt-scenes/`。
 - **与AI对话：场景包技术路线**：按住增强改为「管道冻结 + 场景路由」。首发四包 `website` / `ppt` / `debug` / `brief`（拿不准 `generic`），与官网四卡对齐。新场景只加包和口试，不加第五技能。详见 `docs/design-prompt-enhance.md`、`src/shared/prompt-scenes/`。
 - **宣传站权威源码迁回 lizhenning**：以后只改 `lizhenning.com/other/typenow/`；本仓库 `website/` 勿改。Cursor 规则 + `npm run sync:releases` / `sync:plans` 双写站侧。详见 `docs/design-marketing-site.md`、lizhenning `other/typenow/AGENTS.md`。

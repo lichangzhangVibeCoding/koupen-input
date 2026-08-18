@@ -11,9 +11,9 @@ const TRAY_GUID = 'a8e3c0d2-7f14-4b9a-9c21-1f0e4d7b6a55'
 export type TrayHandlers = {
   getMainWindow: () => BrowserWindow | null
   onVoice: () => void
+  onAiTalk: () => void
   onReply: () => void
   onScreenAsk: () => void
-  onScreenQuiz: () => void
   onQuit: () => void
 }
 
@@ -77,16 +77,16 @@ function applyMenu(handlers: TrayHandlers, status: string): void {
       click: () => handlers.onVoice()
     },
     {
+      label: BRAND.aiTalk.name,
+      click: () => handlers.onAiTalk()
+    },
+    {
       label: BRAND.reply.name,
       click: () => handlers.onReply()
     },
     {
       label: BRAND.screenAsk.name,
       click: () => handlers.onScreenAsk()
-    },
-    {
-      label: BRAND.screenQuiz.name,
-      click: () => handlers.onScreenQuiz()
     },
     { type: 'separator' },
     {

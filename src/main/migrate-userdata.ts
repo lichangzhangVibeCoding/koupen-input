@@ -38,6 +38,7 @@ function copyTreeIfMissing(from: string, to: string): void {
 
 /**
  * appId / 包名改为 typenow 后，userData 路径会变。
+ * 现用：Mac ~/Library/Application Support/typenow ；Windows %APPDATA%\typenow
  * 新目录为空时，从旧 Application Support 目录迁移 config / data。
  */
 export function migrateUserDataFromLegacy(): void {

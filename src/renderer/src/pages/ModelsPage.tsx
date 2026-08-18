@@ -392,7 +392,7 @@ export default function ModelsPage() {
     <section className="models-page">
       <h2 className="page-title">模型</h2>
       <p className="page-desc models-desc">
-        三种跑法任选其一。语音 / 视觉 / 回复会跟随当前方案，不必重复配置三遍。
+        默认官方会员：先注册登录，三槽走官方优化模型。也可改自配 Key 或本地，不必重复配置三遍。
       </p>
 
       {/* ① 方案三选一 */}
@@ -449,10 +449,12 @@ export default function ModelsPage() {
         {scheme === 'official' ? (
           <>
             <p className="models-panel-lead">
-              当前：官方优化模型
-              {me?.phone ? ` · ${me.phone}` : ''}
-              {credits != null ? ` · 剩余 ${credits} 积分` : ''}
-              {me?.plan ? (
+              {loggedIn
+                ? `当前：官方优化模型${me?.phone ? ` · ${me.phone}` : ''}${
+                    credits != null ? ` · 剩余 ${credits} 积分` : ''
+                  }`
+                : '请先注册或登录，登录后默认使用官方优化模型'}
+              {loggedIn && me?.plan ? (
                 <>
                   {' · '}
                   <PlanTierBadge planId={me.plan.id} planName={me.plan.name} />
@@ -460,7 +462,9 @@ export default function ModelsPage() {
               ) : null}
             </p>
             <p className="status">
-              免填 API Key，语音 / 视觉 / 回复走官方优化模型，按次扣积分。不消耗你自己的第三方额度。
+              {loggedIn
+                ? '免填 API Key，语音 / 视觉 / 回复走官方优化模型，按次扣积分。不消耗你自己的第三方额度。'
+                : '注册即开体验积分。免填 API Key，按次扣积分。也可改用自配 Key 或本地模型。'}
             </p>
             <div className="row models-panel-actions">
               {loggedIn ? (
@@ -469,7 +473,7 @@ export default function ModelsPage() {
                 </Link>
               ) : (
                 <Link className="btn" to="/account">
-                  去个人中心登录
+                  去注册 / 登录
                 </Link>
               )}
             </div>

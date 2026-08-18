@@ -1,51 +1,25 @@
-# 即刻对话 / TalkNow 官网
+# 官网源码已迁出（勿在此改）
 
-面向中国用户推广的产品官网。纯静态 HTML/CSS/JS，无构建步骤。  
-**品牌域名：https://www.talknow.cn/**
+**权威维护目录：**  
+`/Users/tank/Downloads/lizhenning.com/other/typenow/`
 
-## 三页结构
+线上：https://www.lizhenning.com/other/typenow/  
+品牌域名：https://www.talknow.cn/
 
-| 路径 | 说明 |
+本目录仅作历史镜像。改文案、场景、样式、订阅/帮助、会员 API、部署 → 到 **lizhenning.com** 项目的 `other/typenow/`。
+
+## App 侧脚本（在 koupen-input 根目录跑）
+
+| 命令 | 作用 |
 |---|---|
-| `/` | 首页（现有单页内容保留） |
-| `/subscribe/` | 订阅（与 App 个人中心套餐同源） |
-| `/help/` | 帮助（含即刻对话点按 / 按住说明书） |
-| `/changelog/` | 更新日志（页脚） |
-| `/pricing/` | 重定向到 `/subscribe/` |
-
-主导航：**首页 · 订阅 · 帮助**。
-
-## 套餐同源
-
-- 数据：`src/shared/plan-catalog.json`
-- App：`src/shared/plan-catalog.ts` + `GET /v1/plans`
-- 官网：`npm run sync:plans` → `website/js/plan-catalog.js`，订阅页拉同一 API
-
-改档位结构后务必：
-
-```bash
-npm run sync:plans
-```
-
-## 目录
-
-```
-website/
-├── index.html
-├── subscribe/
-├── help/
-├── changelog/
-├── pricing/          # redirect
-├── css/ink-signal.css
-├── js/i18n.js · plan-catalog.js · subscribe.js · releases-*.js
-└── assets/
-```
+| `npm run sync:plans` | 写入 lizhenning `other/typenow/js/plan-catalog.js`（并镜像本目录） |
+| `npm run sync:releases` | 写入 lizhenning `other/typenow/js/releases-data.js` + `src/shared/releases.json` |
 
 ## 部署
 
 ```bash
-npm run sync:plans
-FTP_PASS='…' python3 website/deploy-inline-ftp.py
+cd /Users/tank/Downloads/lizhenning.com/other/typenow
+FTP_PASS='…' python3 deploy-inline-ftp.py
 ```
 
-目标过渡路径：`lizhenning.com/other/typenow/`。
+详见：`docs/design-marketing-site.md`、lizhenning `other/typenow/README.md` · `AGENTS.md`。

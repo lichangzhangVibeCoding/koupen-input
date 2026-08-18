@@ -219,6 +219,31 @@ function seed(db) {
   seedInternalKb(db)
 }
 
+const AI_PROMPT_SCENES_KB_BODY = `与AI对话 = 即刻对话「按住说」：对着任意 AI 输入框，口述加成可执行提示词再贴入（不发送）。
+
+【核心竞争力】管道只维护一次；好用靠场景包变多变准。不加第五技能、不按 App 名硬编码。
+
+【技术路线】
+按住 → 截屏+录音 → STT
+  → 读屏摘要（视觉）
+  → 场景路由 website | ppt | debug | brief | generic
+  → 套场景包（骨架 / 允许补全 / 禁止）
+  → 文字模型写提示词 → 粘贴
+
+【首发四包】与官网四卡对齐
+- website 做网站：页面模块；用户点到的功能再展开；禁写成 HTML 幻灯
+- ppt 做 PPT：HTML 分页幻灯（第 N 页 + 要点）；禁止 .ppt/.pptx
+- debug 修 Bug：现象/复现/期望/范围；屏幕报错原文；禁新开产品需求
+- brief 写方案：目标、约束、输出格式
+- generic 回落：轻度扩写，禁止套建站电商模块。Debug 与建站同时像时 debug 优先。
+
+【黄金口试】公司官网→website；十页融资PPT→ppt（HTML 幻灯）；对着红字修这个→debug；周报结构→brief；含糊弄一下→generic
+
+【演进】P0 四包+路由（本期）；P1 跟进句 followup；P2 继续加包，每包两条口试。
+
+规格：docs/design-prompt-enhance.md
+代码：src/shared/prompt-scenes/`
+
 function seedInternalKb(db) {
   const kbCount = db.prepare('SELECT COUNT(*) AS c FROM kb_articles').get().c
   if (kbCount === 0) {
@@ -263,7 +288,30 @@ function seedInternalKb(db) {
       t,
       t
     )
+    ins.run(
+      'ai-prompt-scenes',
+      '与AI对话：场景包技术路线',
+      '核心架构',
+      AI_PROMPT_SCENES_KB_BODY,
+      50,
+      t,
+      t
+    )
   }
+
+  const tKb = nowIso()
+  db.prepare(
+    `INSERT OR IGNORE INTO kb_articles (slug, title, category, body, sort_order, updated_at, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    'ai-prompt-scenes',
+    '与AI对话：场景包技术路线',
+    '核心架构',
+    AI_PROMPT_SCENES_KB_BODY,
+    50,
+    tKb,
+    tKb
+  )
 
   const rmCount = db.prepare('SELECT COUNT(*) AS c FROM roadmap_items').get().c
   if (rmCount === 0) {
@@ -281,6 +329,7 @@ function seedInternalKb(db) {
       ['P5', '微信/支付宝单次与连续订阅', '公司主体就绪后；API 已 501 预留', 'deferred', 60],
       ['P6', '官网定价页 + 会员设计文档', 'website/pricing/ + design-membership.md', 'done', 70],
       ['产品', '性格包 W2（主播维系场景）', '已落地；W3 导入/商城未做', 'done', 80],
+      ['产品', '与AI对话场景包（管道+路由）', 'website/ppt/debug/brief；见 design-prompt-enhance.md', 'building', 85],
       ['产品', '技能模块（对标闪电说且做强）', '未做；触发稳定性/联系人绑定/表单优先', 'pending', 90],
       ['产品', '真实短信验证码登录', '现为 DEV_LOGIN_CODE 开发码', 'pending', 100],
       ['商业', '经营主体 + 支付商户号', '约还需一个月', 'pending', 110],
@@ -289,6 +338,24 @@ function seedInternalKb(db) {
     for (const [phase, title, detail, status, sort] of items) {
       ins.run(phase, title, detail, status, sort, t, t)
     }
+  }
+
+  const roadTitle = '与AI对话场景包（管道+路由）'
+  const hasRoad = db.prepare('SELECT COUNT(*) AS c FROM roadmap_items WHERE title = ?').get(roadTitle)
+  if (hasRoad.c === 0) {
+    const t = nowIso()
+    db.prepare(
+      `INSERT INTO roadmap_items (phase, title, detail, status, sort_order, updated_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      '产品',
+      roadTitle,
+      'website/ppt/debug/brief；见 design-prompt-enhance.md',
+      'building',
+      85,
+      t,
+      t
+    )
   }
 }
 

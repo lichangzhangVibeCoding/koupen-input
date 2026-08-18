@@ -15,6 +15,7 @@ import { getOllamaStatus } from './ollama'
 import { hasMacAccessibility, macAccessibilityApisAllowed } from './permissions'
 import { pasteIntoFrontApp } from './paste'
 import { isScreenAskBusy, showScreenAskProgressHud } from './screen-ask'
+import { notifySkillGuideStep } from './skill-guide'
 import {
   abortNetworkWork,
   beginNetworkWork,
@@ -24,6 +25,7 @@ import {
 
 let running = false
 let runId = 0
+let pipelineFromUi = false
 
 export function isReplyBusy(): boolean {
   return running
@@ -39,7 +41,7 @@ export function cancelCapturePipeline(): boolean {
   return true
 }
 
-export async function runCapturePipeline(): Promise<void> {
+export async function runCapturePipeline(opts?: { fromUi?: boolean }): Promise<void> {
   if (isScreenAskBusy()) {
     showScreenAskProgressHud()
     return
@@ -68,6 +70,7 @@ export async function runCapturePipeline(): Promise<void> {
   }
 
   running = true
+  pipelineFromUi = Boolean(opts?.fromUi)
   const myRun = ++runId
   notifyActivityChanged()
 
@@ -150,6 +153,7 @@ export async function runCapturePipeline(): Promise<void> {
     } else {
       showHud({ kind: 'done', text: t('reply.hud.pasteFail') })
     }
+    if (!pipelineFromUi) notifySkillGuideStep('reply', true)
   } catch (err) {
     if (isTaskCancelled(err) || myRun !== runId) return
     const message = err instanceof Error ? err.message : String(err)

@@ -7,6 +7,27 @@
   "siteUrl": "https://www.talknow.cn/",
   "releases": [
     {
+      "version": "0.5.10",
+      "date": "2026-08-19",
+      "title": "看屏幕与设置体验更新",
+      "titleEn": "Screen-ask and settings polish",
+      "highlights": [
+        "看屏幕问答与首页/设置/帮助文案与交互改进",
+        "语音与会员相关能力继续打磨",
+        "Windows 安装包直链更新"
+      ],
+      "highlightsEn": [
+        "Screen-ask plus home/settings/help UX polish",
+        "Continued voice and membership refinements",
+        "Updated Windows installer download link"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.10-arm64.dmg",
+        "macX64": "即刻对话-0.5.10-x64.dmg",
+        "winX64": "TalkNow-0.5.10-x64.exe"
+      }
+    },
+    {
       "version": "0.5.9",
       "date": "2026-08-18",
       "title": "口述校对：去水词与改错别字",
