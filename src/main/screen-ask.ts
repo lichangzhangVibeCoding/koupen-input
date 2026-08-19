@@ -17,14 +17,15 @@ import {
   recentScreenAskTextHistory
 } from './screen-ask-store'
 import { isSpeaking, prefetchSpeakText, speakText, stopSpeaking } from './speak'
-import { resolveSttConfig, transcribeAudio } from './stt'
+import { prefersLocalStreamAsr, resolveSttConfig, transcribeUtterance } from './stt'
+import { ensureStreamAsr, isStreamAsrInstalled } from './local-asr-stream'
 import {
   abortNetworkWork,
   beginNetworkWork,
   isTaskCancelled,
   TaskCancelledError
 } from './task-cancel'
-import { discardMicRecording, startMicRecording, stopMicRecording } from './voice-recorder'
+import { discardMicRecording, setVoicePartialTranscriptHandler, startMicRecording, stopMicRecording } from './voice-recorder'
 import { notifySkillGuideStep } from './skill-guide'
 
 type Phase = 'idle' | 'capturing' | 'speaking' | 'listening' | 'transcribing' | 'thinking'
@@ -82,6 +83,7 @@ export function cancelScreenAsk(): boolean {
   if (requestId || phase === 'listening' || phase === 'transcribing') {
     discardMicRecording()
   }
+  setVoicePartialTranscriptHandler(null)
   pendingImage = null
   requestId = ''
   phase = 'idle'
@@ -209,7 +211,9 @@ async function assertModelsReady(): Promise<void> {
   } else if (!settings.apiKey.trim()) {
     throw new Error(t('screenAsk.errApiKey'))
   }
-  resolveSttConfig(settings)
+  if (!prefersLocalStreamAsr(settings)) {
+    resolveSttConfig(settings)
+  }
 }
 
 async function finishListening(): Promise<void> {
@@ -224,19 +228,37 @@ async function finishListening(): Promise<void> {
   const myRun = runId
 
   try {
-    setPhaseHud({
-      kind: 'transcribing',
-      text: t('screenAsk.transcribing'),
-      detail: t('screenAsk.transcribingDetail'),
-      icon: 'write'
-    })
-    const { buffer, mime } = await stopMicRecording(rid)
+    setVoicePartialTranscriptHandler(null)
+    const { buffer, mime, streamedText, liveText } = await stopMicRecording(rid)
     if (myRun !== runId) throw new TaskCancelledError()
     if (!buffer.length) throw new Error(t('screenAsk.errNoAudio'))
 
     const settings = getSettings()
+    const usedLocal = prefersLocalStreamAsr(settings) && Boolean(streamedText.trim())
+    if (usedLocal) {
+      const live = liveText.trim()
+      const final = streamedText.trim()
+      const changed = Boolean(live && live !== final)
+      setPhaseHud({
+        kind: changed ? 'transcribing' : 'recording',
+        text: changed ? t('voice.hud.corrected') : t('screenAsk.prompt'),
+        detail: final,
+        icon: changed ? 'write' : 'listen'
+      })
+      if (changed) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 340))
+        if (myRun !== runId) throw new TaskCancelledError()
+      }
+    } else {
+      setPhaseHud({
+        kind: 'transcribing',
+        text: t('screenAsk.transcribing'),
+        detail: t('screenAsk.transcribingDetail'),
+        icon: 'write'
+      })
+    }
     const signal = beginNetworkWork()
-    const question = await transcribeAudio(settings, buffer, mime, signal)
+    const question = await transcribeUtterance(settings, buffer, mime, streamedText, signal)
     if (myRun !== runId) throw new TaskCancelledError()
 
     phase = 'thinking'
@@ -294,6 +316,7 @@ async function finishListening(): Promise<void> {
     showHud({ kind: 'error', text: message.slice(0, 120) })
   } finally {
     clearThinkPulse()
+    setVoicePartialTranscriptHandler(null)
     if (myRun === runId) {
       phase = 'idle'
       notifyActivityChanged()
@@ -360,7 +383,20 @@ export async function toggleScreenAsk(opts?: { fromUi?: boolean }): Promise<void
       detail: t('screenAsk.listeningDetail'),
       icon: 'listen'
     })
-    requestId = await startMicRecording()
+    const listenSettings = getSettings()
+    if (prefersLocalStreamAsr(listenSettings) && !isStreamAsrInstalled()) {
+      void ensureStreamAsr().catch(() => undefined)
+    }
+    setVoicePartialTranscriptHandler((partial) => {
+      if (myRun !== runId) return
+      setPhaseHud({
+        kind: 'recording',
+        text: t('screenAsk.prompt'),
+        detail: partial,
+        icon: 'listen'
+      })
+    })
+    requestId = await startMicRecording({ stream: prefersLocalStreamAsr(listenSettings) })
     if (myRun !== runId) {
       discardMicRecording()
       throw new TaskCancelledError()
@@ -372,6 +408,7 @@ export async function toggleScreenAsk(opts?: { fromUi?: boolean }): Promise<void
       if (myRun === runId) {
         stopSpeaking()
         clearThinkPulse()
+        setVoicePartialTranscriptHandler(null)
         pendingImage = null
         requestId = ''
         phase = 'idle'
@@ -381,6 +418,7 @@ export async function toggleScreenAsk(opts?: { fromUi?: boolean }): Promise<void
     }
     stopSpeaking()
     clearThinkPulse()
+    setVoicePartialTranscriptHandler(null)
     pendingImage = null
     requestId = ''
     phase = 'idle'

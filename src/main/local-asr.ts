@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from '
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
+import { pcm16leToFloat32, wavPcm16le } from './audio-wav'
 
 const execFileAsync = promisify(execFile)
 
@@ -86,23 +87,74 @@ async function toWav16k(audio: Buffer, mime: string): Promise<string> {
   }
 }
 
-function wavToFloat32(wavPath: string): Float32Array {
-  const buf = readFileSync(wavPath)
-  // Skip WAV header (44 bytes typical); find 'data' chunk for robustness
-  let offset = 44
-  for (let i = 12; i < Math.min(buf.length - 8, 200); i++) {
-    if (buf.toString('ascii', i, i + 4) === 'data') {
-      offset = i + 8
-      break
+function wavFileToFloat32(wavPath: string): Float32Array {
+  return pcm16leToFloat32(wavPcm16le(readFileSync(wavPath)))
+}
+
+/** Membership PHP bills by file size/2000; 16k WAV would over-charge. Compress for upload. */
+export async function wavToCompactOpus(
+  wav: Buffer
+): Promise<{ buffer: Buffer; mime: string; filename: string }> {
+  const ffmpeg = await getFfmpegPath()
+  const id = randomUUID()
+  const inPath = join(tmpdir(), `vip-asr-up-${id}.wav`)
+  const outPath = join(tmpdir(), `vip-asr-up-${id}.ogg`)
+  writeFileSync(inPath, wav)
+  try {
+    try {
+      await execFileAsync(ffmpeg, [
+        '-y',
+        '-i',
+        inPath,
+        '-ar',
+        '16000',
+        '-ac',
+        '1',
+        '-c:a',
+        'libopus',
+        '-b:a',
+        '16k',
+        outPath
+      ])
+      return { buffer: readFileSync(outPath), mime: 'audio/ogg', filename: 'speech.ogg' }
+    } catch {
+      const mp3Path = join(tmpdir(), `vip-asr-up-${id}.mp3`)
+      try {
+        await execFileAsync(ffmpeg, [
+          '-y',
+          '-i',
+          inPath,
+          '-ar',
+          '16000',
+          '-ac',
+          '1',
+          '-codec:a',
+          'libmp3lame',
+          '-b:a',
+          '24k',
+          mp3Path
+        ])
+        return { buffer: readFileSync(mp3Path), mime: 'audio/mpeg', filename: 'speech.mp3' }
+      } finally {
+        try {
+          unlinkSync(mp3Path)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } finally {
+    try {
+      unlinkSync(inPath)
+    } catch {
+      /* ignore */
+    }
+    try {
+      unlinkSync(outPath)
+    } catch {
+      /* ignore */
     }
   }
-  const samples = Math.floor((buf.length - offset) / 2)
-  const out = new Float32Array(samples)
-  for (let i = 0; i < samples; i++) {
-    const s = buf.readInt16LE(offset + i * 2)
-    out[i] = s / 32768
-  }
-  return out
 }
 
 export async function ensureLocalAsr(
@@ -172,6 +224,28 @@ export function friendlyLocalAsrLoadError(err: unknown): string {
   return raw.replace(/^Error invoking remote method '[^']+':\s*(Error:\s*)?/i, '').trim() || raw
 }
 
+async function runLocalWhisper(samples: Float32Array): Promise<string> {
+  if (!asrPipeline) throw new Error('本地语音模型未就绪')
+  const result = await asrPipeline(samples, {
+    language: 'chinese',
+    task: 'transcribe',
+    chunk_length_s: 30,
+    stride_length_s: 5
+  })
+  const text = (result?.text || '').trim()
+  if (!text) throw new Error('本地转写结果为空')
+  return text
+}
+
+/** Raw 16 kHz mono PCM16 (no WAV header). */
+export async function transcribeLocalPcm16k(
+  pcm16le: Buffer,
+  onProgress?: (p: AsrProgress) => void
+): Promise<string> {
+  await ensureLocalAsr(onProgress)
+  return runLocalWhisper(pcm16leToFloat32(pcm16le))
+}
+
 export async function transcribeLocalBuiltin(
   audio: Buffer,
   mime: string,
@@ -180,18 +254,13 @@ export async function transcribeLocalBuiltin(
   await ensureLocalAsr(onProgress)
   if (!asrPipeline) throw new Error('本地语音模型未就绪')
 
+  if (/wav/i.test(mime)) {
+    return runLocalWhisper(pcm16leToFloat32(wavPcm16le(audio)))
+  }
+
   const wavPath = await toWav16k(audio, mime)
   try {
-    const samples = wavToFloat32(wavPath)
-    const result = await asrPipeline(samples, {
-      language: 'chinese',
-      task: 'transcribe',
-      chunk_length_s: 30,
-      stride_length_s: 5
-    })
-    const text = (result?.text || '').trim()
-    if (!text) throw new Error('本地转写结果为空')
-    return text
+    return runLocalWhisper(wavFileToFloat32(wavPath))
   } finally {
     try {
       unlinkSync(wavPath)

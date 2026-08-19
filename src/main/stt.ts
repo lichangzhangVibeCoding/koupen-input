@@ -1,5 +1,11 @@
 import { AppSettings, LOCAL_DEFAULTS } from '../shared/types'
-import { isLocalAsrInstalled, transcribeLocalBuiltin } from './local-asr'
+import { encodeWav16kMono, wavOrPcmDurationSeconds, wavPcm16le } from './audio-wav'
+import {
+  isLocalAsrInstalled,
+  transcribeLocalBuiltin,
+  transcribeLocalPcm16k,
+  wavToCompactOpus
+} from './local-asr'
 import {
   formatMembershipHttpError,
   membershipAuthHeaders,
@@ -71,6 +77,73 @@ export function resolveSttConfig(settings: AppSettings): {
   throw new Error('请先在「模型」页配置语音识别，或在「会员」页登录官方模式')
 }
 
+export function prefersLocalStreamAsr(settings: AppSettings): boolean {
+  return settings.voiceAsrMode !== 'cloud'
+}
+
+/** Local Zipformer text wins; otherwise file ASR (membership / BYOK / whisper). */
+export async function transcribeUtterance(
+  settings: AppSettings,
+  audio: Buffer,
+  mime: string,
+  streamedText: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const local = String(streamedText || '').trim()
+  if (prefersLocalStreamAsr(settings) && local) return local
+  return transcribeAudio(settings, audio, mime, signal)
+}
+
+function parseTranscriptBody(text: string): string {
+  try {
+    const data = JSON.parse(text) as { text?: string }
+    const out = (data.text || '').trim()
+    if (!out) throw new Error('没听清你说的话，请靠近麦克风再说一遍')
+    return out
+  } catch (e) {
+    if (e instanceof Error && (e.message.includes('听清') || e.message.includes('转写'))) throw e
+    const out = text.trim()
+    if (!out) throw new Error('没听清你说的话，请靠近麦克风再说一遍')
+    return out
+  }
+}
+
+async function transcribeLocalFallback(audio: Buffer, mime: string): Promise<string> {
+  if (!isLocalAsrInstalled()) throw new Error('本地语音模型尚未安装')
+  if (/wav|pcm/i.test(mime)) {
+    const pcm = /wav/i.test(mime) ? wavPcm16le(audio) : audio
+    return transcribeLocalPcm16k(pcm)
+  }
+  return transcribeLocalBuiltin(audio, mime)
+}
+
+async function prepareCloudFile(
+  audio: Buffer,
+  mime: string,
+  membership: boolean
+): Promise<{ buffer: Buffer; mime: string; filename: string; durationSeconds: number }> {
+  const durationSeconds = wavOrPcmDurationSeconds(audio, mime)
+  let wav = audio
+  let wavMime = mime
+  if (!/wav/i.test(mime) && /pcm/i.test(mime)) {
+    wav = encodeWav16kMono(audio)
+    wavMime = 'audio/wav'
+  }
+  if (membership && /wav/i.test(wavMime)) {
+    try {
+      const compact = await wavToCompactOpus(wav)
+      return { ...compact, durationSeconds }
+    } catch {
+      /* PHP size heuristic is wrong for WAV; still better than failing the utterance */
+    }
+  }
+  if (/wav/i.test(wavMime)) {
+    return { buffer: wav, mime: 'audio/wav', filename: 'speech.wav', durationSeconds }
+  }
+  const ext = mime.includes('mp4') || mime.includes('m4a') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm'
+  return { buffer: audio, mime: mime || 'audio/webm', filename: `speech.${ext}`, durationSeconds }
+}
+
 export async function transcribeAudio(
   settings: AppSettings,
   audio: Buffer,
@@ -87,14 +160,15 @@ export async function transcribeAudio(
     return transcribeLocalBuiltin(audio, mime)
   }
 
+  const file = await prepareCloudFile(audio, mime, cfg.isMembership)
   const url = `${cfg.baseUrl.replace(/\/+$/, '')}/audio/transcriptions`
-  const ext = mime.includes('mp4') || mime.includes('m4a') ? 'm4a' : 'webm'
   const form = new FormData()
-  const blob = new Blob([new Uint8Array(audio)], { type: mime || 'audio/webm' })
-  form.append('file', blob, `speech.${ext}`)
+  const blob = new Blob([new Uint8Array(file.buffer)], { type: file.mime })
+  form.append('file', blob, file.filename)
   form.append('model', cfg.model)
   form.append('language', 'zh')
   form.append('response_format', 'json')
+  form.append('duration_seconds', String(file.durationSeconds))
 
   let res: Response
   try {
@@ -109,12 +183,27 @@ export async function transcribeAudio(
   } catch (e) {
     throwIfCancelled(signal)
     if (e instanceof Error && e.name === 'AbortError') throw e
+    if (isLocalAsrInstalled()) {
+      try {
+        return await transcribeLocalFallback(audio, mime)
+      } catch {
+        /* keep network error */
+      }
+    }
     const msg = e instanceof Error ? e.message : String(e)
     throw new Error(cfg.isLocal ? `本地转写服务连不上（${msg}）` : `转写请求失败：${msg}`)
   }
 
   const text = await res.text()
   if (!res.ok) {
+    const retryable = res.status >= 500 || res.status === 429 || res.status === 503 || res.status === 504
+    if (retryable && isLocalAsrInstalled()) {
+      try {
+        return await transcribeLocalFallback(audio, mime)
+      } catch {
+        /* keep cloud error */
+      }
+    }
     if (cfg.isMembership) {
       throw new Error(formatMembershipHttpError(res.status, text))
     }
@@ -127,15 +216,5 @@ export async function transcribeAudio(
     throw new Error(`${hint}：${text.slice(0, 160)}`)
   }
 
-  try {
-    const data = JSON.parse(text) as { text?: string }
-    const out = (data.text || '').trim()
-    if (!out) throw new Error('没听清你说的话，请靠近麦克风再说一遍')
-    return out
-  } catch (e) {
-    if (e instanceof Error && (e.message.includes('听清') || e.message.includes('转写'))) throw e
-    const out = text.trim()
-    if (!out) throw new Error('没听清你说的话，请靠近麦克风再说一遍')
-    return out
-  }
+  return parseTranscriptBody(text)
 }

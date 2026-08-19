@@ -486,6 +486,12 @@ const zhCN: Record<MessageKey, string> = {
   'settings.voiceFixTypos': '自动改错别字',
   'settings.voiceFixTyposHint':
     '按上下文修正转写错字（含中英混听），不扩写、不编造。默认关（会多等一轮回复模型）；官方会员走现有回复积分。',
+  'settings.voiceAsrLocal': '本机流式听写',
+  'settings.voiceAsrLocalHint':
+    '边说边出字，支持中英混说，松手即贴，不经硅基、不扣语音积分。首次使用会下载中英模型（约 200MB）。关掉则录完再走云端文件转写。',
+  'settings.voiceCloudProofread': '云端二次校对',
+  'settings.voiceCloudProofreadHint':
+    '本机先贴上，再用官方语音模型重转一遍（不挡第一次粘贴）。会扣语音积分。默认关。',
   'settings.save': '保存设置',
   'settings.saving': '保存中…',
   'settings.saved': '已保存',
@@ -649,6 +655,8 @@ const zhCN: Record<MessageKey, string> = {
   'voice.hud.enhanceReadingDetail': '没有相关内容就按你说的扩写成任务',
   'voice.hud.enhancedPasted': '增强后的提示词已经填好啦',
   'voice.hud.holdCancelled': '这次增强取消了',
+  'voice.hud.downloadingAsr': '正在下载中英语音模型…这次先走云端',
+  'voice.hud.corrected': '改了一下口误',
   'screenAsk.errLocalNotReady': '本地模型未就绪，请到设置安装/启动',
   'screenAsk.errLocalVision': '请先安装本地视觉模型',
   'screenAsk.errApiKey': '请先配置 API Key，或改用免费本地模型',

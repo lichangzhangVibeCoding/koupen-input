@@ -1,6 +1,6 @@
 {
   "name": "typenow",
-  "version": "0.5.10",
+  "version": "0.5.11",
   "description": "即刻对话 / TalkNow — local chat assistant · www.talknow.cn",
   "main": "./out/main/index.js",
   "author": "TalkNow",
@@ -32,6 +32,7 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0",
     "sharp": "0.32.6",
+    "sherpa-onnx-node": "^1.13.6",
     "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
@@ -62,7 +63,14 @@
       "**/onnxruntime-node/**/*",
       "**/sharp/**/*",
       "**/sharp/vendor/**/*",
-      "**/ffmpeg-static/**/*"
+      "**/ffmpeg-static/**/*",
+      "**/sherpa-onnx-node/**/*",
+      "**/sherpa-onnx-darwin-arm64/**/*",
+      "**/sherpa-onnx-darwin-x64/**/*",
+      "**/sherpa-onnx-win-x64/**/*",
+      "**/sherpa-onnx-win-ia32/**/*",
+      "**/sherpa-onnx-linux-x64/**/*",
+      "**/sherpa-onnx-linux-arm64/**/*"
     ],
     "npmRebuild": true,
     "afterPack": "./scripts/after-pack-verify-sharp.cjs",

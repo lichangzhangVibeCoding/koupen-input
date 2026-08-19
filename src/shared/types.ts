@@ -13,6 +13,9 @@ export type InferenceMode = 'local' | 'cloud'
 /** 云端模型路由：自配 Key，或走官方会员薄代理 */
 export type ModelRoutingMode = 'byok' | 'membership'
 
+/** 即刻对话听写：默认本机流式；cloud = 硅基/会员文件 ASR */
+export type VoiceAsrMode = 'local-stream' | 'cloud'
+
 export type { PersonaPackId }
 
 export interface AppSettings {
@@ -42,6 +45,14 @@ export interface AppSettings {
    * 即刻对话：按上下文修正转写错字，不扩写（默认关，避免多等一轮回复模型）
    */
   voiceFixSttTyposEnabled: boolean
+  /**
+   * 听写引擎。默认本机 Zipformer 流式；cloud = 录完再走官方/自配文件 ASR
+   */
+  voiceAsrMode: VoiceAsrMode
+  /**
+   * 本地已贴上后再用云端 SenseVoice 校对（不阻塞首贴，默认关）
+   */
+  voiceCloudProofread: boolean
   /**
    * 即刻对话点按触发键（仅 Mac 生效）
    * rightCommand=右 Command（默认）；rightOption=右 Option；fn=Fn/地球键
@@ -331,6 +342,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   voiceInputEnabled: true,
   voiceStripFillersEnabled: true,
   voiceFixSttTyposEnabled: false,
+  voiceAsrMode: 'local-stream',
+  voiceCloudProofread: false,
   voiceTrigger: 'rightCommand',
   deAiToneEnabled: true,
   personaPackId: 'none',

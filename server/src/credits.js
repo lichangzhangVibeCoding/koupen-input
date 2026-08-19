@@ -299,9 +299,13 @@ export function chargeCredits(db, userId, amount, reason, requestId) {
   return applyCreditDelta(db, userId, -amount, reason, 'consume', requestId, '')
 }
 
-export function estimateAudioMinutes(fileSize, mime) {
-  // Rough: webm/opus ~16kbps ≈ 2KB/s; m4a similar ballpark. Floor 1 minute.
-  const bytesPerSec = 2000
+export function estimateAudioMinutes(fileSize, mime, durationSeconds) {
+  const dur = Number(durationSeconds)
+  if (Number.isFinite(dur) && dur > 0) {
+    return Math.max(1, Math.ceil(dur / 60))
+  }
+  // 16 kHz mono PCM16 ≈ 32KB/s; compressed webm/opus ≈ 2KB/s
+  const bytesPerSec = /wav|pcm/i.test(String(mime || '')) ? 32000 : 2000
   const secs = Math.max(1, Math.ceil(fileSize / bytesPerSec))
   return Math.max(1, Math.ceil(secs / 60))
 }

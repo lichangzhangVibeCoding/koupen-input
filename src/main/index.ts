@@ -32,6 +32,7 @@ import {
   installLocalSuite,
   testSlot
 } from './model-service'
+import { ensureStreamAsr, getStreamAsrStatus, warmupStreamAsr } from './local-asr-stream'
 import {
   ensureLocalModels,
   getOllamaStatus,
@@ -589,6 +590,16 @@ function setupIpc(): void {
     })
   })
   ipcMain.handle('models:testSlot', async (_e, slot: SlotId) => testSlot(slot))
+  ipcMain.handle('models:ensureStreamAsr', async (event) => {
+    await ensureStreamAsr((p) => {
+      event.sender.send('models:install-progress', {
+        phase: 'asr-stream',
+        message: p.message,
+        percent: p.percent
+      })
+    })
+    return getStreamAsrStatus()
+  })
 
   ipcMain.handle('ollama:status', async () => {
     const s = getSettings()
@@ -646,6 +657,7 @@ app.whenReady().then(() => {
   initEscapeCancel()
 
   warmupCosyVoice()
+  if (settings.voiceAsrMode !== 'cloud') warmupStreamAsr()
 
   app.on('activate', () => {
     if (!mainWindow) {

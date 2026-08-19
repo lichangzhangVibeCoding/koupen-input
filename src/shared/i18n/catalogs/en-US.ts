@@ -508,6 +508,12 @@ const enUS: Record<MessageKey, string> = {
   'settings.voiceFixTypos': 'Fix STT typos',
   'settings.voiceFixTyposHint':
     'Correct recognition errors from context (including Chinese/English mix-ups). No new content. Off by default (adds a reply-model round). Official membership uses the existing reply credit.',
+  'settings.voiceAsrLocal': 'On-device streaming dictation',
+  'settings.voiceAsrLocalHint':
+    'Words appear as you speak (Chinese and English mixed). Release to paste. No SiliconFlow hop, no voice credits. First use downloads a ~200MB bilingual model. Turn off to wait for cloud file ASR.',
+  'settings.voiceCloudProofread': 'Cloud proofread after paste',
+  'settings.voiceCloudProofreadHint':
+    'Paste locally first, then re-run official ASR in the background (does not block the first paste). Uses voice credits. Off by default.',
   'settings.save': 'Save settings',
   'settings.saving': 'Saving…',
   'settings.saved': 'Saved',
@@ -674,6 +680,8 @@ const enUS: Record<MessageKey, string> = {
   'voice.hud.enhanceReadingDetail': 'If nothing useful, we’ll expand what you said',
   'voice.hud.enhancedPasted': 'Enhanced prompt is in the field',
   'voice.hud.holdCancelled': 'Prompt enhance cancelled',
+  'voice.hud.downloadingAsr': 'Downloading bilingual ASR… using cloud this time',
+  'voice.hud.corrected': 'Fixed a slip',
   'screenAsk.errLocalNotReady': 'Local models not ready — install/start them in Settings',
   'screenAsk.errLocalVision': 'Install the local vision model first',
   'screenAsk.errApiKey': 'Add an API key, or switch to free local models',

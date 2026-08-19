@@ -7,6 +7,27 @@
   "siteUrl": "https://www.talknow.cn/",
   "releases": [
     {
+      "version": "0.5.11",
+      "date": "2026-08-19",
+      "title": "本机流式听写：边说边出字",
+      "titleEn": "On-device streaming dictation",
+      "highlights": [
+        "即刻对话默认本机 Zipformer 中英流式识别：边说边出字、停顿补标点、松手即贴，不扣语音积分",
+        "云端 SenseVoice 仅作未就绪底线和可选二次校对",
+        "Windows 安装包 / 绿色版同步更新"
+      ],
+      "highlightsEn": [
+        "TalkNow defaults to on-device bilingual Zipformer streaming: live words, pause punctuation, paste on release, no voice credits",
+        "Cloud SenseVoice is fallback and optional proofread only",
+        "Windows installer and portable builds updated"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.11-arm64.dmg",
+        "macX64": "即刻对话-0.5.11-x64.dmg",
+        "winX64": "TalkNow-0.5.11-x64.exe"
+      }
+    },
+    {
       "version": "0.5.10",
       "date": "2026-08-19",
       "title": "看屏幕与设置体验更新",

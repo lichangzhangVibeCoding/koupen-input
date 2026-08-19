@@ -12,8 +12,14 @@ import {
   showScreenAskProgressHud,
   stopScreenAskIfListening
 } from './screen-ask'
-import { discardMicRecording, startMicRecording, stopMicRecording } from './voice-recorder'
-import { resolveSttConfig, transcribeAudio } from './stt'
+import {
+  discardMicRecording,
+  setVoicePartialTranscriptHandler,
+  startMicRecording,
+  stopMicRecording
+} from './voice-recorder'
+import { resolveSttConfig, transcribeAudio, transcribeUtterance, prefersLocalStreamAsr } from './stt'
+import { ensureStreamAsr, isStreamAsrInstalled } from './local-asr-stream'
 import {
   abortNetworkWork,
   beginNetworkWork,
@@ -53,6 +59,52 @@ function resetHoldState(): void {
   holdFromUi = false
 }
 
+function kickStreamAsr(settings: ReturnType<typeof getSettings>): string {
+  if (!prefersLocalStreamAsr(settings)) return ''
+  if (!isStreamAsrInstalled()) {
+    void ensureStreamAsr().catch(() => undefined)
+    return t('voice.hud.downloadingAsr')
+  }
+  return ''
+}
+
+async function flashAsrCorrection(
+  liveText: string,
+  finalText: string,
+  title: string,
+  myRun: number
+): Promise<void> {
+  const live = liveText.trim()
+  const final = finalText.trim()
+  if (!final) return
+  const changed = Boolean(live && live !== final)
+  showHud({
+    kind: changed ? 'transcribing' : 'recording',
+    text: changed ? t('voice.hud.corrected') : title,
+    detail: final,
+    icon: changed ? 'write' : 'listen'
+  })
+  if (!changed) return
+  await new Promise<void>((resolve) => setTimeout(resolve, 340))
+  if (myRun !== runId) throw new TaskCancelledError()
+}
+
+function maybeCloudProofread(
+  settings: ReturnType<typeof getSettings>,
+  audio: Buffer,
+  mime: string,
+  usedLocal: boolean,
+  pasted: string
+): void {
+  if (!settings.voiceCloudProofread || !usedLocal) return
+  void transcribeAudio(settings, audio, mime)
+    .then(async (cloud) => {
+      const cleaned = await cleanVoiceTranscript(settings, cloud)
+      if (cleaned && cleaned !== pasted) await pasteIntoFrontApp(cleaned, 'keep-clipboard')
+    })
+    .catch(() => undefined)
+}
+
 /** Esc：立刻停下语音链路（点按与按住共用） */
 export function cancelVoiceInput(): boolean {
   if (!recording && !busy && !holdMode) return false
@@ -65,6 +117,7 @@ export function cancelVoiceInput(): boolean {
   busy = false
   requestId = ''
   resetHoldState()
+  setVoicePartialTranscriptHandler(null)
   notifyActivityChanged()
   return true
 }
@@ -96,7 +149,10 @@ export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
   const myRun = ++runId
   holdReady = (async () => {
     try {
-      resolveSttConfig(settings)
+      if (!prefersLocalStreamAsr(settings)) {
+        resolveSttConfig(settings)
+      }
+      const asrHint = kickStreamAsr(settings)
       const shotP = captureFullScreen()
         .then((shot) => {
           if (myRun === runId) holdImage = shot.visionImage
@@ -108,9 +164,20 @@ export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
         kind: 'recording',
         text: holdFromUi
           ? t('hotkey.holdRecordingUi')
-          : formatHoldRecordingHudText(process.platform, settings.voiceTrigger)
+          : formatHoldRecordingHudText(process.platform, settings.voiceTrigger),
+        ...(asrHint ? { detail: asrHint } : {})
       })
-      requestId = await startMicRecording()
+      setVoicePartialTranscriptHandler((partial) => {
+        if (myRun !== runId || !holdMode) return
+        showHud({
+          kind: 'recording',
+          text: holdFromUi
+            ? t('hotkey.holdRecordingUi')
+            : formatHoldRecordingHudText(process.platform, settings.voiceTrigger),
+          detail: partial
+        })
+      })
+      requestId = await startMicRecording({ stream: prefersLocalStreamAsr(settings) })
       if (myRun !== runId) {
         discardMicRecording()
         return
@@ -123,6 +190,7 @@ export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
       recording = false
       resetHoldState()
       requestId = ''
+      setVoicePartialTranscriptHandler(null)
       const message = err instanceof Error ? err.message : String(err)
       showHud({ kind: 'error', text: message.slice(0, 80) })
       notifyActivityChanged()
@@ -145,18 +213,31 @@ export async function endVoiceHold(): Promise<void> {
     recording = false
     if (!requestId) throw new Error(t('screenAsk.errNoAudio'))
 
-    showHud({
-      kind: 'transcribing',
-      text: t('voice.hud.transcribing'),
-      detail: t('voice.hud.busyDetail'),
-      icon: 'write'
-    })
-    const { buffer, mime } = await stopMicRecording(requestId)
+    setVoicePartialTranscriptHandler(null)
+    const { buffer, mime, streamedText, liveText } = await stopMicRecording(requestId)
     if (myRun !== runId) throw new TaskCancelledError()
     if (!buffer.length) throw new Error(t('screenAsk.errNoAudio'))
 
+    const usedLocal = prefersLocalStreamAsr(settings) && Boolean(streamedText.trim())
+    if (usedLocal) {
+      await flashAsrCorrection(
+        liveText,
+        streamedText,
+        holdFromUi
+          ? t('hotkey.holdRecordingUi')
+          : formatHoldRecordingHudText(process.platform, settings.voiceTrigger),
+        myRun
+      )
+    } else {
+      showHud({
+        kind: 'transcribing',
+        text: t('voice.hud.transcribing'),
+        detail: t('voice.hud.busyDetail'),
+        icon: 'write'
+      })
+    }
     const signal = beginNetworkWork()
-    const spokenRaw = await transcribeAudio(settings, buffer, mime, signal)
+    const spokenRaw = await transcribeUtterance(settings, buffer, mime, streamedText, signal)
     if (myRun !== runId) throw new TaskCancelledError()
     const needsCleanup =
       settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled === true
@@ -225,6 +306,7 @@ export async function endVoiceHold(): Promise<void> {
       resetHoldState()
       notifyActivityChanged()
     }
+    setVoicePartialTranscriptHandler(null)
   }
 }
 
@@ -307,16 +389,29 @@ export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<voi
   if (!recording) {
     try {
       tapFromUi = Boolean(opts?.fromUi)
-      resolveSttConfig(settings)
+      if (!prefersLocalStreamAsr(settings)) {
+        resolveSttConfig(settings)
+      }
+      const asrHint = kickStreamAsr(settings)
       showHud({
         kind: 'recording',
-        text: formatRecordingHudText(process.platform, settings.voiceTrigger)
+        text: formatRecordingHudText(process.platform, settings.voiceTrigger),
+        ...(asrHint ? { detail: asrHint } : {})
       })
-      requestId = await startMicRecording()
+      setVoicePartialTranscriptHandler((partial) => {
+        if (!recording) return
+        showHud({
+          kind: 'recording',
+          text: formatRecordingHudText(process.platform, getSettings().voiceTrigger),
+          detail: partial
+        })
+      })
+      requestId = await startMicRecording({ stream: prefersLocalStreamAsr(settings) })
       recording = true
       notifyActivityChanged()
     } catch (err) {
       recording = false
+      setVoicePartialTranscriptHandler(null)
       const message = err instanceof Error ? err.message : String(err)
       showHud({ kind: 'error', text: message.slice(0, 80) })
       notifyActivityChanged()
@@ -328,19 +423,30 @@ export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<voi
   busy = true
   notifyActivityChanged()
   const myRun = ++runId
+  setVoicePartialTranscriptHandler(null)
   try {
-    showHud({
-      kind: 'transcribing',
-      text: t('voice.hud.transcribing'),
-      detail: t('voice.hud.busyDetail'),
-      icon: 'write'
-    })
-    const { buffer, mime } = await stopMicRecording(requestId)
+    const { buffer, mime, streamedText, liveText } = await stopMicRecording(requestId)
     if (myRun !== runId) throw new TaskCancelledError()
     if (!buffer.length) throw new Error(t('screenAsk.errNoAudio'))
 
+    const usedLocal = prefersLocalStreamAsr(settings) && Boolean(streamedText.trim())
+    if (usedLocal) {
+      await flashAsrCorrection(
+        liveText,
+        streamedText,
+        formatRecordingHudText(process.platform, settings.voiceTrigger),
+        myRun
+      )
+    } else {
+      showHud({
+        kind: 'transcribing',
+        text: t('voice.hud.transcribing'),
+        detail: t('voice.hud.busyDetail'),
+        icon: 'write'
+      })
+    }
     const signal = beginNetworkWork()
-    const textRaw = await transcribeAudio(settings, buffer, mime, signal)
+    const textRaw = await transcribeUtterance(settings, buffer, mime, streamedText, signal)
     if (myRun !== runId) throw new TaskCancelledError()
     const needsCleanup =
       settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled === true
@@ -361,6 +467,7 @@ export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<voi
     } else {
       showHud({ kind: 'done', text: t('voice.hud.pasteFail') })
     }
+    maybeCloudProofread(settings, buffer, mime, usedLocal, text)
     if (!tapFromUi) notifySkillGuideStep('voice', true)
   } catch (err) {
     if (isTaskCancelled(err) || myRun !== runId) {
@@ -375,5 +482,6 @@ export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<voi
       requestId = ''
       notifyActivityChanged()
     }
+    setVoicePartialTranscriptHandler(null)
   }
 }

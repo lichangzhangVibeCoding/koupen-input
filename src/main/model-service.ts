@@ -1,6 +1,8 @@
 import { getSettings, saveSettings } from './db'
 import { getOllamaStatus, ensureLocalModels, startOllama } from './ollama'
 import { ensureLocalAsr, isLocalAsrInstalled, AsrProgress } from './local-asr'
+import { ensureStreamAsr, getStreamAsrStatus, isStreamAsrInstalled } from './local-asr-stream'
+import { prefersLocalStreamAsr } from './stt'
 import { testConnection } from './llm'
 import {
   applyLocalSuiteRecommend,
@@ -30,6 +32,13 @@ export interface ModelDashboard {
   /** 当前云端是否走官方会员代理 */
   routingMode: 'membership' | 'byok' | 'local-mixed'
   membershipActive: boolean
+  streamAsr: {
+    installed: boolean
+    downloading: boolean
+    percent?: number
+    error?: string
+    detail: string
+  }
 }
 
 export async function getModelDashboard(): Promise<ModelDashboard> {
@@ -65,6 +74,21 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
 
   const slotReady = (id: SlotId): { ready: boolean; detail: string } => {
     const b = bindings[id]
+    if (id === 'asr' && prefersLocalStreamAsr(settings)) {
+      const st = getStreamAsrStatus()
+      const fallback =
+        (intendsOfficial && membershipActive) ||
+        Boolean(settings.sttApiKey.trim()) ||
+        localAsr
+      return {
+        ready: st.installed || fallback,
+        detail: st.installed
+          ? '本机中英流式（免积分）'
+          : fallback
+            ? `${st.detail} · 可回退云端`
+            : st.detail
+      }
+    }
     // 官方会员：云端槽位免 Key，由服务端路由；未登录则未就绪
     if (intendsOfficial && b.providerId !== 'local') {
       if (!membershipActive) {
@@ -161,7 +185,15 @@ export async function getModelDashboard(): Promise<ModelDashboard> {
     : allLocal
       ? 'local-mixed'
       : 'byok'
-  return { slots, providers, readyCount, total: 3, routingMode, membershipActive }
+  return {
+    slots,
+    providers,
+    readyCount,
+    total: 3,
+    routingMode,
+    membershipActive,
+    streamAsr: getStreamAsrStatus()
+  }
 }
 
 export async function applySiliconflow(
@@ -237,6 +269,11 @@ export async function testSlot(slot: SlotId): Promise<string> {
   const b = bindings[slot]
 
   if (slot === 'asr') {
+    if (prefersLocalStreamAsr(settings)) {
+      await ensureStreamAsr()
+      if (!isStreamAsrInstalled()) throw new Error('本机流式语音未就绪')
+      return '本机中英流式语音可用（免积分）'
+    }
     if (b.providerId === 'local') {
       if (!isLocalAsrInstalled()) throw new Error('本地语音未安装')
       await ensureLocalAsr()

@@ -501,6 +501,22 @@ export default function SettingsPage() {
           />
           <div className="settings-divider" />
           <ToggleRow
+            checked={form.voiceAsrMode !== 'cloud'}
+            onChange={(checked) =>
+              setForm({ ...form, voiceAsrMode: checked ? 'local-stream' : 'cloud' })
+            }
+            title={t('settings.voiceAsrLocal')}
+            hint={t('settings.voiceAsrLocalHint')}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
+            checked={form.voiceCloudProofread === true}
+            onChange={(checked) => setForm({ ...form, voiceCloudProofread: checked })}
+            title={t('settings.voiceCloudProofread')}
+            hint={t('settings.voiceCloudProofreadHint')}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
             checked={form.voiceStripFillersEnabled !== false}
             onChange={(checked) => setForm({ ...form, voiceStripFillersEnabled: checked })}
             title={t('settings.voiceStripFillers')}

@@ -87,6 +87,12 @@ export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppS
   if (typeof merged.voiceFixSttTyposEnabled !== 'boolean') {
     merged.voiceFixSttTyposEnabled = false
   }
+  if (merged.voiceAsrMode !== 'cloud' && merged.voiceAsrMode !== 'local-stream') {
+    merged.voiceAsrMode = 'local-stream'
+  }
+  if (typeof merged.voiceCloudProofread !== 'boolean') {
+    merged.voiceCloudProofread = false
+  }
   if (!isPersonaPackId(merged.personaPackId)) {
     merged.personaPackId = 'none'
   }

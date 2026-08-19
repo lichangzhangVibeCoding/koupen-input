@@ -12,5 +12,8 @@ contextBridge.exposeInMainWorld('recBridge', {
     error?: string
   }) => {
     ipcRenderer.send('voice:recorder-result', payload)
+  },
+  pcm: (payload: { requestId: string; bytes: number[] }) => {
+    ipcRenderer.send('voice:recorder-pcm', payload)
   }
 })

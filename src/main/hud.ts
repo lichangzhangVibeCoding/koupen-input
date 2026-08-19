@@ -117,6 +117,8 @@ function shellHtml(): string {
   }
   .copy {
     min-width: 0;
+    flex: 1;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -134,7 +136,11 @@ function shellHtml(): string {
     opacity: 0.78;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    text-overflow: clip;
+  }
+  .detail.fade-head {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 100%);
   }
   .detail:empty { display: none; }
   .bar.answer .label {
@@ -327,6 +333,14 @@ function shellHtml(): string {
       label.textContent = text || '';
       detailEl.textContent = detail || '';
       bar.className = 'bar show ' + toneClass(kind);
+      requestAnimationFrame(function () {
+        detailEl.scrollLeft = detailEl.scrollWidth;
+        if (detailEl.scrollWidth > detailEl.clientWidth + 1) {
+          detailEl.classList.add('fade-head');
+        } else {
+          detailEl.classList.remove('fade-head');
+        }
+      });
       if (window.hudBridge) window.hudBridge.setIgnoreMouse(true);
     };
     window.__hudHide = function () {
@@ -639,10 +653,14 @@ export function showHud(status: HudStatus): void {
   }
 
   const text = compactHudText(status.text || defaultText(status.kind), status.kind)
+  const rawDetail =
+    status.kind !== 'answer' && 'detail' in status && status.detail ? status.detail : ''
   const detail =
-    status.kind !== 'answer' && 'detail' in status && status.detail
-      ? compactHudText(status.detail, 'error')
-      : ''
+    (status.kind === 'recording' || status.kind === 'transcribing') && rawDetail
+      ? rawDetail.replace(/\s+/g, ' ').trim()
+      : rawDetail
+        ? compactHudText(rawDetail, 'error')
+        : ''
   const icon =
     status.kind !== 'answer' && 'icon' in status && status.icon
       ? status.icon

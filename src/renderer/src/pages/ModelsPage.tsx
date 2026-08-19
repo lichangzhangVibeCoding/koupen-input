@@ -310,6 +310,25 @@ export default function ModelsPage() {
     }
   }
 
+  async function onDownloadStreamAsr() {
+    setBusy('asr-stream')
+    setPageStatus(null)
+    setProgress('正在下载中英流式语音…')
+    try {
+      await window.vipChat.ensureStreamAsr()
+      await refresh()
+      setPageStatus({ type: 'ok', text: '本机中英流式语音已就绪 · 听写免积分' })
+      setProgress('')
+    } catch (e) {
+      setPageStatus({
+        type: 'err',
+        text: e instanceof Error ? e.message : String(e)
+      })
+    } finally {
+      setBusy('')
+    }
+  }
+
   async function onTest(slot: SlotId) {
     setBusy(`test-${slot}`)
     setSlotFeedback((prev) => ({ ...prev, [slot]: undefined }))
@@ -383,7 +402,7 @@ export default function ModelsPage() {
 
   const schemeHint =
     scheme === 'official'
-      ? '官方优化模型 · 免 Key · 按次扣积分'
+      ? '听写本机流式（免积分）· 视觉/回复官方优化模型 · 按次扣积分'
       : scheme === 'local'
         ? '本地模型 · 数据不出机 · 本地不费钱（不扣积分）'
         : '自配 Key · 不消耗积分 · 模型费用自理'
@@ -392,7 +411,7 @@ export default function ModelsPage() {
     <section className="models-page">
       <h2 className="page-title">模型</h2>
       <p className="page-desc models-desc">
-        默认官方会员：先注册登录，三槽走官方优化模型。也可改自配 Key 或本地，不必重复配置三遍。
+        默认官方会员：听写走本机流式（免积分）。视觉 / 回复走官方优化模型。也可改自配 Key 或本地。
       </p>
 
       {/* ① 方案三选一 */}
@@ -463,8 +482,8 @@ export default function ModelsPage() {
             </p>
             <p className="status">
               {loggedIn
-                ? '免填 API Key，语音 / 视觉 / 回复走官方优化模型，按次扣积分。不消耗你自己的第三方额度。'
-                : '注册即开体验积分。免填 API Key，按次扣积分。也可改用自配 Key 或本地模型。'}
+                ? '听写默认本机流式（免积分）。视觉 / 回复走官方优化模型，按次扣积分。不消耗你自己的第三方额度。'
+                : '注册即开体验积分。听写默认本机流式。视觉 / 回复免填 Key、按次扣积分。也可改用自配 Key 或本地模型。'}
             </p>
             <div className="row models-panel-actions">
               {loggedIn ? (
@@ -554,7 +573,9 @@ export default function ModelsPage() {
           {slotsOrder.map((id) => {
             const ready = slotReady(id)
             const detail =
-              scheme === 'official' && ready
+              id === 'asr' && dash?.streamAsr
+                ? dash.streamAsr.detail
+                : scheme === 'official' && ready
                 ? '官方优化模型'
                 : scheme === 'local' && ready
                   ? slotDetail(id) || '本地就绪'
@@ -569,7 +590,19 @@ export default function ModelsPage() {
                   </span>
                 </div>
                 <p className="models-cap-detail">{detail}</p>
-                {scheme !== 'official' ? (
+                {id === 'asr' && dash?.streamAsr && !dash.streamAsr.installed ? (
+                  <button
+                    type="button"
+                    className="btn ghost sm"
+                    disabled={Boolean(busy)}
+                    onClick={() => void onDownloadStreamAsr()}
+                  >
+                    {busy === 'asr-stream' || dash.streamAsr.downloading
+                      ? '下载中…'
+                      : '下载本机语音'}
+                  </button>
+                ) : null}
+                {scheme !== 'official' || id === 'asr' ? (
                   <button
                     type="button"
                     className="btn ghost sm"

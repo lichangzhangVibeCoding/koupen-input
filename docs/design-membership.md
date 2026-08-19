@@ -21,7 +21,7 @@
 
 | 能力 | 字段 | 默认 | 说明 |
 |------|------|------|------|
-| 即刻对话（官方 ASR） | `voiceCreditsPerMinute` | **2** | `ceil(秒/60) * 单价`，不足 1 分钟按 1 分钟 |
+| 即刻对话（官方 ASR） | `voiceCreditsPerMinute` | **2** | 仅 **云端文件转写** 扣分：`voiceAsrMode=cloud`、本地流式未就绪回退、或开了 `voiceCloudProofread`。默认端侧 Zipformer **不扣**。计费 `ceil(秒/60) * 单价` |
 | 帮我对话 · 读屏 | `replyVisionCredits` | **5** | 截图识别 |
 | 帮我对话 · 生成 | `replyCredits` | **10** | 文本回复；与读屏合计约 **15**/次。即刻对话「改错别字」复用此槽，不新增能力码 |
 | 看屏幕 | `screenAskCredits` | **25** | 整屏视觉 + 回答 |
@@ -122,7 +122,7 @@ BYOK / 本地路径 **不扣**。
 - 设置字段：`modelRoutingMode: 'byok' | 'membership'`、`membershipServerUrl`、`membershipAccessToken`
 - 侧栏「会员」页：登录、余额、套餐、**Stripe 支付**、客服/付款说明、兑换码
 - 已开通用户：更高档「升级到此档」走 Stripe；更低档「申请换到此档」仍弹客服微信；当前档「续费延长」走 Stripe
-- 会员模式：`stt` / `llm` 走薄代理；本地与 BYOK 仍可用且不扣分
+- 会员模式：视觉 / 回复走薄代理；**听写默认本机流式**（不扣语音积分）。`stt` 代理只在用户改走云端、本地模型未就绪、或开了云端二次校对时使用
 - 即刻对话转写后处理：只开「去水词」走本地规则、**不扣**文本积分；开「改错别字」时一次 `reply` 校对（失败则回退原文）。不新增 `X-TalkNow-Capability`。规格见 `docs/design-voice-trigger.md`
 - HUD：积分不足时提示并引导打开会员页
 

@@ -1,7 +1,14 @@
 # 即刻对话 — 文档与产品变更日志
 
+## 0.5.11 — 2026-08-19
+
+- **即刻对话默认端侧流式 ASR**：16kHz PCM 喂 sherpa-onnx Zipformer 中英双语，边说边出字、停顿补标点、松手即贴，不经硅基、不扣语音积分。模型首次使用时下载到本机。云端 SenseVoice 只作未就绪底线和可选二次校对。详见 `docs/design-voice-trigger.md`。
+- Windows 三装包：NSIS `TalkNow-0.5.11-x64.exe`、绿色版单文件、zip。
+
+
 ## 0.5.10 — 2026-08-19
 
+- **即刻对话默认端侧流式 ASR**：16kHz PCM 喂 sherpa-onnx Zipformer **中英双语**，边说边出字、松手即贴，不经硅基、不扣语音积分。模型首次使用时下载到本机（约 200MB）。云端 SenseVoice 只作未就绪底线和可选二次校对。详见 `docs/design-voice-trigger.md`。
 - 看屏幕问答与设置/首页体验更新
 - Windows 安装包：`TalkNow-0.5.10-x64.exe`
 

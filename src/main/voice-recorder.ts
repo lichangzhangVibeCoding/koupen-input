@@ -2,6 +2,16 @@ import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { randomUUID } from 'crypto'
 import { writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
+import { encodeWav16kMono } from './audio-wav'
+import {
+  abortStreamSession,
+  beginStreamSession,
+  feedStreamPcm16k,
+  finishStreamSession,
+  peekStreamPartial,
+  rescoreStreamPcm16k,
+  setStreamPartialHandler
+} from './local-asr-stream'
 import { ensureMacMicrophoneAccess } from './permissions'
 import { markAuxWindow, withMainDockPreservedAsync } from './preserve-main-dock'
 import { TaskCancelledError } from './task-cancel'
@@ -10,7 +20,12 @@ import { t } from '../shared/i18n'
 let recorderWin: BrowserWindow | null = null
 let pending:
   | {
-      resolve: (data: { buffer: Buffer; mime: string }) => void
+      resolve: (data: {
+        buffer: Buffer
+        mime: string
+        streamedText: string
+        liveText: string
+      }) => void
       reject: (err: Error) => void
       requestId: string
     }
@@ -19,6 +34,16 @@ let pending:
 let ipcReady = false
 let currentRequestId = ''
 let micPermissionHooked = false
+let streamActive = false
+
+export function setVoicePartialTranscriptHandler(handler: ((text: string) => void) | null): void {
+  setStreamPartialHandler(handler)
+}
+
+function resetPcmSession(): void {
+  abortStreamSession()
+  streamActive = false
+}
 
 const RECORDER_HTML = `<!doctype html>
 <html lang="zh-CN">
@@ -26,76 +51,145 @@ const RECORDER_HTML = `<!doctype html>
 <body>
 <script>
 let mediaStream = null
-let mediaRecorder = null
-let chunks = []
+let audioCtx = null
+let processor = null
+let sourceNode = null
+let mute = null
 let requestId = ''
+let pcmChunks = []
+let tickBuf = []
+let tickTimer = null
+
+function resampleTo16k(input, inRate) {
+  if (inRate === 16000) return input
+  const ratio = inRate / 16000
+  const outLen = Math.max(1, Math.round(input.length / ratio))
+  const out = new Float32Array(outLen)
+  for (let i = 0; i < outLen; i++) {
+    const x = i * ratio
+    const i0 = Math.min(Math.floor(x), input.length - 1)
+    const i1 = Math.min(i0 + 1, input.length - 1)
+    const f = x - i0
+    out[i] = input[i0] * (1 - f) + input[i1] * f
+  }
+  return out
+}
+
+function floatToInt16(f32) {
+  const out = new Int16Array(f32.length)
+  for (let i = 0; i < f32.length; i++) {
+    var s = f32[i]
+    if (s > 1) s = 1
+    else if (s < -1) s = -1
+    out[i] = s < 0 ? (s * 0x8000) : (s * 0x7fff)
+  }
+  return out
+}
+
+function concatInt16(parts) {
+  var total = 0
+  for (var i = 0; i < parts.length; i++) total += parts[i].length
+  var out = new Int16Array(total)
+  var off = 0
+  for (var j = 0; j < parts.length; j++) {
+    out.set(parts[j], off)
+    off += parts[j].length
+  }
+  return out
+}
+
+function flushTick() {
+  if (!tickBuf.length || !window.recBridge.pcm) return
+  var i16 = concatInt16(tickBuf)
+  tickBuf = []
+  window.recBridge.pcm({
+    requestId: requestId,
+    bytes: Array.from(new Uint8Array(i16.buffer, i16.byteOffset, i16.byteLength))
+  })
+}
+
+function cleanupGraph() {
+  if (tickTimer) {
+    clearInterval(tickTimer)
+    tickTimer = null
+  }
+  try { if (processor) processor.disconnect() } catch (e) {}
+  try { if (sourceNode) sourceNode.disconnect() } catch (e) {}
+  try { if (mute) mute.disconnect() } catch (e) {}
+  processor = null
+  sourceNode = null
+  mute = null
+  if (audioCtx) {
+    try { audioCtx.close() } catch (e) {}
+    audioCtx = null
+  }
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(function (t) { t.stop() })
+    mediaStream = null
+  }
+}
 
 async function start(id) {
   requestId = id
-  chunks = []
+  pcmChunks = []
+  tickBuf = []
   mediaStream = await navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 }
-  })
-  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-    ? 'audio/webm;codecs=opus'
-    : MediaRecorder.isTypeSupported('audio/webm')
-      ? 'audio/webm'
-      : ''
-  mediaRecorder = new MediaRecorder(mediaStream, mime ? { mimeType: mime } : undefined)
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data && e.data.size > 0) chunks.push(e.data)
-  }
-  mediaRecorder.onstop = async () => {
-    try {
-      const blob = new Blob(chunks, { type: (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm' })
-      const buf = await blob.arrayBuffer()
-      window.recBridge.result({
-        requestId,
-        ok: true,
-        bytes: Array.from(new Uint8Array(buf)),
-        mime: blob.type || 'audio/webm'
-      })
-    } catch (err) {
-      window.recBridge.result({
-        requestId,
-        ok: false,
-        error: String((err && err.message) || err)
-      })
-    } finally {
-      if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop())
-      mediaStream = null
-      mediaRecorder = null
-      chunks = []
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      channelCount: 1,
+      sampleRate: 16000
     }
+  })
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  if (audioCtx.state === 'suspended') await audioCtx.resume()
+  sourceNode = audioCtx.createMediaStreamSource(mediaStream)
+  processor = audioCtx.createScriptProcessor(4096, 1, 1)
+  mute = audioCtx.createGain()
+  mute.gain.value = 0
+  var inRate = audioCtx.sampleRate
+  processor.onaudioprocess = function (ev) {
+    var input = ev.inputBuffer.getChannelData(0)
+    var resampled = resampleTo16k(input, inRate)
+    var i16 = floatToInt16(resampled)
+    pcmChunks.push(i16)
+    tickBuf.push(i16)
   }
-  mediaRecorder.start(1000)
-  window.recBridge.started({ requestId })
+  sourceNode.connect(processor)
+  processor.connect(mute)
+  mute.connect(audioCtx.destination)
+  tickTimer = setInterval(flushTick, 200)
+  window.recBridge.started({ requestId: requestId })
 }
 
 function stop() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop()
-  } else {
-    window.recBridge.result({ requestId, ok: false, error: '录音尚未开始' })
+  flushTick()
+  if (!pcmChunks.length) {
+    cleanupGraph()
+    window.recBridge.result({ requestId: requestId, ok: false, error: '录音尚未开始' })
+    return
   }
+  var i16 = concatInt16(pcmChunks)
+  var bytes = Array.from(new Uint8Array(i16.buffer, i16.byteOffset, i16.byteLength))
+  cleanupGraph()
+  pcmChunks = []
+  tickBuf = []
+  window.recBridge.result({
+    requestId: requestId,
+    ok: true,
+    bytes: bytes,
+    mime: 'audio/pcm'
+  })
 }
 
 function discard() {
-  try {
-    if (mediaRecorder) {
-      mediaRecorder.ondataavailable = null
-      mediaRecorder.onstop = null
-      if (mediaRecorder.state !== 'inactive') mediaRecorder.stop()
-    }
-  } catch (e) {}
-  if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop())
-  mediaStream = null
-  mediaRecorder = null
-  chunks = []
-  window.recBridge.result({ requestId, ok: false, error: 'CANCELLED' })
+  cleanupGraph()
+  pcmChunks = []
+  tickBuf = []
+  window.recBridge.result({ requestId: requestId, ok: false, error: 'CANCELLED' })
 }
 
-window.recorderApi = { start, stop, discard }
+window.recorderApi = { start: start, stop: stop, discard: discard }
 </script>
 </body>
 </html>`
@@ -107,6 +201,15 @@ function ensureIpc(): void {
   ipcMain.on('voice:recorder-started', () => {})
 
   ipcMain.on(
+    'voice:recorder-pcm',
+    (_e, payload: { requestId?: string; bytes?: number[] }) => {
+      if (!currentRequestId || !payload?.bytes?.length) return
+      if (payload.requestId && payload.requestId !== currentRequestId) return
+      if (streamActive) feedStreamPcm16k(Buffer.from(payload.bytes))
+    }
+  )
+
+  ipcMain.on(
     'voice:recorder-result',
     (
       _e,
@@ -116,6 +219,7 @@ function ensureIpc(): void {
       const { resolve, reject } = pending
       pending = null
       if (!payload.ok || !payload.bytes) {
+        resetPcmSession()
         if (payload.error === 'CANCELLED') {
           reject(new TaskCancelledError())
         } else {
@@ -123,9 +227,21 @@ function ensureIpc(): void {
         }
         return
       }
+      const raw = Buffer.from(payload.bytes)
+      const mime = payload.mime || 'audio/pcm'
+      const wav = /wav/i.test(mime) ? raw : encodeWav16kMono(raw)
+      const liveText = streamActive ? peekStreamPartial() : ''
+      let streamedText = ''
+      if (streamActive) {
+        const closed = finishStreamSession()
+        streamedText = rescoreStreamPcm16k(raw) || closed || liveText
+      }
+      streamActive = false
       resolve({
-        buffer: Buffer.from(payload.bytes),
-        mime: payload.mime || 'audio/webm'
+        buffer: wav,
+        mime: 'audio/wav',
+        streamedText,
+        liveText
       })
     }
   )
@@ -178,7 +294,7 @@ async function ensureRecorderWindow(): Promise<BrowserWindow> {
   })
 }
 
-export async function startMicRecording(): Promise<string> {
+export async function startMicRecording(opts?: { stream?: boolean }): Promise<string> {
   ensureIpc()
   const micOk = await ensureMacMicrophoneAccess()
   if (!micOk) {
@@ -187,6 +303,8 @@ export async function startMicRecording(): Promise<string> {
   const win = await ensureRecorderWindow()
   const requestId = randomUUID()
   currentRequestId = requestId
+  resetPcmSession()
+  streamActive = Boolean(opts?.stream) && beginStreamSession()
   await win.webContents.executeJavaScript(
     `window.recorderApi.start(${JSON.stringify(requestId)})`
   )
@@ -195,13 +313,13 @@ export async function startMicRecording(): Promise<string> {
 
 export async function stopMicRecording(
   requestId?: string
-): Promise<{ buffer: Buffer; mime: string }> {
+): Promise<{ buffer: Buffer; mime: string; streamedText: string; liveText: string }> {
   ensureIpc()
   const win = await ensureRecorderWindow()
   const id = requestId || currentRequestId
   if (!id) throw new Error('没有进行中的录音')
 
-  return new Promise<{ buffer: Buffer; mime: string }>((resolve, reject) => {
+  return new Promise<{ buffer: Buffer; mime: string; streamedText: string; liveText: string }>((resolve, reject) => {
     pending = { resolve, reject, requestId: id }
     void win.webContents.executeJavaScript(`window.recorderApi.stop()`).catch((err) => {
       pending = null
@@ -212,7 +330,7 @@ export async function stopMicRecording(
         pending = null
         reject(new Error('录音超时，请重试'))
       }
-    }, 180000)
+    }, 600000)
   })
 }
 
@@ -226,6 +344,7 @@ export function discardMicRecording(): void {
     p.reject(new TaskCancelledError())
   }
   currentRequestId = ''
+  resetPcmSession()
   if (recorderWin && !recorderWin.isDestroyed()) {
     void recorderWin.webContents
       .executeJavaScript(`window.recorderApi.discard && window.recorderApi.discard()`)
@@ -236,6 +355,7 @@ export function discardMicRecording(): void {
 }
 
 export function destroyRecorder(): void {
+  resetPcmSession()
   if (recorderWin && !recorderWin.isDestroyed()) recorderWin.destroy()
   recorderWin = null
   pending = null

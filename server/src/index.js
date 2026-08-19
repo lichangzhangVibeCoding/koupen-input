@@ -271,7 +271,11 @@ app.post('/v1/proxy/audio/transcriptions', upload.single('file'), async (req, re
     const route = getRoute('asr')
     if (!route?.api_key) return res.status(503).json({ error: '官方语音模型未配置上游 Key' })
     const prices = getPrices(db)
-    const minutes = estimateAudioMinutes(req.file?.size || 0, req.file?.mimetype || '')
+    const minutes = estimateAudioMinutes(
+      req.file?.size || 0,
+      req.file?.mimetype || '',
+      req.body?.duration_seconds
+    )
     const cost = minutes * (prices.voiceCreditsPerMinute || 2)
     if (getBalance(db, user.id) < cost) {
       const err = new Error('INSUFFICIENT_CREDITS')

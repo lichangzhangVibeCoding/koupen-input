@@ -5,68 +5,6 @@
     <title>Recorder</title>
   </head>
   <body>
-    <script>
-      let mediaStream = null
-      let mediaRecorder = null
-      let chunks = []
-      let requestId = ''
-
-      async function start(id) {
-        requestId = id
-        chunks = []
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            channelCount: 1
-          }
-        })
-        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : MediaRecorder.isTypeSupported('audio/webm')
-            ? 'audio/webm'
-            : ''
-        mediaRecorder = new MediaRecorder(mediaStream, mime ? { mimeType: mime } : undefined)
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) chunks.push(e.data)
-        }
-        mediaRecorder.onstop = async () => {
-          try {
-            const blob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' })
-            const buf = await blob.arrayBuffer()
-            const bytes = Array.from(new Uint8Array(buf))
-            window.recBridge.result({
-              requestId,
-              ok: true,
-              bytes,
-              mime: blob.type || 'audio/webm'
-            })
-          } catch (err) {
-            window.recBridge.result({
-              requestId,
-              ok: false,
-              error: String((err && err.message) || err)
-            })
-          } finally {
-            if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop())
-            mediaStream = null
-            mediaRecorder = null
-            chunks = []
-          }
-        }
-        mediaRecorder.start(1000)
-        window.recBridge.started({ requestId })
-      }
-
-      function stop() {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-          mediaRecorder.stop()
-        } else {
-          window.recBridge.result({ requestId, ok: false, error: '录音尚未开始' })
-        }
-      }
-
-      window.recorderApi = { start, stop }
-    </script>
+    <p>录音页由主进程写入 userData/voice/recorder.html，请改 src/main/voice-recorder.ts 里的 RECORDER_HTML。</p>
   </body>
 </html>

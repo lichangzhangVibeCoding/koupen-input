@@ -113,6 +113,7 @@ const api = {
   getModelDashboard: () => ipcRenderer.invoke('models:dashboard'),
   applySiliconflow: (apiKey: string) => ipcRenderer.invoke('models:applySiliconflow', apiKey),
   installLocalSuite: () => ipcRenderer.invoke('models:installLocalSuite'),
+  ensureStreamAsr: () => ipcRenderer.invoke('models:ensureStreamAsr'),
   testModelSlot: (slot: SlotId) => ipcRenderer.invoke('models:testSlot', slot),
   onInstallProgress: (
     cb: (p: { phase: string; message: string; percent?: number }) => void
