@@ -1,10 +1,16 @@
-import { desktopCapturer, NativeImage, screen } from 'electron'
+import { app, desktopCapturer, nativeImage, NativeImage, screen } from 'electron'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { assertMacScreenCaptureAllowed, hasMacAccessibility, macAccessibilityApisAllowed } from './permissions'
+import { tmpdir } from 'os'
+import { unlinkSync } from 'fs'
+import { join } from 'path'
+import { hasMacAccessibility, macAccessibilityApisAllowed, markMacScreenCaptureVerified } from './permissions'
+import { raceDeadline } from './task-cancel'
 import {
   capThumbnailDimensions,
+  ENHANCE_MAX_LONG_EDGE,
   preprocessCaptureForVision,
+  preprocessEnhanceFullScreen,
   preprocessFullScreenForVision,
   VisionImagePayload
 } from './capture-preprocess'
@@ -26,6 +32,7 @@ export interface WindowCapture {
 
 type ActiveWindowInfo = {
   title?: string
+  id?: number
   owner?: { name?: string }
   bounds?: { x: number; y: number; width: number; height: number }
 }
@@ -205,56 +212,163 @@ function cropThumbnailToBounds(
   return thumbnail.crop({ x, y, width: w, height: h })
 }
 
-async function captureViaDesktopCapturer(): Promise<WindowCapture> {
-  if (process.platform === 'darwin') {
-    assertMacScreenCaptureAllowed()
+function macScreenCaptureHint(): string {
+  if (app.isPackaged) {
+    return '截屏失败：请到 系统设置 → 屏幕录制 勾选「即刻对话」，然后 ⌘Q 完全退出再打开。'
   }
+  return (
+    '截屏失败：开发版请到 系统设置 → 屏幕录制，用「+」添加 node_modules 里的 Electron.app 并打开开关。' +
+    '弹出「退出 Electron」时选「以后」，再对开发版按 ⌘Q，回到终端重新 npm run dev。不要点「退出并重新打开」。'
+  )
+}
 
+async function captureViaScreencaptureWindow(
+  windowId?: number,
+  bounds?: ActiveWindowInfo['bounds']
+): Promise<NativeImage | null> {
+  if (process.platform !== 'darwin') return null
+  const out = join(tmpdir(), `typenow-win-${Date.now()}.png`)
+  const tryCapture = async (args: string[]): Promise<NativeImage | null> => {
+    try {
+      await execFileAsync('screencapture', args, { timeout: 5000 })
+      const img = nativeImage.createFromPath(out)
+      if (!img || img.isEmpty()) return null
+      const { width, height } = img.getSize()
+      if (width < 40 || height < 40) return null
+      return img
+    } catch {
+      return null
+    }
+  }
+  try {
+    if (windowId && windowId > 0) {
+      const byId = await tryCapture(['-x', '-o', '-l', String(windowId), out])
+      if (byId) return byId
+    }
+    if (bounds && bounds.width > 40 && bounds.height > 40) {
+      const rect = [
+        Math.round(bounds.x),
+        Math.round(bounds.y),
+        Math.round(bounds.width),
+        Math.round(bounds.height)
+      ].join(',')
+      const byRect = await tryCapture(['-x', '-R', rect, out])
+      if (byRect) return byRect
+    }
+    return null
+  } finally {
+    try {
+      unlinkSync(out)
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+async function captureActiveWindowImage(): Promise<{
+  image: NativeImage
+  appName: string
+  windowTitle: string
+}> {
   const active = await getActiveWindow()
   const meta = await getFrontAppMeta()
   const appName = active?.owner?.name || meta.appName
   const windowTitle = active?.title || meta.windowTitle
-
   const display = screen.getPrimaryDisplay()
   const scale = display.scaleFactor || 1
   const bounds = active?.bounds
-  const rawW = Math.round((bounds?.width || display.size.width) * scale)
-  const rawH = Math.round((bounds?.height || display.size.height) * scale)
-  const { width: tw, height: th } = capThumbnailDimensions(rawW, rawH)
 
-  const windowSources = await desktopCapturer.getSources({
-    types: ['window'],
-    thumbnailSize: { width: tw, height: th },
-    fetchWindowIcons: false
-  })
-
-  const picked = pickWindowSource(windowSources, active, windowTitle)
-  if (picked?.thumbnail && !picked.thumbnail.isEmpty()) {
-    return finalizeCapture(picked.thumbnail, appName, windowTitle)
+  if (process.platform === 'darwin') {
+    const winImg = await captureViaScreencaptureWindow(active?.id, bounds)
+    if (winImg && !winImg.isEmpty()) {
+      markMacScreenCaptureVerified()
+      return { image: winImg, appName, windowTitle }
+    }
+  } else {
+    const rawW = Math.round((bounds?.width || display.size.width) * scale)
+    const rawH = Math.round((bounds?.height || display.size.height) * scale)
+    const { width: tw, height: th } = capThumbnailDimensions(rawW, rawH)
+    try {
+      const windowSources = await raceDeadline(
+        desktopCapturer.getSources({
+          types: ['window'],
+          thumbnailSize: { width: tw, height: th },
+          fetchWindowIcons: false
+        }),
+        3000,
+        'window-capture-timeout'
+      )
+      const picked = pickWindowSource(windowSources, active, windowTitle)
+      if (picked?.thumbnail && !picked.thumbnail.isEmpty()) {
+        return { image: picked.thumbnail, appName, windowTitle }
+      }
+    } catch {
+      /* fall through */
+    }
   }
 
   const screenRawW = Math.round(display.size.width * scale)
   const screenRawH = Math.round(display.size.height * scale)
   const screenCap = capThumbnailDimensions(screenRawW, screenRawH)
-  const screenSources = await desktopCapturer.getSources({
-    types: ['screen'],
-    thumbnailSize: { width: screenCap.width, height: screenCap.height }
-  })
-  const screenSource =
-    screenSources.find((s) => s.display_id === String(display.id)) || screenSources[0]
-  if (!screenSource?.thumbnail || screenSource.thumbnail.isEmpty()) {
-    throw new Error(
-      process.platform === 'darwin'
-        ? '截屏失败：请确认已在 系统设置 → 屏幕录制 中勾选「即刻对话」，并完全退出后重开。'
-        : '截屏失败，请检查系统是否允许屏幕捕获'
-    )
-  }
-
-  let image = screenSource.thumbnail
+  let image = await capturePrimaryScreenImage(screenCap, 4000)
   if (bounds) {
     image = cropThumbnailToBounds(image, bounds, display)
   }
+  return { image, appName, windowTitle }
+}
 
+async function captureViaScreencaptureCli(): Promise<NativeImage | null> {
+  if (process.platform !== 'darwin') return null
+  const out = join(tmpdir(), `typenow-screen-${Date.now()}.png`)
+  try {
+    await execFileAsync('screencapture', ['-x', out], { timeout: 8000 })
+    const img = nativeImage.createFromPath(out)
+    if (!img || img.isEmpty()) return null
+    return img
+  } catch {
+    return null
+  } finally {
+    try {
+      unlinkSync(out)
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+async function capturePrimaryScreenImage(
+  thumbnailSize: { width: number; height: number },
+  timeoutMs: number
+): Promise<NativeImage> {
+  if (process.platform === 'darwin') {
+    const cli = await captureViaScreencaptureCli()
+    if (cli && !cli.isEmpty()) {
+      markMacScreenCaptureVerified()
+      return cli
+    }
+  }
+
+  const sources = await raceDeadline(
+    desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize
+    }),
+    timeoutMs,
+    '截屏超时'
+  )
+  const display = screen.getPrimaryDisplay()
+  const src = sources.find((s) => s.display_id === String(display.id)) || sources[0]
+  if (!src?.thumbnail || src.thumbnail.isEmpty()) {
+    throw new Error(
+      process.platform === 'darwin' ? macScreenCaptureHint() : '截屏失败，请检查系统是否允许屏幕捕获'
+    )
+  }
+  markMacScreenCaptureVerified()
+  return src.thumbnail
+}
+
+async function captureViaDesktopCapturer(): Promise<WindowCapture> {
+  const { image, appName, windowTitle } = await captureActiveWindowImage()
   return finalizeCapture(image, appName, windowTitle)
 }
 
@@ -263,35 +377,37 @@ export async function captureFrontWindow(): Promise<WindowCapture> {
   return captureViaDesktopCapturer()
 }
 
-/** 截取主屏幕整屏（看屏幕问答） */
-export async function captureFullScreen(): Promise<{
+/** 与AI对话读屏：只截当前激活窗口（不截整桌面） */
+export async function captureForEnhance(): Promise<{
+  visionImage: VisionImagePayload
+  imageBase64: string
+  appName: string
+  windowTitle: string
+}> {
+  const { image, appName, windowTitle } = await captureActiveWindowImage()
+  const visionImage = preprocessEnhanceFullScreen(image)
+  return { visionImage, imageBase64: visionImage.base64, appName, windowTitle }
+}
+
+/** 截取主屏幕整屏。看屏幕/答题清晰图 */
+export async function captureFullScreen(opts?: {
+  forEnhance?: boolean
+}): Promise<{
   visionImage: VisionImagePayload
   imageBase64: string
 }> {
-  if (process.platform === 'darwin') {
-    assertMacScreenCaptureAllowed()
-  }
-
   const display = screen.getPrimaryDisplay()
   const scale = display.scaleFactor || 1
   const screenRawW = Math.round(display.size.width * scale)
   const screenRawH = Math.round(display.size.height * scale)
-  const screenCap = capThumbnailDimensions(screenRawW, screenRawH)
-  const screenSources = await desktopCapturer.getSources({
-    types: ['screen'],
-    thumbnailSize: { width: screenCap.width, height: screenCap.height }
-  })
-  const screenSource =
-    screenSources.find((s) => s.display_id === String(display.id)) || screenSources[0]
-  if (!screenSource?.thumbnail || screenSource.thumbnail.isEmpty()) {
-    throw new Error(
-      process.platform === 'darwin'
-        ? '截屏失败：请确认已在 系统设置 → 屏幕录制 中勾选应用，并完全退出后重开。'
-        : '截屏失败，请检查系统是否允许屏幕捕获'
-    )
-  }
+  const maxLong = opts?.forEnhance ? ENHANCE_MAX_LONG_EDGE : undefined
+  const screenCap = capThumbnailDimensions(screenRawW, screenRawH, maxLong)
+  const timeoutMs = opts?.forEnhance ? 4000 : 8000
+  const image = await capturePrimaryScreenImage(screenCap, timeoutMs)
 
-  const visionImage = preprocessFullScreenForVision(screenSource.thumbnail)
+  const visionImage = opts?.forEnhance
+    ? preprocessEnhanceFullScreen(image)
+    : preprocessFullScreenForVision(image)
   return { visionImage, imageBase64: visionImage.base64 }
 }
 

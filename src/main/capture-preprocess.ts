@@ -5,12 +5,16 @@ import type { Channel } from '../shared/types'
 export const VISION_MAX_LONG_EDGE = 1024
 /** 整屏问答/答题：更清晰，减轻密集文字错绑（校名↔人数） */
 export const SCREEN_ASK_MAX_LONG_EDGE = 1600
+/** 与AI对话读屏：轻量，避免 32B + 大图卡住 */
+export const ENHANCE_MAX_LONG_EDGE = 1024
 /** 截屏 thumbnail 长边上限（预处理前） */
 export const CAPTURE_MAX_LONG_EDGE = 1600
 /** JPEG 质量（聊天窗） */
 export const VISION_JPEG_QUALITY = 75
 /** 整屏 JPEG：略提高，方便读小字 */
 export const SCREEN_ASK_JPEG_QUALITY = 88
+/** 与AI对话整屏 JPEG：更小更快 */
+export const ENHANCE_JPEG_QUALITY = 70
 
 export type VisionImagePayload = {
   base64: string
@@ -32,12 +36,16 @@ function getChatRoi(channel: Channel): RoiRatios {
   return CHAT_ROI.default
 }
 
-export function capThumbnailDimensions(width: number, height: number): { width: number; height: number } {
+export function capThumbnailDimensions(
+  width: number,
+  height: number,
+  maxLong = CAPTURE_MAX_LONG_EDGE
+): { width: number; height: number } {
   const w = Math.max(1, Math.round(width))
   const h = Math.max(1, Math.round(height))
   const long = Math.max(w, h)
-  if (long <= CAPTURE_MAX_LONG_EDGE) return { width: w, height: h }
-  const scale = CAPTURE_MAX_LONG_EDGE / long
+  if (long <= maxLong) return { width: w, height: h }
+  const scale = maxLong / long
   return {
     width: Math.max(320, Math.round(w * scale)),
     height: Math.max(240, Math.round(h * scale))
@@ -92,6 +100,15 @@ export function preprocessFullScreenForVision(image: NativeImage): VisionImagePa
   const next = resizeLongEdge(image, SCREEN_ASK_MAX_LONG_EDGE)
   return {
     base64: next.toJPEG(SCREEN_ASK_JPEG_QUALITY).toString('base64'),
+    mime: 'image/jpeg'
+  }
+}
+
+/** 与AI对话：当前窗口轻量图，答题/看屏幕仍走 preprocessFullScreenForVision */
+export function preprocessEnhanceFullScreen(image: NativeImage): VisionImagePayload {
+  const next = resizeLongEdge(image, ENHANCE_MAX_LONG_EDGE)
+  return {
+    base64: next.toJPEG(ENHANCE_JPEG_QUALITY).toString('base64'),
     mime: 'image/jpeg'
   }
 }

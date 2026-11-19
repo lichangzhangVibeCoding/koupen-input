@@ -1,13 +1,13 @@
 import crypto from 'crypto'
 
 const PRICE_KEYS = {
-  standard_month: process.env.STRIPE_PRICE_STANDARD_MONTH || 'price_1U4kJeBCwVqfj009DwHmyI7v',
-  standard_year: process.env.STRIPE_PRICE_STANDARD_YEAR || 'price_1U4kJiBCwVqfj009QRRO6P3Q',
-  advanced_month: process.env.STRIPE_PRICE_ADVANCED_MONTH || 'price_1U4kJoBCwVqfj009eKrRDcof',
-  advanced_year: process.env.STRIPE_PRICE_ADVANCED_YEAR || 'price_1U4kJrBCwVqfj009myMsUz0j',
-  flagship_month: process.env.STRIPE_PRICE_FLAGSHIP_MONTH || 'price_1U4kJwBCwVqfj009X8JrDm31',
-  flagship_year: process.env.STRIPE_PRICE_FLAGSHIP_YEAR || 'price_1U4kK0BCwVqfj0095JrPcDJG',
-  topup: process.env.STRIPE_PRICE_TOPUP || 'price_1U4kK5BCwVqfj009DQ7Aj0Ef'
+  standard_month: process.env.STRIPE_PRICE_STANDARD_MONTH || '',
+  standard_year: process.env.STRIPE_PRICE_STANDARD_YEAR || '',
+  advanced_month: process.env.STRIPE_PRICE_ADVANCED_MONTH || '',
+  advanced_year: process.env.STRIPE_PRICE_ADVANCED_YEAR || '',
+  flagship_month: process.env.STRIPE_PRICE_FLAGSHIP_MONTH || '',
+  flagship_year: process.env.STRIPE_PRICE_FLAGSHIP_YEAR || '',
+  topup: process.env.STRIPE_PRICE_TOPUP || ''
 }
 
 export function stripeConfigured() {

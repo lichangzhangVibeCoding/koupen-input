@@ -1,25 +1,33 @@
-# 官网源码已迁出（勿在此改）
+# 即刻对话 / TalkNow 官网
 
-**权威维护目录：**  
-`/Users/tank/Downloads/lizhenning.com/other/typenow/`
+本目录是宣传站与会员 API 的**唯一源码**。
 
 线上：https://www.lizhenning.com/other/typenow/  
-品牌域名：https://www.talknow.cn/
+品牌域：https://www.talknow.cn/
 
-本目录仅作历史镜像。改文案、场景、样式、订阅/帮助、会员 API、部署 → 到 **lizhenning.com** 项目的 `other/typenow/`。
+## 改什么
 
-## App 侧脚本（在 koupen-input 根目录跑）
+| 路径 | 内容 |
+|------|------|
+| `index.html`、`css/`、`js/`、`help/`、`changelog/`、`subscribe/` | 宣传站 |
+| `talknowAPi/` | 会员 PHP API / 后台 |
 
-| 命令 | 作用 |
-|---|---|
-| `npm run sync:plans` | 写入 lizhenning `other/typenow/js/plan-catalog.js`（并镜像本目录） |
-| `npm run sync:releases` | 写入 lizhenning `other/typenow/js/releases-data.js` + `src/shared/releases.json` |
+不要再改 `lizhenning.com/other/typenow/` 里的页面（那边只留部署入口）。已删除本仓库旧草案 `website-new/`。
 
 ## 部署
 
 ```bash
-cd /Users/tank/Downloads/lizhenning.com/other/typenow
-FTP_PASS='…' python3 deploy-inline-ftp.py
+cd /Users/tank/Downloads/LichangzhangVibeCoding/koupen-input/website
+python3 deploy-inline-ftp.py
 ```
 
-详见：`docs/design-marketing-site.md`、lizhenning `other/typenow/README.md` · `AGENTS.md`。
+凭据在本目录 gitignore 的 `.env`。主机 WAF 会清空独立 `*.js` / `*.css`，必须走内联脚本。
+
+会员 API：`python3 talknowAPi/deploy-ftp.py`
+
+## 从 App 同步
+
+在仓库根目录：
+
+- `npm run sync:plans` → `website/js/plan-catalog.js`
+- `npm run sync:releases` → `website/js/releases-data.js` 与 `website/releases.json`

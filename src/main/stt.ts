@@ -12,7 +12,7 @@ import {
   membershipChatBase,
   intendsOfficialMembership
 } from './membership'
-import { throwIfCancelled } from './task-cancel'
+import { isTimeoutAbort, raceDeadline, throwIfCancelled, withTimeout } from './task-cancel'
 
 export function isBuiltinLocalAsr(settings: AppSettings): boolean {
   return (
@@ -87,11 +87,20 @@ export async function transcribeUtterance(
   audio: Buffer,
   mime: string,
   streamedText: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  opts?: { preferLocalFallback?: boolean; cloudTimeoutMs?: number }
 ): Promise<string> {
   const local = String(streamedText || '').trim()
   if (prefersLocalStreamAsr(settings) && local) return local
-  return transcribeAudio(settings, audio, mime, signal)
+  if (opts?.preferLocalFallback && isLocalAsrInstalled()) {
+    try {
+      const text = (await transcribeLocalFallback(audio, mime)).trim()
+      if (text) return text
+    } catch {
+      /* cloud below */
+    }
+  }
+  return transcribeAudio(settings, audio, mime, signal, opts?.cloudTimeoutMs)
 }
 
 function parseTranscriptBody(text: string): string {
@@ -148,7 +157,8 @@ export async function transcribeAudio(
   settings: AppSettings,
   audio: Buffer,
   mime: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  timeoutMs = 15_000
 ): Promise<string> {
   const cfg = resolveSttConfig(settings)
   throwIfCancelled(signal)
@@ -170,19 +180,29 @@ export async function transcribeAudio(
   form.append('response_format', 'json')
   form.append('duration_seconds', String(file.durationSeconds))
 
+  const wait = Math.max(1, timeoutMs)
   let res: Response
   try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: cfg.isMembership
-        ? membershipAuthHeaders(settings)
-        : { Authorization: `Bearer ${cfg.apiKey}` },
-      body: form,
-      signal
-    })
+    res = await raceDeadline(
+      fetch(url, {
+        method: 'POST',
+        headers: cfg.isMembership
+          ? membershipAuthHeaders(settings)
+          : { Authorization: `Bearer ${cfg.apiKey}` },
+        body: form,
+        signal: withTimeout(signal, wait)
+      }),
+      wait + 400,
+      '转写超时，请再说一次'
+    )
   } catch (e) {
     throwIfCancelled(signal)
-    if (e instanceof Error && e.name === 'AbortError') throw e
+    if (
+      isTimeoutAbort(e) ||
+      (e instanceof Error && (e.name === 'AbortError' || /超时/.test(e.message)))
+    ) {
+      throw new Error('转写超时，请再说一次')
+    }
     if (isLocalAsrInstalled()) {
       try {
         return await transcribeLocalFallback(audio, mime)
@@ -194,7 +214,7 @@ export async function transcribeAudio(
     throw new Error(cfg.isLocal ? `本地转写服务连不上（${msg}）` : `转写请求失败：${msg}`)
   }
 
-  const text = await res.text()
+  const text = await raceDeadline(res.text(), Math.min(wait, 8_000) + 400, '转写超时，请再说一次')
   if (!res.ok) {
     const retryable = res.status >= 500 || res.status === 429 || res.status === 503 || res.status === 504
     if (retryable && isLocalAsrInstalled()) {

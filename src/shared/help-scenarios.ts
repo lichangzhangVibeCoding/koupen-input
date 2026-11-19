@@ -81,8 +81,8 @@ export const HELP_SCENARIO_GROUPS: HelpScenarioGroup[] = [
       {
         title: L('做网站增强', 'Build a website faster'),
         desc: L(
-          '对着 WorkBuddy、豆包、Cursor 按住说需求，松手后按屏幕整理成可执行的开发提示词。',
-          'Hold and speak into WorkBuddy, Doubao, or Cursor — spoken words become an executable build prompt from the screen.'
+          '对着 WorkBuddy、豆包、Cursor 按住说需求，松手后整理成可执行的开发提示词。',
+          'Hold and speak into WorkBuddy, Doubao, or Cursor — spoken words become an executable build prompt.'
         ),
         tags: [L('WorkBuddy', 'WorkBuddy'), L('豆包', 'Doubao'), L('Cursor', 'Cursor')]
       },

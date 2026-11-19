@@ -50,6 +50,8 @@
         <button type="button" data-tab="ops" class="nav-item">运营文案</button>
 
         <p class="nav-group">内部协作</p>
+        <button type="button" data-tab="competitors" class="nav-item">竞品分析</button>
+        <button type="button" data-tab="requirements" class="nav-item">需求管理</button>
         <button type="button" data-tab="roadmap" class="nav-item">产品规划</button>
         <button type="button" data-tab="kb" class="nav-item">项目情报</button>
       </nav>
@@ -81,6 +83,18 @@
           <div class="panel">
             <h3>产品规划摘要</h3>
             <p id="overviewRoadmap" class="hint">加载中…</p>
+          </div>
+          <div class="panel">
+            <h3>待复查竞品</h3>
+            <div id="overviewCompetitors" class="overview-list hint">加载中…</div>
+          </div>
+          <div class="panel">
+            <h3>待处理需求</h3>
+            <div id="overviewRequirements" class="overview-list hint">加载中…</div>
+          </div>
+          <div class="panel">
+            <h3>最新调研</h3>
+            <div id="overviewReports" class="overview-list hint">加载中…</div>
           </div>
         </div>
       </section>
@@ -308,6 +322,127 @@
           <label class="field">付款说明<textarea id="opsHint" rows="4"></textarea></label>
           <label class="field">客服联系方式<input id="opsContact" /></label>
           <button type="button" id="btnSaveOps" class="btn btn-primary">保存</button>
+        </div>
+      </section>
+
+      <section id="tab-competitors" class="tab hidden">
+        <div class="comp-layout">
+          <div class="comp-list-panel panel">
+            <div class="toolbar">
+              <button type="button" id="btnNewCompetitor" class="btn btn-primary">新建竞品</button>
+              <button type="button" id="btnSyncCompetitorCatalog" class="btn btn-ghost" title="从仓库 catalog 同步档案、报告、需求与情报">同步资料库</button>
+            </div>
+            <div id="competitorSummary" class="stat-inline hint"></div>
+            <div class="table-wrap">
+              <table id="competitorTable">
+                <thead><tr><th>名称</th><th>类型</th><th>重叠</th><th>威胁</th><th>下次复查</th><th></th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="competitorDetail" class="comp-detail panel hidden">
+            <div class="comp-detail-head">
+              <h3 id="compDetailTitle">—</h3>
+              <button type="button" id="btnCloseCompDetail" class="btn btn-ghost">收起</button>
+            </div>
+            <div class="form-grid">
+              <label class="field">Slug<input id="compSlug" /></label>
+              <label class="field">名称<input id="compName" /></label>
+              <label class="field">类型
+                <select id="compType">
+                  <option value="commercial">商业</option>
+                  <option value="opensource">开源</option>
+                  <option value="internal">内部对标</option>
+                </select>
+              </label>
+              <label class="field">重叠度 1–5<input id="compOverlap" type="number" min="1" max="5" /></label>
+              <label class="field">威胁
+                <select id="compThreat">
+                  <option value="watch">watch</option>
+                  <option value="learn">learn</option>
+                  <option value="urgent">urgent</option>
+                </select>
+              </label>
+              <label class="field">状态
+                <select id="compStatus">
+                  <option value="active">active</option>
+                  <option value="archived">archived</option>
+                </select>
+              </label>
+              <label class="field">复查周期（天）<input id="compCadence" type="number" min="1" value="30" /></label>
+              <label class="field">官网<input id="compWebsite" /></label>
+              <label class="field">仓库<input id="compRepo" /></label>
+              <label class="field">文档<input id="compDocs" /></label>
+              <label class="field field-span">摘要<textarea id="compSummary" rows="2"></textarea></label>
+              <label class="field field-span">档案正文（Markdown）<textarea id="compBody" class="kb-body-input" rows="6"></textarea></label>
+            </div>
+            <div class="row-actions">
+              <button type="button" id="btnSaveCompetitor" class="btn btn-primary">保存档案</button>
+              <button type="button" id="btnDeleteCompetitor" class="btn btn-danger">删除</button>
+            </div>
+            <hr class="comp-divider" />
+            <h4>调研报告</h4>
+            <div id="compReportTimeline" class="report-timeline"></div>
+            <div class="panel comp-report-form">
+              <h4>写报告</h4>
+              <div class="form-grid">
+                <label class="field">类型
+                  <select id="repType">
+                    <option value="initial">initial</option>
+                    <option value="periodic">periodic</option>
+                    <option value="release_note">release_note</option>
+                    <option value="deep_dive">deep_dive</option>
+                  </select>
+                </label>
+                <label class="field">调研日期<input id="repDate" type="date" /></label>
+                <label class="field field-span">标题<input id="repTitle" /></label>
+                <label class="field field-span">来源 URL（每行一个）<textarea id="repSources" rows="2"></textarea></label>
+                <label class="field field-span">要点（每行：标题 | 详情 | impact）<textarea id="repFindings" rows="3" placeholder="Phase1延迟 | ~20ms | learn"></textarea></label>
+                <label class="field field-span">正文<textarea id="repBody" class="kb-body-input" rows="6"></textarea></label>
+              </div>
+              <button type="button" id="btnSaveReport" class="btn btn-primary">保存报告</button>
+              <button type="button" id="btnExtractReq" class="btn btn-secondary">从报告提炼需求</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-requirements" class="tab hidden">
+        <div id="reqSummary" class="stat-inline hint"></div>
+        <div class="panel">
+          <h3>新增需求</h3>
+          <div class="form-grid">
+            <label class="field">标题<input id="reqTitle" /></label>
+            <label class="field">优先级
+              <select id="reqPriority">
+                <option value="P0">P0</option>
+                <option value="P1">P1</option>
+                <option value="P2" selected>P2</option>
+                <option value="P3">P3</option>
+              </select>
+            </label>
+            <label class="field">状态
+              <select id="reqStatus">
+                <option value="backlog">backlog</option>
+                <option value="accepted">accepted</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done">done</option>
+                <option value="wont_do">wont_do</option>
+              </select>
+            </label>
+            <label class="field">来源竞品
+              <select id="reqCompetitor"><option value="0">— 无 —</option></select>
+            </label>
+            <label class="field field-span">详情<textarea id="reqDetail" rows="3"></textarea></label>
+            <label class="field field-span">验收标准<textarea id="reqAcceptance" rows="2"></textarea></label>
+          </div>
+          <button type="button" id="btnAddRequirement" class="btn btn-primary">添加需求</button>
+        </div>
+        <div class="table-wrap">
+          <table id="requirementsTable">
+            <thead><tr><th>优先级</th><th>标题</th><th>状态</th><th>来源</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </section>
 

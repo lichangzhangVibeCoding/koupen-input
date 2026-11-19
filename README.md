@@ -1,10 +1,12 @@
-# 即刻对话
+# 即刻对话 TalkNow
 
 本机对话助手，少打字、快回人。支持 macOS 与 Windows。  
-视觉体系：**墨色信号 VI**（见 [docs/design-vi-ink-signal.md](./docs/design-vi-ink-signal.md)）。  
-官网品牌域名：[www.talknow.cn](https://www.talknow.cn/)（权威源码在 **lizhenning.com** 仓库 [`other/typenow/`](../../lizhenning.com/other/typenow/)；本仓库 [`website/`](./website/) 仅镜像，勿改；DNS 启用前过渡路径 lizhenning.com/other/typenow/）。中文名 **即刻对话**，英文名 **TalkNow**。  
-下载：[GitHub Releases](https://github.com/lichangzhangVibeCoding/koupen-input/releases/latest)。  
-（曾用名：口喷输入）
+中文名 **即刻对话**，英文名 **TalkNow**（曾用名：口喷输入）。  
+官网：[www.talknow.cn](https://www.talknow.cn/)
+
+![即刻对话首页](screenshots/home.png)
+
+下载：[GitHub Releases](https://github.com/lichangzhangVibeCoding/koupen-input/releases/latest)
 
 ## 四大能力
 
@@ -31,7 +33,6 @@
 ## 开发启动
 
 ```bash
-cd ~/Downloads/LichangzhangVibeCoding/koupen-input
 npm install
 npx electron-rebuild -f -w better-sqlite3,uiohook-napi
 npm run dev
@@ -43,6 +44,8 @@ npm run dev
 python3 scripts/generate-vi-assets.py
 ```
 
+会员 API 示例配置在 `website/talknowAPi/config.example.php`，复制成 `config.php` 后自己填。后台「模型路由」的 Key 和线上模型名只放本机 / 服务器，不要提交。
+
 ## 打包
 
 ```bash
@@ -52,3 +55,7 @@ npm run dist
 # Windows NSIS .exe（需在 Windows 或 GitHub Actions 上执行）
 npm run dist:win
 ```
+
+## 许可
+
+[MIT](LICENSE)

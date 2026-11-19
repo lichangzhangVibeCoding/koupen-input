@@ -47,11 +47,11 @@ Win / Mac 有差异时，**分别对应现实**：只写当前系统用户会真
 - 视觉 VI（墨色信号）：`docs/design-vi-ink-signal.md`
 - Esc 取消进行中任务：`docs/design-esc-cancel.md`
 - 商用 UI：`docs/design-ui-commercial-v1.md`
-- 宣传站：`docs/design-marketing-site.md` · **线上 HTML / 会员 API 仍在** `lizhenning.com/other/typenow/`（本仓库 `website/` 勿当 FTP 源、勿改去部署）  
-- 产品信息真源（本仓库）：隐私口径、本机存储路径 → `docs/design-user-data.md`（用户可见：设置「配置与数据」、帮助「数据与隐私」）。官网首页讲语音搭子，不主讲信任/SaaS；过时以本仓库为准再同步 lizhenning
+- 宣传站：`docs/design-marketing-site.md` · **源码在本仓库 `website/`**（部署 `website/deploy-inline-ftp.py`；`lizhenning.com/other/typenow/` 只转发）  
+- 产品信息真源（本仓库）：隐私口径、本机存储路径 → `docs/design-user-data.md`（用户可见：设置「配置与数据」、帮助「数据与隐私」）。官网首页讲语音搭子，不主讲信任/SaaS
 - **四能力用户文案对齐（内部、不对用户展示）**：`docs/ops-copy-sync.md`（勿写入 `docs/releases.json`）
-- 发版数据：`docs/design-releases.md` · `docs/releases.json`（**每次用户可见更新后**：`npm run sync:releases` → lizhenning `other/typenow/js/releases-data.js` + `src/shared/`，并打安装包；**中英 `title`/`titleEn`、`highlights`/`highlightsEn` 一起写**）
-- 套餐结构：`npm run sync:plans` → lizhenning `other/typenow/js/plan-catalog.js`
+- 发版数据：`docs/design-releases.md` · `docs/releases.json`（**每次用户可见更新后**：`npm run sync:releases` → `website/js/releases-data.js` + `src/shared/`，并打安装包；**中英 `title`/`titleEn`、`highlights`/`highlightsEn` 一起写**）
+- 套餐结构：`npm run sync:plans` → `website/js/plan-catalog.js`
 - 系统测试：`docs/qa/system-test-plan-0.5.0.md` · `docs/qa/system-test-report-0.5.0.md`
 - 模型配置：`docs/design-model-config.md`
 - 用户配置与数据：`docs/design-user-data.md`

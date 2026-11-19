@@ -21,13 +21,40 @@ import {
   type MembershipCapability
 } from './membership'
 import { formatPromptSceneBlock, matchPromptScene } from '../shared/prompt-scenes'
+import {
+  detectEnhanceTargetApp,
+  enhanceAppVisionHint,
+  formatEnhanceWindowLine
+} from '../shared/enhance-apps'
 import { getOllamaStatus } from './ollama'
+import {
+  isTaskCancelled,
+  isTimeoutAbort,
+  raceDeadline,
+  throwIfCancelled,
+  withTimeout
+} from './task-cancel'
 
 export type GenerateReplyResult = {
   text: string
   /** 命中场景短名，供 HUD */
   scenarioShortName?: string
 }
+
+/** 与AI对话读屏：自配/本地用更快 VL；官方会员服务端仍可能绑 vision 槽（压图+超时降级止血） */
+const ENHANCE_VISION_FAST = 'Qwen/Qwen2.5-VL-7B-Instruct'
+
+/**
+ * 会员站前置 OpenResty 约 60s 就回 504 HTML，且该虚拟主机会缓冲输出（心跳实测无效），
+ * 所以任何一次会员请求都不可能超过 60s。PHP 侧 50s 主动放弃并回 JSON，
+ * 客户端留一点余量收下那个 JSON 错误，而不是自己先掐断成「超时」。
+ */
+export const LLM_TIMEOUT_MS = {
+  default: 45_000,
+  enhanceVision: 12_000,
+  enhanceRewrite: 55_000,
+  screenAsk: 55_000
+} as const
 
 function resolveRuntime(settings: AppSettings): {
   baseUrl: string
@@ -119,7 +146,11 @@ async function chatCompletion(
   settings: AppSettings,
   body: Record<string, unknown>,
   signal?: AbortSignal,
-  capability: MembershipCapability = 'reply'
+  capability: MembershipCapability = 'reply',
+  timeoutMs: number = LLM_TIMEOUT_MS.default,
+  attempts?: number,
+  /** 回传本次的 finish_reason，调用方据此识别被 max_tokens 截断的半截输出 */
+  out?: { finishReason?: string | null }
 ): Promise<string> {
   const runtime = resolveRuntime(settings)
 
@@ -140,47 +171,110 @@ async function chatCompletion(
     throw new Error('请先配置 API Base URL')
   }
 
-  const maxAttempts = runtime.isLocal ? 1 : 3
+  const maxAttempts = Math.max(1, attempts ?? (runtime.isLocal ? 1 : 3))
   let lastErr: Error | null = null
+  const started = Date.now()
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    throwIfCancelled(signal)
+    const remain = timeoutMs - (Date.now() - started)
+    if (remain <= 200) {
+      throw new Error('模型响应超时，请再试一次')
+    }
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(runtime.isMembership
         ? membershipAuthHeaders(settings, capability)
         : { Authorization: `Bearer ${runtime.apiKey.trim() || 'ollama'}` })
     }
-    const res = await fetch(chatUrl(runtime.baseUrl), {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal
-    })
+    let res: Response
+    try {
+      res = await raceDeadline(
+        fetch(chatUrl(runtime.baseUrl), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+          signal: withTimeout(signal, remain)
+        }),
+        remain + 400,
+        '模型响应超时，请再试一次'
+      )
+    } catch (e) {
+      throwIfCancelled(signal)
+      // fetch 把 AbortSignal.timeout 包成 AbortError，不能当用户取消
+      if (
+        isTimeoutAbort(e) ||
+        (e instanceof Error && (e.name === 'AbortError' || /超时/.test(e.message)))
+      ) {
+        lastErr = new Error('模型响应超时，请再试一次')
+        if (attempt < maxAttempts && timeoutMs - (Date.now() - started) > 4000) {
+          continue
+        }
+        throw lastErr
+      }
+      // 共享主机偶发断连。会员额度只在上游 2xx 之后才扣，重试不会重复扣费。
+      const netFail =
+        e instanceof TypeError ||
+        (e instanceof Error && /fetch failed|socket hang up|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(e.message))
+      if (netFail) {
+        lastErr = e instanceof Error ? e : new Error(String(e))
+        if (attempt < maxAttempts && timeoutMs - (Date.now() - started) > 4000) {
+          await sleep(800 * attempt, signal)
+          continue
+        }
+        throw lastErr
+      }
+      throw e
+    }
 
-    const text = await res.text()
+    const text = await raceDeadline(
+      res.text(),
+      Math.max(remain, 1000) + 400,
+      '模型响应超时，请再试一次'
+    )
     if (!res.ok) {
       lastErr = new Error(
         runtime.isMembership
           ? formatMembershipHttpError(res.status, text)
           : formatModelHttpError(res.status, text)
       )
-      const retryable = res.status === 429 || res.status === 503 || res.status === 504
+      const retryable =
+        res.status === 429 ||
+        res.status === 503 ||
+        (res.status === 504 && !runtime.isMembership)
       if (retryable && attempt < maxAttempts) {
-        await sleep(1500 * attempt, signal)
+        const wait = 1500 * attempt
+        if (timeoutMs - (Date.now() - started) <= wait + 200) {
+          throw lastErr
+        }
+        await sleep(wait, signal)
         continue
       }
       throw lastErr
     }
 
-    let data: { choices?: { message?: { content?: string } }[] }
+    let data: {
+      choices?: { message?: { content?: string }; finish_reason?: string }[]
+      error?: unknown
+    }
     try {
       data = JSON.parse(text)
     } catch {
       throw new Error('模型返回不是合法 JSON')
     }
 
+    // 会员代理慢路径下上游报错也可能是 200 + 错误体，别把它当空回复
+    if (data.error) {
+      const detail =
+        typeof data.error === 'string'
+          ? data.error
+          : ((data.error as { message?: string })?.message ?? JSON.stringify(data.error))
+      throw new Error(`模型请求失败: ${String(detail).slice(0, 200)}`)
+    }
+
     const content = data.choices?.[0]?.message?.content
     if (!content) throw new Error('模型没有返回内容')
+    if (out) out.finishReason = data.choices?.[0]?.finish_reason ?? null
     return content.trim()
   }
 
@@ -547,7 +641,8 @@ ${q}
       ]
     },
     signal,
-    'screen_ask'
+    'screen_ask',
+    LLM_TIMEOUT_MS.screenAsk
   )
 }
 
@@ -591,7 +686,8 @@ export async function extractScreenQuizText(
       ]
     },
     signal,
-    'screen_quiz'
+    'screen_quiz',
+    LLM_TIMEOUT_MS.screenAsk
   )
   return raw.trim()
 }
@@ -640,7 +736,8 @@ ${q}
       messages: [{ role: 'user', content: prompt }]
     },
     signal,
-    'screen_quiz'
+    'screen_quiz',
+    LLM_TIMEOUT_MS.screenAsk
   )
   return raw.trim()
 }
@@ -664,12 +761,17 @@ export async function answerScreenQuiz(
   return { answer, questionText }
 }
 
-const EMPTY_SCREEN_CONTEXT = '无相关上下文'
+export const EMPTY_SCREEN_CONTEXT = '无相关上下文'
 
 function unwrapPromptBody(raw: string): string {
   let text = raw.trim()
   const fenced = text.match(/^```[a-zA-Z0-9_-]*\s*\r?\n([\s\S]*?)\r?\n```$/i)
-  if (fenced?.[1]) text = fenced[1].trim()
+  if (fenced?.[1]) {
+    text = fenced[1].trim()
+  } else if (text.startsWith('```')) {
+    // 围栏没闭合（多半被截断）：剥掉起始那行，别把 ``` 贴给用户
+    text = text.replace(/^```[a-zA-Z0-9_-]*\s*\r?\n?/i, '').replace(/\r?\n?```\s*$/i, '').trim()
+  }
   if (
     (text.startsWith('"') && text.endsWith('"')) ||
     (text.startsWith('「') && text.endsWith('」'))
@@ -679,49 +781,71 @@ function unwrapPromptBody(raw: string): string {
   return text
 }
 
-/** 有图时：视觉模型只抽与写提示词有关的事实，不写说明书。 */
-async function extractPromptScreenContext(
+/** 有图时：视觉模型只抽与写提示词有关的事实，不写说明书。超时/失败返回「无相关上下文」。 */
+export async function extractPromptScreenContext(
   settings: AppSettings,
   image: { base64: string; mime: string },
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  windowMeta?: { appName?: string; windowTitle?: string }
 ): Promise<string> {
   const runtime = resolveRuntime(settings)
-  const model = runtime.visionModelName || runtime.modelName
-  const prompt = `用户正要对屏幕上的 AI 输入框说话。请只根据截图列出对「写给那个 AI 的任务说明」有用的事实。
+  const model = runtime.isMembership
+    ? runtime.visionModelName || runtime.modelName
+    : ENHANCE_VISION_FAST
+  const appName = windowMeta?.appName || ''
+  const windowTitle = windowMeta?.windowTitle || ''
+  const kind = detectEnhanceTargetApp(appName, windowTitle)
+  const layout = enhanceAppVisionHint(kind, appName, windowTitle)
+  const windowLine = formatEnhanceWindowLine(appName, windowTitle)
+  const prompt = `用户正要对这个已激活窗口里的 AI 输入框说话。截图只含当前窗口，没有整张桌面。
 
+${layout}
+
+请只根据截图列出对「写给那个 AI 的任务说明」有用的事实。
 输出规则：
-1. 若有报错、文件路径、选中代码、表格数字、文档标题、对话里上一句 AI 回复：每条一行短事实
-2. 最多 10 条；忽略浏览器栏、桌面图标、与任务无关的壳
-3. 若只是空输入框、聊天软件界面、或与即将要做的事无关：只输出一行「${EMPTY_SCREEN_CONTEXT}」
-4. 不要回答用户、不要写提示词、不要猜测看不见的内容`
+1. 第一行必须是：${windowLine}
+2. 其后若有报错、文件路径、选中代码、表格数字、文档标题、对话里上一句 AI 回复：每条一行短事实
+3. 最多再加 8 条；忽略侧栏、菜单、桌面、其它窗口
+4. 若只是空输入框、或与即将要做的事无关：第一行窗口身份之后只再输出一行「${EMPTY_SCREEN_CONTEXT}」
+5. 不要回答用户、不要写提示词、不要猜测看不见的内容`
 
-  const raw = await chatCompletion(
-    settings,
-    {
-      model,
-      temperature: 0.1,
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: { url: `data:${image.mime};base64,${image.base64}` }
-            }
-          ]
-        }
-      ]
-    },
-    signal,
-    'reply_vision'
-  )
-  const notes = unwrapPromptBody(raw)
-  return notes || EMPTY_SCREEN_CONTEXT
+  try {
+    const raw = await chatCompletion(
+      settings,
+      {
+        model,
+        temperature: 0.1,
+        max_tokens: 360,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'image_url',
+                image_url: { url: `data:${image.mime};base64,${image.base64}` }
+              }
+            ]
+          }
+        ]
+      },
+      signal,
+      'reply_vision',
+      LLM_TIMEOUT_MS.enhanceVision
+    )
+    const notes = unwrapPromptBody(raw)
+    if (!notes) return `${windowLine}\n${EMPTY_SCREEN_CONTEXT}`
+    if (!notes.includes('[窗口]')) return `${windowLine}\n${notes}`
+    return notes
+  } catch (err) {
+    if (signal?.aborted || isTaskCancelled(err)) {
+      return `${windowLine}\n${EMPTY_SCREEN_CONTEXT}`
+    }
+    return `${windowLine}\n${EMPTY_SCREEN_CONTEXT}`
+  }
 }
 
-async function rewriteSpokenAsAiPrompt(
+export async function rewriteSpokenAsAiPrompt(
   settings: AppSettings,
   spokenText: string,
   screenNotes: string,
@@ -730,8 +854,9 @@ async function rewriteSpokenAsAiPrompt(
   const runtime = resolveRuntime(settings)
   const scene = matchPromptScene(spokenText, screenNotes)
   const sceneBlock = formatPromptSceneBlock(scene)
-  const prompt = `你是给其它 AI（Cursor、ChatGPT、WorkBuddy 等）写任务说明书的助手。
-用户刚口述了一个意图。请改写成一条可直接粘贴给那个 AI 去执行的提示词。
+  const prompt = `你现在只扮演下面指定的任务代理，用线上能力把用户口述改写成一条可直接粘贴给 Cursor / ChatGPT / WorkBuddy / 豆包 去执行的提示词。
+
+${sceneBlock}
 
 屏幕摘要：
 ${screenNotes}
@@ -739,64 +864,54 @@ ${screenNotes}
 用户口述：
 ${spokenText}
 
-${sceneBlock}
-
-通用规则：
+规则：
 1. 只输出提示词正文。不要开场白、不要「好的，提示词如下」、不要分析过程、不要用 markdown 代码围栏包住整段
-2. 不要替那个 AI 回答问题，不要写代码实现，不要写成微信/QQ 私聊回复
-3. 把「我是…我想做…」改成对 Agent 的祈使任务（请你 / 为我做 …）
-4. 按语境修正口误
-5. 屏幕摘要里若有报错、文件名、代码、表格：必须写进提示词，且这些细节不得编造
-6. 屏幕摘要为「${EMPTY_SCREEN_CONTEXT}」时不要编造路径或报错；不要编造用户没提过的品牌、具体数字
-7. 必须遵守上面的【本轮场景】骨架、允许补全与禁止；不要串用其它场景的模块（例如修 Bug 不要写购物车，做 PPT 不要写官网）
+2. 必须按本轮代理的骨架来写；禁止串用其它代理（修 Bug 不要写购物车，做 PPT 不要写官网，做网站不要写成幻灯）
+3. 只写「要做什么」的任务说明，不要交付成品：不要输出 HTML、幻灯页、代码实现，也不要写成微信/QQ 私聊回复；不要替那个 AI 回答问题
+4. 把「我是…我想做…」改成对 Agent 的祈使任务（请你 / 为我做 …）
+5. 按语境修正口误，保留用户提到的专有名词
+6. 屏幕摘要里若有报错、文件名、代码、表格：必须写进提示词，且这些细节不得编造
+7. 屏幕摘要含「${EMPTY_SCREEN_CONTEXT}」时不要编造路径或报错；不要编造用户没提过的品牌、具体数字
 8. 使用与用户口述相同的语言
-9. 不要写「请发送」或催促回车`
+9. 不要写「请发送」或催促回车
+10. 屏幕摘要第一行若有窗口身份，按该产品习惯写任务；不要把窗口名硬塞进提示词，除非用户提到`
 
-  const raw = await chatCompletion(
-    settings,
-    {
-      model: runtime.modelName,
-      temperature: 0.65,
-      max_tokens: 1400,
-      messages: [{ role: 'user', content: prompt }]
-    },
-    signal,
-    'reply'
-  )
-  const out = unwrapPromptBody(raw)
-  if (!out) throw new Error('提示词增强没有写出内容，请重试')
-  return out
-}
-
-/**
- * 按住即刻对话：口述（+ 可选整屏）→ 场景路由 + 场景包 → 可粘贴的 AI 任务说明书。
- * 有图时先抽屏幕事实；文字模型按 website/ppt/debug/brief/generic 扩写。
- */
-export async function enhancePromptForAi(
-  settings: AppSettings,
-  image: { base64: string; mime: string } | null,
-  spoken: string,
-  signal?: AbortSignal,
-  onPhase?: (phase: 'reading' | 'writing') => void
-): Promise<string> {
-  const spokenText = spoken.trim()
-  if (!spokenText) throw new Error('没有听清你说的话，请再按住说一次')
-
-  let screenNotes = EMPTY_SCREEN_CONTEXT
-  if (image) {
-    onPhase?.('reading')
-    try {
-      screenNotes = await extractPromptScreenContext(settings, image, signal)
-    } catch {
-      screenNotes = EMPTY_SCREEN_CONTEXT
+  console.warn(`[enhance] rewrite-scene ${scene.id} ${scene.name}`)
+  try {
+    const meta: { finishReason?: string | null } = {}
+    const raw = await chatCompletion(
+      settings,
+      {
+        model: runtime.modelName,
+        temperature: 0.4,
+        max_tokens: 1200,
+        enable_thinking: false,
+        messages: [{ role: 'user', content: prompt }]
+      },
+      signal,
+      'enhance',
+      LLM_TIMEOUT_MS.enhanceRewrite,
+      2,
+      meta
+    )
+    // 截断的半截提示词贴进去比不贴更糟，按失败处理
+    if (meta.finishReason === 'length') {
+      console.warn('[enhance] truncated by max_tokens, treat as failure')
+      throw new Error('提示词写太长被截断，请再按住说一次')
     }
-    if (settings.inferenceMode !== 'local') {
-      await sleep(800, signal)
-    }
+    const out = unwrapPromptBody(raw)
+    if (!out) throw new Error('提示词没有写出来，请再按住说一次')
+    return out
+  } catch (err) {
+    throwIfCancelled(signal)
+    if (isTaskCancelled(err)) throw err
+    const msg = err instanceof Error ? err.message : String(err)
+    // 归一成「请再说一次」之前留下真实原因，否则线上只剩一句无从排查的文案
+    console.warn(`[enhance] rewrite failed: ${msg}`)
+    // 配置、额度、网关、截断、上游太慢这几类照实说，用户才知道下一步该做什么
+    if (/请先|Ollama|API Key|API Base|额度|会员|登录|网关|截断|太慢|上游/.test(msg)) throw err
+    throw new Error('提示词没有写出来，请再按住说一次')
   }
-
-  onPhase?.('writing')
-  return rewriteSpokenAsAiPrompt(settings, spokenText, screenNotes, signal)
 }
 
 /** 口语水词：嗯/啊/呃 以及停顿里的「那个/就是」。有实义的指代不在此硬删，交给模型拿不准时保留。 */

@@ -28,7 +28,295 @@ function tn_ensure_schema() {
   }
   tn_ensure_plan_columns();
   tn_ensure_subscription_columns();
+  tn_ensure_competitor_tables();
   tn_seed();
+}
+
+/** 竞品 / 报告 / 需求表（已有库幂等补建） */
+function tn_ensure_competitor_tables() {
+  $pdo = tn_db();
+  try {
+    $pdo->query('SELECT 1 FROM tn_competitors LIMIT 1');
+  } catch (Exception $e) {
+    $sqlFile = dirname(__FILE__) . '/../sql/schema.sql';
+    $sql = file_get_contents($sqlFile);
+    $parts = explode(';', $sql);
+    for ($i = 0; $i < count($parts); $i++) {
+      $stmt = trim($parts[$i]);
+      if ($stmt === '') continue;
+      if (stripos($stmt, 'tn_competitors') === false
+        && stripos($stmt, 'tn_competitor_reports') === false
+        && stripos($stmt, 'tn_product_requirements') === false) continue;
+      $lines = explode("\n", $stmt);
+      $clean = array();
+      foreach ($lines as $line) {
+        if (strpos(trim($line), '--') === 0) continue;
+        $clean[] = $line;
+      }
+      $stmt = trim(implode("\n", $clean));
+      if ($stmt === '') continue;
+      try { $pdo->exec($stmt); } catch (Exception $e2) {}
+    }
+  }
+  try {
+    $pdo->query('SELECT source_requirement_id FROM tn_roadmap_items LIMIT 1');
+  } catch (Exception $e) {
+    try {
+      $pdo->exec('ALTER TABLE tn_roadmap_items ADD source_requirement_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER sort_order');
+    } catch (Exception $e2) {}
+  }
+}
+
+function tn_json_field($raw, $fallback) {
+  if ($raw === '' || $raw === null) return $fallback;
+  $d = json_decode($raw, true);
+  return is_array($d) ? $d : $fallback;
+}
+
+function tn_encode_json($value) {
+  if (!is_array($value)) return '[]';
+  $j = json_encode($value);
+  return ($j === false) ? '[]' : $j;
+}
+
+function tn_competitor_public($row, $overdue = false) {
+  return array(
+    'id' => (int)$row['id'],
+    'slug' => $row['slug'],
+    'name' => $row['name'],
+    'type' => $row['type'],
+    'websiteUrl' => $row['website_url'],
+    'repoUrl' => $row['repo_url'],
+    'docsUrl' => $row['docs_url'],
+    'overlapScore' => (int)$row['overlap_score'],
+    'threatLevel' => $row['threat_level'],
+    'status' => $row['status'],
+    'reviewCadenceDays' => (int)$row['review_cadence_days'],
+    'lastReviewedAt' => $row['last_reviewed_at'],
+    'nextReviewAt' => $row['next_review_at'],
+    'summary' => $row['summary'],
+    'bodyMd' => $row['body_md'],
+    'tags' => tn_json_field($row['tags_json'], array()),
+    'overdue' => $overdue,
+    'createdAt' => $row['created_at'],
+    'updatedAt' => $row['updated_at'],
+  );
+}
+
+function tn_report_public($row) {
+  return array(
+    'id' => (int)$row['id'],
+    'competitorId' => (int)$row['competitor_id'],
+    'reportType' => $row['report_type'],
+    'title' => $row['title'],
+    'bodyMd' => $row['body_md'],
+    'sourceUrls' => tn_json_field($row['source_urls_json'], array()),
+    'keyFindings' => tn_json_field($row['key_findings_json'], array()),
+    'reviewedAt' => $row['reviewed_at'],
+    'createdAt' => $row['created_at'],
+  );
+}
+
+function tn_requirement_public($row, $competitorName) {
+  return array(
+    'id' => (int)$row['id'],
+    'title' => $row['title'],
+    'detailMd' => $row['detail_md'],
+    'priority' => $row['priority'],
+    'status' => $row['status'],
+    'sourceType' => $row['source_type'],
+    'sourceCompetitorId' => (int)$row['source_competitor_id'],
+    'sourceReportId' => (int)$row['source_report_id'],
+    'roadmapItemId' => (int)$row['roadmap_item_id'],
+    'competitorName' => $competitorName,
+    'tags' => tn_json_field($row['tags_json'], array()),
+    'acceptanceMd' => $row['acceptance_md'],
+    'sortOrder' => (int)$row['sort_order'],
+    'createdAt' => $row['created_at'],
+    'updatedAt' => $row['updated_at'],
+  );
+}
+
+function tn_is_competitor_overdue($row) {
+  if ($row['status'] !== 'active') return false;
+  $next = isset($row['next_review_at']) ? trim($row['next_review_at']) : '';
+  if ($next === '') return true;
+  $ts = strtotime($next);
+  if ($ts === false) return true;
+  return $ts < time();
+}
+
+function tn_bump_competitor_review($competitorId, $reviewedAt) {
+  $pdo = tn_db();
+  $st = $pdo->prepare('SELECT * FROM tn_competitors WHERE id=?');
+  $st->execute(array((int)$competitorId));
+  $c = $st->fetch();
+  if (!$c) return;
+  $days = (int)$c['review_cadence_days'];
+  if ($days < 1) $days = 30;
+  $base = strtotime($reviewedAt);
+  if ($base === false) $base = time();
+  $next = gmdate('Y-m-d\TH:i:s', $base + ($days * 86400)) . '.000Z';
+  $t = tn_now();
+  $pdo->prepare('UPDATE tn_competitors SET last_reviewed_at=?, next_review_at=?, updated_at=? WHERE id=?')
+    ->execute(array($reviewedAt, $next, $t, (int)$competitorId));
+}
+
+/** 从 lib/competitor-catalog.php upsert 竞品档案、报告、需求、情报摘要 */
+function tn_sync_competitor_catalog($force = false) {
+  try {
+    require_once dirname(__FILE__) . '/competitor-catalog.php';
+  } catch (Exception $e) {
+    return array('ok' => false, 'error' => 'catalog load: ' . $e->getMessage());
+  }
+  tn_ensure_competitor_tables();
+  $pdo = tn_db();
+  try {
+  $catalog = tn_competitor_catalog_data();
+  $ver = (string)$catalog['version'];
+  if (!$force && tn_setting('competitor_catalog_version', '') === $ver) {
+    return array('ok' => true, 'skipped' => true, 'version' => $ver);
+  }
+
+  $t = tn_now();
+  $next = gmdate('Y-m-d\TH:i:s', time() + (30 * 86400)) . '.000Z';
+  $ids = array();
+  $reportIds = array();
+
+  $ci = $pdo->prepare('SELECT id FROM tn_competitors WHERE slug=?');
+  $cu = $pdo->prepare(
+    'UPDATE tn_competitors SET name=?, type=?, website_url=?, repo_url=?, docs_url=?, overlap_score=?, threat_level=?, status=?, review_cadence_days=?, summary=?, body_md=?, tags_json=?, updated_at=? WHERE id=?'
+  );
+  $cins = $pdo->prepare(
+    'INSERT INTO tn_competitors (slug,name,type,website_url,repo_url,docs_url,overlap_score,threat_level,status,review_cadence_days,last_reviewed_at,next_review_at,summary,body_md,tags_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+  );
+
+  for ($i = 0; $i < count($catalog['competitors']); $i++) {
+    $c = $catalog['competitors'][$i];
+    $ci->execute(array($c['slug']));
+    $ex = $ci->fetch();
+    $tags = isset($c['tags']) ? $c['tags'] : array();
+    if ($ex) {
+      $id = (int)$ex['id'];
+      $cu->execute(array(
+        $c['name'], $c['type'], $c['website_url'], $c['repo_url'], $c['docs_url'],
+        (int)$c['overlap_score'], $c['threat_level'], $c['status'], (int)$c['review_cadence_days'],
+        $c['summary'], $c['body_md'], tn_encode_json($tags), $t, $id
+      ));
+    } else {
+      $cadence = (int)$c['review_cadence_days'];
+      if ($cadence < 1) $cadence = 30;
+      $nextAt = gmdate('Y-m-d\TH:i:s', time() + ($cadence * 86400)) . '.000Z';
+      $cins->execute(array(
+        $c['slug'], $c['name'], $c['type'], $c['website_url'], $c['repo_url'], $c['docs_url'],
+        (int)$c['overlap_score'], $c['threat_level'], $c['status'], $cadence,
+        $t, $nextAt, $c['summary'], $c['body_md'], tn_encode_json($tags), $t, $t
+      ));
+      $id = (int)$pdo->lastInsertId();
+    }
+    $ids[$c['slug']] = $id;
+  }
+
+  $rsel = $pdo->prepare('SELECT id FROM tn_competitor_reports WHERE competitor_id=? AND title=?');
+  $rupd = $pdo->prepare(
+    'UPDATE tn_competitor_reports SET report_type=?, body_md=?, source_urls_json=?, key_findings_json=? WHERE id=?'
+  );
+  $rins = $pdo->prepare(
+    'INSERT INTO tn_competitor_reports (competitor_id,report_type,title,body_md,source_urls_json,key_findings_json,reviewed_at,created_at) VALUES (?,?,?,?,?,?,?,?)'
+  );
+
+  for ($i = 0; $i < count($catalog['reports']); $i++) {
+    $r = $catalog['reports'][$i];
+    $slug = $r['competitor_slug'];
+    if (!isset($ids[$slug])) continue;
+    $cid = $ids[$slug];
+    $sources = isset($r['source_urls']) ? $r['source_urls'] : array();
+    $findings = isset($r['key_findings']) ? $r['key_findings'] : array();
+    $rsel->execute(array($cid, $r['title']));
+    $rex = $rsel->fetch();
+    if ($rex) {
+      $rid = (int)$rex['id'];
+      $rupd->execute(array(
+        $r['report_type'], $r['body_md'], tn_encode_json($sources), tn_encode_json($findings), $rid
+      ));
+    } else {
+      $rins->execute(array(
+        $cid, $r['report_type'], $r['title'], $r['body_md'],
+        tn_encode_json($sources), tn_encode_json($findings), $t, $t
+      ));
+      $rid = (int)$pdo->lastInsertId();
+    }
+    if (isset($r['report_key'])) {
+      $reportIds[$slug . ':' . $r['report_key']] = $rid;
+    }
+    tn_bump_competitor_review($cid, $t);
+  }
+
+  $qsel = $pdo->prepare('SELECT id FROM tn_product_requirements WHERE source_competitor_id=? AND title=?');
+  $qupd = $pdo->prepare(
+    'UPDATE tn_product_requirements SET detail_md=?, priority=?, status=?, source_type=?, source_report_id=?, tags_json=?, acceptance_md=?, sort_order=?, updated_at=? WHERE id=?'
+  );
+  $qins = $pdo->prepare(
+    'INSERT INTO tn_product_requirements (title,detail_md,priority,status,source_type,source_competitor_id,source_report_id,roadmap_item_id,tags_json,acceptance_md,sort_order,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+  );
+
+  for ($i = 0; $i < count($catalog['requirements']); $i++) {
+    $req = $catalog['requirements'][$i];
+    $cslug = $req['competitor_slug'];
+    if (!isset($ids[$cslug])) continue;
+    $cid = $ids[$cslug];
+    $rid = 0;
+    if (isset($req['report_key'])) {
+      $rk = $cslug . ':' . $req['report_key'];
+      if (isset($reportIds[$rk])) $rid = $reportIds[$rk];
+    }
+    $tags = isset($req['tags']) ? $req['tags'] : array();
+    $qsel->execute(array($cid, $req['title']));
+    $qex = $qsel->fetch();
+    if ($qex) {
+      $qupd->execute(array(
+        $req['detail_md'], $req['priority'], $req['status'], 'report', $rid,
+        tn_encode_json($tags), $req['acceptance_md'], (int)$req['sort_order'], $t, (int)$qex['id']
+      ));
+    } else {
+      $qins->execute(array(
+        $req['title'], $req['detail_md'], $req['priority'], $req['status'], 'report',
+        $cid, $rid, 0, tn_encode_json($tags), $req['acceptance_md'], (int)$req['sort_order'], $t, $t
+      ));
+    }
+  }
+
+  if (isset($catalog['kb_articles']) && is_array($catalog['kb_articles'])) {
+    $ksel = $pdo->prepare('SELECT id FROM tn_kb_articles WHERE slug=?');
+    $kupd = $pdo->prepare('UPDATE tn_kb_articles SET title=?, category=?, body=?, sort_order=?, updated_at=? WHERE id=?');
+    $kins = $pdo->prepare('INSERT INTO tn_kb_articles (slug,title,category,body,sort_order,updated_at,created_at) VALUES (?,?,?,?,?,?,?)');
+    for ($i = 0; $i < count($catalog['kb_articles']); $i++) {
+      $k = $catalog['kb_articles'][$i];
+      $ksel->execute(array($k['slug']));
+      $kex = $ksel->fetch();
+      if ($kex) {
+        $kupd->execute(array($k['title'], $k['category'], $k['body'], (int)$k['sort_order'], $t, (int)$kex['id']));
+      } else {
+        $kins->execute(array($k['slug'], $k['title'], $k['category'], $k['body'], (int)$k['sort_order'], $t, $t));
+      }
+    }
+  }
+
+  tn_set_setting('competitor_catalog_version', $ver);
+  return array(
+    'ok' => true,
+    'version' => $ver,
+    'competitors' => count($ids),
+    'reports' => count($catalog['reports']),
+    'requirements' => count($catalog['requirements']),
+  );
+  } catch (Exception $e) {
+    return array('ok' => false, 'error' => $e->getMessage());
+  }
+}
+
+function tn_seed_competitors() {
+  tn_ensure_competitor_tables();
 }
 
 /** 套餐表补 gift_credits（基础 + 赠送） */
@@ -201,6 +489,7 @@ function tn_seed() {
       $r->execute(array($it[0], $it[1], $it[2], $it[3], $it[4], $t, $t));
     }
   }
+  tn_seed_competitors();
 }
 
 function tn_setting($key, $fallback = '') {

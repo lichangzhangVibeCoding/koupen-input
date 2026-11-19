@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('recBridge', {
     requestId: string
     ok: boolean
     bytes?: number[]
+    pcmB64?: string
     mime?: string
     error?: string
   }) => {

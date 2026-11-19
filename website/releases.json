@@ -1,4 +1,4 @@
-window.TALKNOW_RELEASES = {
+{
   "product": "即刻对话",
   "productEn": "TalkNow",
   "repo": "https://github.com/lichangzhangVibeCoding/koupen-input",
@@ -6,6 +6,90 @@ window.TALKNOW_RELEASES = {
   "latestUrl": "https://github.com/lichangzhangVibeCoding/koupen-input/releases/latest",
   "siteUrl": "https://www.talknow.cn/",
   "releases": [
+    {
+      "version": "0.5.11",
+      "date": "2026-08-19",
+      "title": "本机流式听写：边说边出字",
+      "titleEn": "On-device streaming dictation",
+      "highlights": [
+        "即刻对话默认本机 Zipformer 中英流式识别：边说边出字、停顿补标点、松手即贴，不扣语音积分",
+        "云端 SenseVoice 仅作未就绪底线和可选二次校对",
+        "Windows 安装包 / 绿色版同步更新"
+      ],
+      "highlightsEn": [
+        "TalkNow defaults to on-device bilingual Zipformer streaming: live words, pause punctuation, paste on release, no voice credits",
+        "Cloud SenseVoice is fallback and optional proofread only",
+        "Windows installer and portable builds updated"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.11-arm64.dmg",
+        "macX64": "即刻对话-0.5.11-x64.dmg",
+        "winX64": "TalkNow-0.5.11-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.10",
+      "date": "2026-08-19",
+      "title": "看屏幕与设置体验更新",
+      "titleEn": "Screen-ask and settings polish",
+      "highlights": [
+        "看屏幕问答与首页/设置/帮助文案与交互改进",
+        "语音与会员相关能力继续打磨",
+        "Windows 安装包直链更新"
+      ],
+      "highlightsEn": [
+        "Screen-ask plus home/settings/help UX polish",
+        "Continued voice and membership refinements",
+        "Updated Windows installer download link"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.10-arm64.dmg",
+        "macX64": "即刻对话-0.5.10-x64.dmg",
+        "winX64": "TalkNow-0.5.10-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.9",
+      "date": "2026-08-18",
+      "title": "口述校对：去水词与改错别字",
+      "titleEn": "Dictation cleanup: fillers and STT typos",
+      "highlights": [
+        "即刻对话可自动去掉嗯啊呃等水词，并按上下文改正转写错字（设置里可关）",
+        "点按贴口述、按住增强都会先校对；不把具体错词写进场景包",
+        "官网顶栏显示当前版本；macOS 下载改为敬请期待，Windows 安装包照常提供"
+      ],
+      "highlightsEn": [
+        "TalkNow can strip spoken fillers and fix STT typos from context (toggles in Settings)",
+        "Tap-to-paste and hold-to-enhance both clean the transcript first; no scene-pack hardcoding",
+        "Site header shows the current version; macOS download is coming soon, Windows installer stays live"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.9-arm64.dmg",
+        "macX64": "即刻对话-0.5.9-x64.dmg",
+        "winX64": "TalkNow-0.5.9-x64.exe"
+      }
+    },
+    {
+      "version": "0.5.8",
+      "date": "2026-08-18",
+      "title": "托盘、语音与站内下载加固",
+      "titleEn": "Tray, voice, and site download hardening",
+      "highlights": [
+        "托盘图标与菜单更稳；语音输入与修饰键触发体验改进",
+        "会员/账户相关能力与官网下载链路（Win 直链）修复",
+        "更新日志页链接与内容展示修复，避免 &lang= 导致 404"
+      ],
+      "highlightsEn": [
+        "More reliable tray icon/menu; improved voice input and modifier-key triggers",
+        "Membership/account updates and Windows site download link fixes",
+        "Changelog URL/lang query fix (no more &lang= 404) and SSR content"
+      ],
+      "downloads": {
+        "macArm64": "即刻对话-0.5.8-arm64.dmg",
+        "macX64": "即刻对话-0.5.8-x64.dmg",
+        "winX64": "TalkNow-0.5.8-x64.exe"
+      }
+    },
     {
       "version": "0.5.7",
       "date": "2026-07-28",
@@ -55,7 +139,7 @@ window.TALKNOW_RELEASES = {
       ],
       "highlightsEn": [
         "Triggering voice / reply / screen ask while minimized no longer drops the Dock icon",
-        "HUD and recorder use panel windows and restore the main window's minimized state"
+        "HUD and recorder use panel windows and restore the main window’s minimized state"
       ],
       "downloads": {
         "macArm64": "即刻对话-0.5.5-arm64.dmg",
@@ -115,7 +199,7 @@ window.TALKNOW_RELEASES = {
       ],
       "highlightsEn": [
         "Accessibility: stop repeated system prompts after grant — ask to ⌘Q quit and reopen",
-        "Request microphone before voice; Settings Open triggers the system prompt first",
+        "Request microphone before voice; Settings “Open” triggers the system prompt first",
         "Clearer microphone-denied guidance"
       ],
       "downloads": {
@@ -302,4 +386,4 @@ window.TALKNOW_RELEASES = {
       }
     }
   ]
-};
+}

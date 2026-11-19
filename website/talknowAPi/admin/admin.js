@@ -13,7 +13,9 @@ const PAGE_META = {
   routes: ['模型路由', '上游 Base URL / Model / Key'],
   ops: ['运营文案', '客户端付款说明与客服'],
   roadmap: ['产品规划', '内部任务看板'],
-  kb: ['项目情报', '密钥·账号·架构·踩坑·教程（仅团队）']
+  kb: ['项目情报', '密钥·账号·架构·踩坑·教程（仅团队）'],
+  competitors: ['竞品分析', '档案 · 调研报告 · 30 天复查'],
+  requirements: ['需求管理', '从竞品调研提炼 · 采纳到规划']
 }
 
 const PLAN_DEFS = [
@@ -37,6 +39,20 @@ const STATUS_LABEL = {
   cancelled: '取消'
 }
 
+const REQ_STATUS_LABEL = {
+  backlog: '待处理',
+  accepted: '已采纳',
+  in_progress: '进行中',
+  done: '已完成',
+  wont_do: '不做'
+}
+
+const COMP_TYPE_LABEL = {
+  commercial: '商业',
+  opensource: '开源',
+  internal: '内部'
+}
+
 /** 项目情报库固定分类（存库用中文名） */
 const KB_CATEGORIES = [
   { id: '凭证账号', hint: 'Key、密码、数据库、FTP、短信、第三方账号' },
@@ -44,12 +60,18 @@ const KB_CATEGORIES = [
   { id: '踩坑记录', hint: 'WAF、打包、sharp、PHP 兼容、线上怪现象' },
   { id: '功能教程', hint: '开单、兑换、模型配置、发版等操作 SOP' },
   { id: '运维部署', hint: '域名、FTP、健康检查、目录结构' },
+  { id: '竞品调研', hint: '商业/开源竞品摘要、SOP、Agent 同步条目' },
   { id: '其它', hint: '临时备忘' }
 ]
 
 let kbCache = []
 let kbFilter = '全部'
 let kbQuery = ''
+let competitorsCache = []
+let selectedCompetitorId = 0
+let selectedReportId = 0
+let requirementsCache = []
+let reqPrefillReportId = 0
 
 function toast(msg) {
   const el = document.getElementById('toast')
@@ -142,7 +164,9 @@ function switchTab(tab) {
     routes: loadRoutes,
     ops: loadOps,
     roadmap: loadRoadmap,
-    kb: loadKb
+    kb: loadKb,
+    competitors: loadCompetitors,
+    requirements: loadRequirements
   }
   if (loaders[tab]) loaders[tab]().catch(function (e) {
     toast(e.message)
@@ -188,6 +212,12 @@ document.querySelectorAll('[data-jump]').forEach(function (btn) {
   }
 })
 
+function formatReviewDate(iso) {
+  if (!iso) return '—'
+  const s = String(iso)
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
 async function loadOverview() {
   const d = await api('/v1/admin/overview')
   document.getElementById('overviewStats').innerHTML =
@@ -208,6 +238,13 @@ async function loadOverview() {
     d.routesConfigured +
     '/' +
     d.routesTotal +
+    '</div></div>' +
+    '<div class="stat-card' +
+    ((d.competitorsOverdue || []).length ? ' warn' : '') +
+    '"><div class="label">待复查竞品</div><div class="value">' +
+    (d.competitorsOverdue || []).length +
+    '/' +
+    (d.competitorCount || 0) +
     '</div></div>'
   const rm = d.roadmap || {}
   document.getElementById('overviewRoadmap').textContent =
@@ -222,6 +259,76 @@ async function loadOverview() {
     ' · 兑换码 ' +
     (d.redeemCodes || 0) +
     ' 个'
+  const ovComp = document.getElementById('overviewCompetitors')
+  if (ovComp) {
+    const overdue = d.competitorsOverdue || []
+    ovComp.innerHTML = overdue.length
+      ? overdue
+          .map(function (c) {
+            return (
+              '<div class="overview-row"><button type="button" class="linkish" data-open-comp="' +
+              c.id +
+              '">' +
+              escapeText(c.name) +
+              '</button><span class="tag-overdue">到期 ' +
+              escapeText(formatReviewDate(c.nextReviewAt)) +
+              '</span></div>'
+            )
+          })
+          .join('')
+      : '<span class="muted">暂无到期竞品</span>'
+    ovComp.querySelectorAll('[data-open-comp]').forEach(function (b) {
+      b.onclick = function () {
+        selectedCompetitorId = Number(b.dataset.openComp)
+        switchTab('competitors')
+      }
+    })
+  }
+  const ovReq = document.getElementById('overviewRequirements')
+  if (ovReq) {
+    const pending = (d.requirementsPending || []).slice(0, 8)
+    ovReq.innerHTML = pending.length
+      ? pending
+          .map(function (r) {
+            return (
+              '<div class="overview-row"><span class="tag-priority">' +
+              escapeText(r.priority) +
+              '</span> ' +
+              escapeText(r.title) +
+              (r.competitorName ? ' <span class="muted">· ' + escapeText(r.competitorName) + '</span>' : '') +
+              '</div>'
+            )
+          })
+          .join('')
+      : '<span class="muted">暂无 backlog 需求</span>'
+  }
+  const ovRep = document.getElementById('overviewReports')
+  if (ovRep) {
+    const reps = d.recentReports || []
+    ovRep.innerHTML = reps.length
+      ? reps
+          .map(function (r) {
+            return (
+              '<div class="overview-row"><button type="button" class="linkish" data-open-comp="' +
+              r.competitorId +
+              '">' +
+              escapeText(r.competitorName || '') +
+              '</button> · ' +
+              escapeText(r.title) +
+              ' <span class="muted">' +
+              escapeText(formatReviewDate(r.reviewedAt)) +
+              '</span></div>'
+            )
+          })
+          .join('')
+      : '<span class="muted">暂无报告</span>'
+    ovRep.querySelectorAll('[data-open-comp]').forEach(function (b) {
+      b.onclick = function () {
+        selectedCompetitorId = Number(b.dataset.openComp)
+        switchTab('competitors')
+      }
+    })
+  }
 }
 
 function yuanToCents(v) {
@@ -1389,6 +1496,475 @@ document.getElementById('btnAddKb').onclick = async function () {
     document.getElementById('kbBody').value = ''
     toast('已写入情报库')
     loadKb()
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+function parseFindingsText(raw) {
+  return String(raw || '')
+    .split('\n')
+    .map(function (line) {
+      return line.trim()
+    })
+    .filter(Boolean)
+    .map(function (line) {
+      const parts = line.split('|').map(function (p) {
+        return p.trim()
+      })
+      return {
+        title: parts[0] || '',
+        detail: parts[1] || '',
+        impact: parts[2] || 'watch'
+      }
+    })
+}
+
+function findingsToText(list) {
+  if (!list || !list.length) return ''
+  return list
+    .map(function (f) {
+      return (f.title || '') + ' | ' + (f.detail || '') + ' | ' + (f.impact || 'watch')
+    })
+    .join('\n')
+}
+
+async function loadCompetitors() {
+  const data = await api('/v1/admin/competitors')
+  competitorsCache = data.competitors || []
+  const overdue = competitorsCache.filter(function (c) {
+    return c.overdue
+  }).length
+  document.getElementById('competitorSummary').textContent =
+    '跟踪中 ' + competitorsCache.length + ' 个 · 待复查 ' + overdue + ' 个'
+  const tb = document.querySelector('#competitorTable tbody')
+  tb.innerHTML = competitorsCache
+    .map(function (c) {
+      return (
+        '<tr data-id="' +
+        c.id +
+        '"' +
+        (selectedCompetitorId === c.id ? ' class="row-selected"' : '') +
+        '><td>' +
+        escapeText(c.name) +
+        (c.overdue ? ' <span class="tag-overdue">到期</span>' : '') +
+        '</td><td>' +
+        escapeText(COMP_TYPE_LABEL[c.type] || c.type) +
+        '</td><td>' +
+        c.overlapScore +
+        '</td><td>' +
+        escapeText(c.threatLevel) +
+        '</td><td>' +
+        escapeText(formatReviewDate(c.nextReviewAt)) +
+        '</td><td><button type="button" class="btn btn-ghost" data-open-comp-row="' +
+        c.id +
+        '">详情</button></td></tr>'
+      )
+    })
+    .join('')
+  tb.querySelectorAll('[data-open-comp-row]').forEach(function (b) {
+    b.onclick = function () {
+      openCompetitorDetail(Number(b.dataset.openCompRow))
+    }
+  })
+  if (selectedCompetitorId) {
+    openCompetitorDetail(selectedCompetitorId, true)
+  }
+  fillReqCompetitorSelect()
+}
+
+async function openCompetitorDetail(id, silent) {
+  selectedCompetitorId = id
+  const panel = document.getElementById('competitorDetail')
+  if (!id) {
+    panel.classList.add('hidden')
+    return
+  }
+  try {
+    const data = await api('/v1/admin/competitors/' + id)
+    const c = data.competitor
+    panel.classList.remove('hidden')
+    document.getElementById('compDetailTitle').textContent = c.name
+    document.getElementById('compSlug').value = c.slug || ''
+    document.getElementById('compName').value = c.name || ''
+    document.getElementById('compType').value = c.type || 'commercial'
+    document.getElementById('compOverlap').value = c.overlapScore || 3
+    document.getElementById('compThreat').value = c.threatLevel || 'watch'
+    document.getElementById('compStatus').value = c.status || 'active'
+    document.getElementById('compCadence').value = c.reviewCadenceDays || 30
+    document.getElementById('compWebsite').value = c.websiteUrl || ''
+    document.getElementById('compRepo').value = c.repoUrl || ''
+    document.getElementById('compDocs').value = c.docsUrl || ''
+    document.getElementById('compSummary').value = c.summary || ''
+    document.getElementById('compBody').value = c.bodyMd || ''
+    const timeline = document.getElementById('compReportTimeline')
+    const reports = data.reports || []
+    timeline.innerHTML = reports.length
+      ? reports
+          .map(function (r) {
+            return (
+              '<div class="report-card" data-report-id="' +
+              r.id +
+              '"><div class="report-card-head"><strong>' +
+              escapeText(r.title) +
+              '</strong><span class="muted">' +
+              escapeText(r.reportType) +
+              ' · ' +
+              escapeText(formatReviewDate(r.reviewedAt)) +
+              '</span></div><pre class="report-snippet">' +
+              escapeText((r.bodyMd || '').slice(0, 280)) +
+              (r.bodyMd && r.bodyMd.length > 280 ? '…' : '') +
+              '</pre><button type="button" class="btn btn-ghost" data-use-report="' +
+              r.id +
+              '">载入到表单</button></div>'
+            )
+          })
+          .join('')
+      : '<p class="hint">尚无报告，可在下方写 initial / periodic 报告。</p>'
+    timeline.querySelectorAll('[data-use-report]').forEach(function (b) {
+      b.onclick = function () {
+        const rep = reports.find(function (x) {
+          return x.id === Number(b.dataset.useReport)
+        })
+        if (!rep) return
+        selectedReportId = rep.id
+        document.getElementById('repType').value = rep.reportType || 'periodic'
+        document.getElementById('repTitle').value = rep.title || ''
+        document.getElementById('repBody').value = rep.bodyMd || ''
+        document.getElementById('repSources').value = (rep.sourceUrls || []).join('\n')
+        document.getElementById('repFindings').value = findingsToText(rep.keyFindings)
+        if (rep.reviewedAt) {
+          document.getElementById('repDate').value = formatReviewDate(rep.reviewedAt)
+        }
+      }
+    })
+    if (!silent) loadCompetitors()
+  } catch (e) {
+    if (!silent) toast(e.message)
+  }
+}
+
+document.getElementById('btnSyncCompetitorCatalog').onclick = async function () {
+  if (!confirm('从仓库 catalog 同步竞品档案、报告、需求与情报摘要？已有同 slug/标题条目会更新。')) return
+  try {
+    const res = await api('/v1/admin/competitor-sync-catalog', {
+      method: 'POST',
+      body: { force: true }
+    })
+    if (res.skipped) {
+      toast('资料库已是最新（v' + res.version + '）')
+    } else {
+      toast('已同步 v' + res.version + ' · ' + res.competitors + ' 竞品 · ' + res.reports + ' 报告')
+    }
+    loadCompetitors()
+    loadOverview()
+    if (document.getElementById('tab-kb') && !document.getElementById('tab-kb').classList.contains('hidden')) {
+      loadKb()
+    }
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+document.getElementById('btnNewCompetitor').onclick = function () {
+  selectedCompetitorId = 0
+  selectedReportId = 0
+  const panel = document.getElementById('competitorDetail')
+  panel.classList.remove('hidden')
+  document.getElementById('compDetailTitle').textContent = '新建竞品'
+  document.getElementById('compSlug').value = ''
+  document.getElementById('compName').value = ''
+  document.getElementById('compType').value = 'commercial'
+  document.getElementById('compOverlap').value = 3
+  document.getElementById('compThreat').value = 'watch'
+  document.getElementById('compStatus').value = 'active'
+  document.getElementById('compCadence').value = 30
+  document.getElementById('compWebsite').value = ''
+  document.getElementById('compRepo').value = ''
+  document.getElementById('compDocs').value = ''
+  document.getElementById('compSummary').value = ''
+  document.getElementById('compBody').value = ''
+  document.getElementById('compReportTimeline').innerHTML = '<p class="hint">保存档案后可写报告。</p>'
+}
+
+document.getElementById('btnCloseCompDetail').onclick = function () {
+  document.getElementById('competitorDetail').classList.add('hidden')
+  selectedCompetitorId = 0
+  loadCompetitors()
+}
+
+document.getElementById('btnSaveCompetitor').onclick = async function () {
+  try {
+    const name = document.getElementById('compName').value.trim()
+    if (!name) throw new Error('请填写名称')
+    const body = {
+      name: name,
+      slug: document.getElementById('compSlug').value.trim(),
+      type: document.getElementById('compType').value,
+      overlapScore: Number(document.getElementById('compOverlap').value || 3),
+      threatLevel: document.getElementById('compThreat').value,
+      status: document.getElementById('compStatus').value,
+      reviewCadenceDays: Number(document.getElementById('compCadence').value || 30),
+      websiteUrl: document.getElementById('compWebsite').value.trim(),
+      repoUrl: document.getElementById('compRepo').value.trim(),
+      docsUrl: document.getElementById('compDocs').value.trim(),
+      summary: document.getElementById('compSummary').value,
+      bodyMd: document.getElementById('compBody').value
+    }
+    if (selectedCompetitorId) body.id = selectedCompetitorId
+    const res = await api('/v1/admin/competitor-save', { method: 'POST', body: body })
+    selectedCompetitorId = res.id
+    toast('竞品档案已保存')
+    openCompetitorDetail(res.id, true)
+    loadCompetitors()
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+document.getElementById('btnDeleteCompetitor').onclick = async function () {
+  if (!selectedCompetitorId) return
+  if (!confirm('删除该竞品及全部报告？')) return
+  try {
+    await api('/v1/admin/competitor-delete', {
+      method: 'POST',
+      body: { id: selectedCompetitorId }
+    })
+    selectedCompetitorId = 0
+    document.getElementById('competitorDetail').classList.add('hidden')
+    toast('已删除')
+    loadCompetitors()
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+document.getElementById('btnSaveReport').onclick = async function () {
+  if (!selectedCompetitorId) {
+    toast('请先保存竞品档案')
+    return
+  }
+  try {
+    const title = document.getElementById('repTitle').value.trim()
+    if (!title) throw new Error('请填写报告标题')
+    let reviewedAt = document.getElementById('repDate').value
+    if (reviewedAt) reviewedAt = reviewedAt + 'T12:00:00.000Z'
+    const sources = document
+      .getElementById('repSources')
+      .value.split('\n')
+      .map(function (s) {
+        return s.trim()
+      })
+      .filter(Boolean)
+    const body = {
+      competitorId: selectedCompetitorId,
+      reportType: document.getElementById('repType').value,
+      title: title,
+      bodyMd: document.getElementById('repBody').value,
+      sourceUrls: sources,
+      keyFindings: parseFindingsText(document.getElementById('repFindings').value),
+      reviewedAt: reviewedAt
+    }
+    if (selectedReportId) body.id = selectedReportId
+    const res = await api('/v1/admin/competitor-report-save', { method: 'POST', body: body })
+    selectedReportId = res.id
+    toast('报告已保存，已更新复查日期')
+    openCompetitorDetail(selectedCompetitorId, true)
+    loadCompetitors()
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+document.getElementById('btnExtractReq').onclick = function () {
+  if (!selectedCompetitorId) {
+    toast('请先选择竞品')
+    return
+  }
+  reqPrefillReportId = selectedReportId || 0
+  const title = document.getElementById('repTitle').value.trim()
+  document.getElementById('reqTitle').value = title ? '来自报告：' + title : ''
+  document.getElementById('reqDetail').value = document.getElementById('repBody').value
+  document.getElementById('reqCompetitor').value = String(selectedCompetitorId)
+  switchTab('requirements')
+}
+
+function fillReqCompetitorSelect() {
+  const sel = document.getElementById('reqCompetitor')
+  if (!sel) return
+  const cur = sel.value
+  sel.innerHTML =
+    '<option value="0">— 无 —</option>' +
+    competitorsCache
+      .map(function (c) {
+        return (
+          '<option value="' + c.id + '">' + escapeText(c.name) + '</option>'
+        )
+      })
+      .join('')
+  if (cur) sel.value = cur
+  if (reqPrefillReportId && selectedCompetitorId) {
+    sel.value = String(selectedCompetitorId)
+  }
+}
+
+async function loadRequirements() {
+  const data = await api('/v1/admin/requirements')
+  requirementsCache = data.requirements || []
+  const s = data.summary || {}
+  document.getElementById('reqSummary').textContent =
+    'backlog ' +
+    (s.backlog || 0) +
+    ' · 已采纳 ' +
+    (s.accepted || 0) +
+    ' · 进行中 ' +
+    (s.in_progress || 0) +
+    ' · 完成 ' +
+    (s.done || 0)
+  fillReqCompetitorSelect()
+  const tb = document.querySelector('#requirementsTable tbody')
+  tb.innerHTML = requirementsCache
+    .map(function (r) {
+      const stOpts = ['backlog', 'accepted', 'in_progress', 'done', 'wont_do']
+        .map(function (st) {
+          return (
+            '<option value="' +
+            st +
+            '"' +
+            (r.status === st ? ' selected' : '') +
+            '>' +
+            REQ_STATUS_LABEL[st] +
+            '</option>'
+          )
+        })
+        .join('')
+      const prOpts = ['P0', 'P1', 'P2', 'P3']
+        .map(function (p) {
+          return (
+            '<option value="' +
+            p +
+            '"' +
+            (r.priority === p ? ' selected' : '') +
+            '>' +
+            p +
+            '</option>'
+          )
+        })
+        .join('')
+      return (
+        '<tr data-req-id="' +
+        r.id +
+        '"><td><select data-f="priority">' +
+        prOpts +
+        '</select></td>' +
+        '<td><input data-f="title" value="' +
+        escapeAttr(r.title) +
+        '" /></td>' +
+        '<td><select data-f="status">' +
+        stOpts +
+        '</select></td>' +
+        '<td class="muted">' +
+        escapeText(r.competitorName || '—') +
+        (r.roadmapItemId ? ' · RM#' + r.roadmapItemId : '') +
+        '</td>' +
+        '<td class="row-actions">' +
+        '<button type="button" class="btn btn-primary" data-save-req="' +
+        r.id +
+        '">保存</button>' +
+        '<button type="button" class="btn btn-secondary" data-promote-req="' +
+        r.id +
+        '">采纳</button>' +
+        '<button type="button" class="btn btn-danger" data-del-req="' +
+        r.id +
+        '">删</button></td></tr>'
+      )
+    })
+    .join('')
+  tb.querySelectorAll('[data-save-req]').forEach(function (b) {
+    b.onclick = async function () {
+      try {
+        const tr = b.closest('tr')
+        const id = Number(b.dataset.saveReq)
+        const existing = requirementsCache.find(function (x) {
+          return x.id === id
+        })
+        const body = {
+          id: id,
+          title: tr.querySelector('[data-f="title"]').value.trim(),
+          priority: tr.querySelector('[data-f="priority"]').value,
+          status: tr.querySelector('[data-f="status"]').value,
+          detailMd: existing ? existing.detailMd : '',
+          acceptanceMd: existing ? existing.acceptanceMd : '',
+          sourceCompetitorId: existing ? existing.sourceCompetitorId : 0,
+          sourceReportId: existing ? existing.sourceReportId : 0
+        }
+        await api('/v1/admin/requirement-save', { method: 'POST', body: body })
+        toast('需求已保存')
+        loadRequirements()
+      } catch (e) {
+        toast(e.message)
+      }
+    }
+  })
+  tb.querySelectorAll('[data-promote-req]').forEach(function (b) {
+    b.onclick = async function () {
+      const phase = prompt('采纳到产品规划：填写阶段（如 产品 / P1）', '产品')
+      if (phase === null) return
+      try {
+        const res = await api('/v1/admin/requirement-promote', {
+          method: 'POST',
+          body: { id: Number(b.dataset.promoteReq), phase: phase }
+        })
+        toast(res.already ? '已在规划中 RM#' + res.roadmapItemId : '已采纳 RM#' + res.roadmapItemId)
+        loadRequirements()
+        loadRoadmap()
+      } catch (e) {
+        toast(e.message)
+      }
+    }
+  })
+  tb.querySelectorAll('[data-del-req]').forEach(function (b) {
+    b.onclick = async function () {
+      if (!confirm('删除该需求？')) return
+      try {
+        await api('/v1/admin/requirement-delete', {
+          method: 'POST',
+          body: { id: Number(b.dataset.delReq) }
+        })
+        loadRequirements()
+      } catch (e) {
+        toast(e.message)
+      }
+    }
+  })
+  if (reqPrefillReportId && selectedCompetitorId) {
+    document.getElementById('reqCompetitor').value = String(selectedCompetitorId)
+  }
+}
+
+document.getElementById('btnAddRequirement').onclick = async function () {
+  try {
+    const title = document.getElementById('reqTitle').value.trim()
+    if (!title) throw new Error('请填写标题')
+    await api('/v1/admin/requirement-save', {
+      method: 'POST',
+      body: {
+        title: title,
+        priority: document.getElementById('reqPriority').value,
+        status: document.getElementById('reqStatus').value,
+        detailMd: document.getElementById('reqDetail').value,
+        acceptanceMd: document.getElementById('reqAcceptance').value,
+        sourceType: reqPrefillReportId ? 'report' : document.getElementById('reqCompetitor').value !== '0' ? 'competitor' : 'manual',
+        sourceCompetitorId: Number(document.getElementById('reqCompetitor').value || 0),
+        sourceReportId: reqPrefillReportId || 0
+      }
+    })
+    document.getElementById('reqTitle').value = ''
+    document.getElementById('reqDetail').value = ''
+    document.getElementById('reqAcceptance').value = ''
+    reqPrefillReportId = 0
+    toast('需求已添加')
+    loadRequirements()
   } catch (e) {
     toast(e.message)
   }

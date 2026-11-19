@@ -499,22 +499,17 @@ export default function SettingsPage() {
               trigger: formatVoiceTriggerLabel(plat, voiceTrigger)
             })}
           />
-          <div className="settings-divider" />
-          <ToggleRow
-            checked={form.voiceAsrMode !== 'cloud'}
-            onChange={(checked) =>
-              setForm({ ...form, voiceAsrMode: checked ? 'local-stream' : 'cloud' })
-            }
-            title={t('settings.voiceAsrLocal')}
-            hint={t('settings.voiceAsrLocalHint')}
-          />
-          <div className="settings-divider" />
-          <ToggleRow
-            checked={form.voiceCloudProofread === true}
-            onChange={(checked) => setForm({ ...form, voiceCloudProofread: checked })}
-            title={t('settings.voiceCloudProofread')}
-            hint={t('settings.voiceCloudProofreadHint')}
-          />
+          {form.voiceAsrMode !== 'cloud' ? (
+            <>
+              <div className="settings-divider" />
+              <ToggleRow
+                checked={form.voiceCloudProofread === true}
+                onChange={(checked) => setForm({ ...form, voiceCloudProofread: checked })}
+                title={t('settings.voiceCloudProofread')}
+                hint={t('settings.voiceCloudProofreadHint')}
+              />
+            </>
+          ) : null}
           <div className="settings-divider" />
           <ToggleRow
             checked={form.voiceStripFillersEnabled !== false}
@@ -528,6 +523,13 @@ export default function SettingsPage() {
             onChange={(checked) => setForm({ ...form, voiceFixSttTyposEnabled: checked })}
             title={t('settings.voiceFixTypos')}
             hint={t('settings.voiceFixTyposHint')}
+          />
+          <div className="settings-divider" />
+          <ToggleRow
+            checked={form.enhanceScreenCaptureEnabled === true}
+            onChange={(checked) => setForm({ ...form, enhanceScreenCaptureEnabled: checked })}
+            title={t('settings.enhanceScreen', { name: brand.aiTalk.name })}
+            hint={t('settings.enhanceScreenHint')}
           />
           <div className="settings-divider" />
           <ToggleRow

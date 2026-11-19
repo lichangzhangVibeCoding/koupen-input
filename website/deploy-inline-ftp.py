@@ -4,7 +4,7 @@
 Hosting WAF returns empty bodies for *.js / *.css (and often 403 for images).
 Deploy by inlining CSS + JS into HTML. Favicon uses a data URI.
 
-Env:
+Env (or sibling .env; existing environment wins):
   FTP_HOST   default lizhenning.w115.cndns5.com
   FTP_USER   default lizhenning
   FTP_PASS   required
@@ -22,6 +22,28 @@ from ftplib import FTP, error_perm
 from pathlib import Path
 
 WEB = Path(__file__).resolve().parent
+
+
+def load_local_env(path: Path) -> None:
+    """Fill os.environ from KEY=VAL lines; do not override existing env. Never print values."""
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in s:
+            continue
+        key, _, val = s.partition("=")
+        key = key.strip()
+        val = val.strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+            val = val[1:-1]
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
+load_local_env(WEB / ".env")
 HOST = os.environ.get("FTP_HOST", "lizhenning.w115.cndns5.com")
 USER = os.environ.get("FTP_USER", "lizhenning")
 PASS = os.environ.get("FTP_PASS", "")
@@ -134,9 +156,31 @@ def upload_bytes(ftp: FTP, remote_rel: str, data: bytes) -> None:
     print(f"  OK {time.time() - t0:.1f}s", flush=True)
 
 
+INSTALLER_RE = re.compile(r"^(?:TalkNow|即刻对话)-[\d.]+-(?:arm64|x64)\.(?:exe|dmg)$", re.I)
+
+
+def prune_old_installers(ftp: FTP, keep_names: set[str]) -> None:
+    """Remove stale .exe/.dmg from dl/ and legacy downloads/; keep only current build(s)."""
+    for subdir in ("dl", "downloads"):
+        ftp.cwd(REMOTE_ROOT)
+        try:
+            ftp.cwd(subdir)
+        except error_perm:
+            continue
+        for name in ftp.nlst():
+            if name in (".", ".."):
+                continue
+            is_installer = INSTALLER_RE.match(name) or (
+                subdir == "downloads" and (name.endswith(".exe") or name.endswith(".dmg"))
+            )
+            if is_installer and name not in keep_names:
+                print(f"DELE {subdir}/{name}", flush=True)
+                ftp.delete(name)
+
+
 def main() -> int:
     if not PASS:
-        print("Set FTP_PASS", file=sys.stderr)
+        print("Set FTP_PASS or add it to .env", file=sys.stderr)
         return 2
 
     css = (WEB / "css/ink-signal.css").read_text(encoding="utf-8")
@@ -174,17 +218,23 @@ def main() -> int:
     sub = build(
         WEB / "subscribe/index.html",
         "../css/ink-signal.css",
-        ["../js/i18n.js", "../js/plan-catalog.js", "../js/subscribe.js"],
+        [
+            "../js/i18n.js",
+            "../js/releases-data.js",
+            "../js/releases.js",
+            "../js/plan-catalog.js",
+            "../js/subscribe.js",
+        ],
         css,
-        [i18n, plan_catalog, subscribe_js],
+        [i18n, releases_data, releases, plan_catalog, subscribe_js],
         icon_data,
     )
     help_page = build(
         WEB / "help/index.html",
         "../css/ink-signal.css",
-        ["../js/i18n.js"],
+        ["../js/i18n.js", "../js/releases-data.js", "../js/releases.js"],
         css,
-        [i18n],
+        [i18n, releases_data, releases],
         icon_data,
     )
     pricing_redirect = (WEB / "pricing/index.html").read_bytes()
@@ -204,6 +254,12 @@ def main() -> int:
     upload_bytes(ftp, "subscribe/index.html", sub)
     upload_bytes(ftp, "help/index.html", help_page)
     upload_bytes(ftp, "pricing/index.html", pricing_redirect)
+    win_name = (((catalog.get("releases") or [{}])[0].get("downloads") or {}).get("winX64") or "")
+    win_path = WEB / "dl" / win_name
+    keep = {win_name} if win_name else set()
+    prune_old_installers(ftp, keep)
+    if win_name and win_path.is_file():
+        upload_bytes(ftp, f"dl/{win_name}", win_path.read_bytes())
     ftp.quit()
     print("DONE →", REMOTE_ROOT)
     return 0

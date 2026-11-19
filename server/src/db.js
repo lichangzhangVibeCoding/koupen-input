@@ -143,8 +143,59 @@ function migrate(db) {
       detail TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'pending',
       sort_order INTEGER NOT NULL DEFAULT 0,
+      source_requirement_id INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL,
       created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS competitors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'commercial',
+      website_url TEXT NOT NULL DEFAULT '',
+      repo_url TEXT NOT NULL DEFAULT '',
+      docs_url TEXT NOT NULL DEFAULT '',
+      overlap_score INTEGER NOT NULL DEFAULT 3,
+      threat_level TEXT NOT NULL DEFAULT 'watch',
+      status TEXT NOT NULL DEFAULT 'active',
+      review_cadence_days INTEGER NOT NULL DEFAULT 30,
+      last_reviewed_at TEXT NOT NULL DEFAULT '',
+      next_review_at TEXT NOT NULL DEFAULT '',
+      summary TEXT NOT NULL DEFAULT '',
+      body_md TEXT NOT NULL DEFAULT '',
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS competitor_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      competitor_id INTEGER NOT NULL REFERENCES competitors(id) ON DELETE CASCADE,
+      report_type TEXT NOT NULL DEFAULT 'periodic',
+      title TEXT NOT NULL,
+      body_md TEXT NOT NULL DEFAULT '',
+      source_urls_json TEXT NOT NULL DEFAULT '[]',
+      key_findings_json TEXT NOT NULL DEFAULT '[]',
+      reviewed_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS product_requirements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      detail_md TEXT NOT NULL DEFAULT '',
+      priority TEXT NOT NULL DEFAULT 'P2',
+      status TEXT NOT NULL DEFAULT 'backlog',
+      source_type TEXT NOT NULL DEFAULT 'manual',
+      source_competitor_id INTEGER NOT NULL DEFAULT 0,
+      source_report_id INTEGER NOT NULL DEFAULT 0,
+      roadmap_item_id INTEGER NOT NULL DEFAULT 0,
+      tags_json TEXT NOT NULL DEFAULT '[]',
+      acceptance_md TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 100,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
   `)
 
@@ -152,6 +203,10 @@ function migrate(db) {
   const cols = db.prepare(`PRAGMA table_info(subscriptions)`).all()
   if (!cols.some((c) => c.name === 'pending_plan_id')) {
     db.exec(`ALTER TABLE subscriptions ADD COLUMN pending_plan_id TEXT NOT NULL DEFAULT ''`)
+  }
+  const rmCols = db.prepare(`PRAGMA table_info(roadmap_items)`).all()
+  if (!rmCols.some((c) => c.name === 'source_requirement_id')) {
+    db.exec(`ALTER TABLE roadmap_items ADD COLUMN source_requirement_id INTEGER NOT NULL DEFAULT 0`)
   }
 }
 
@@ -196,9 +251,9 @@ function seed(db) {
   const baseUrl = process.env.UPSTREAM_BASE_URL || 'https://api.siliconflow.cn/v1'
   const apiKey = process.env.UPSTREAM_API_KEY || ''
   const routes = [
-    ['asr', process.env.UPSTREAM_ASR_MODEL || 'FunAudioLLM/SenseVoiceSmall'],
-    ['vision', process.env.UPSTREAM_VISION_MODEL || 'Qwen/Qwen3-VL-32B-Instruct'],
-    ['chat', process.env.UPSTREAM_CHAT_MODEL || 'deepseek-ai/DeepSeek-V4-Flash']
+    ['asr', process.env.UPSTREAM_ASR_MODEL || ''],
+    ['vision', process.env.UPSTREAM_VISION_MODEL || ''],
+    ['chat', process.env.UPSTREAM_CHAT_MODEL || '']
   ]
   const routeIns = db.prepare(
     `INSERT OR IGNORE INTO model_routes (slot, base_url, api_key, model_id, updated_at)
@@ -357,6 +412,54 @@ function seedInternalKb(db) {
       t
     )
   }
+
+  seedCompetitors(db)
+}
+
+function seedCompetitors(db) {
+  const count = db.prepare('SELECT COUNT(*) AS c FROM competitors').get().c
+  if (count > 0) return
+  const t = nowIso()
+  const next = new Date(Date.now() + 30 * 86400000).toISOString()
+  const ins = db.prepare(
+    `INSERT INTO competitors (slug, name, type, website_url, repo_url, docs_url, overlap_score, threat_level, status, review_cadence_days, last_reviewed_at, next_review_at, summary, body_md, tags_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+  const rows = [
+    ['shandianshuo', '闪电说', 'commercial', '', '', '', 4, 'learn', 'active', 30, t, next,
+      '沟通 Agent；双账本；skills marketplace adjacent。',
+      '闪电说：沟通 Agent；短按直接说 / 长按帮我说；记忆+词典+技能；时长+Agent 积分双账本。\n\nTalkNow：统一积分；联系人/性格包差异化。',
+      '["Agent","语音输入"]'],
+    ['cosyflow', '通义 CosyFlow', 'commercial', 'https://cosyvoice.net', '', '', 3, 'watch', 'active', 30, t, next,
+      '移动语音转写；CosyAgent adjacent。',
+      'cosyvoice.net 移动语音；桌面全局热键仍是 TalkNow 主战场。',
+      '["移动端","语音输入"]'],
+    ['donottype', 'DoNotType', 'opensource', 'https://donottype.com', 'https://github.com/bojieli/DoNotType',
+      'https://github.com/bojieli/DoNotType/blob/main/docs/ARCHITECTURE.md', 5, 'learn', 'active', 30, t, next,
+      'MIT；屏幕上下文 dictation；四端 BYOK。',
+      'Pipeline：hotkey → Phase1 focus → record → Phase2 AX/UIA + screenshot → context-first → paste。',
+      '["开源","读屏上下文"]']
+  ]
+  const ids = {}
+  for (const r of rows) {
+    ins.run(...r, t, t)
+    ids[r[0]] = db.prepare('SELECT id FROM competitors WHERE slug = ?').get(r[0]).id
+  }
+  const rep = db.prepare(
+    `INSERT INTO competitor_reports (competitor_id, report_type, title, body_md, source_urls_json, key_findings_json, reviewed_at, created_at)
+     VALUES (?, 'initial', ?, ?, '[]', '[]', ?, ?)`
+  )
+  rep.run(ids.shandianshuo, '闪电说 · 初研快照', 'Agent/skills/双账本对照 TalkNow 统一积分与场景包。', t, t)
+  rep.run(ids.cosyflow, 'CosyFlow · 初研快照', '移动语音入口与桌面热键差异。', t, t)
+  rep.run(ids.donottype, 'DoNotType · 初研快照', 'Phase1/Phase2 延迟与个人词典值得对标。', t, t)
+  const req = db.prepare(
+    `INSERT INTO product_requirements (title, detail_md, priority, status, source_type, source_competitor_id, source_report_id, roadmap_item_id, tags_json, acceptance_md, sort_order, created_at, updated_at)
+     VALUES (?, ?, ?, 'backlog', 'competitor', ?, 0, 0, '[]', ?, ?, ?, ?)`
+  )
+  req.run('评估 Phase1/Phase2 焦点捕获延迟对标', '对标 voice-input + capture 链路。', 'P2', ids.donottype, '延迟报告', 110, t, t)
+  req.run('个人词典 / 替换词表 UX 调研', 'DoNotType 词典 UX 调研。', 'P2', ids.donottype, 'PRD 或 wont_do', 120, t, t)
+  req.run('Agent 技能 marketplace 差异化梳理', '闪电说 skills 边界一页纸。', 'P3', ids.shandianshuo, '内部文档', 130, t, t)
+  req.run('移动端语音入口与桌面热键差异文档化', '帮助页说明 CosyFlow vs TalkNow。', 'P3', ids.cosyflow, '可对外段落', 140, t, t)
 }
 
 export function hashToken(raw) {

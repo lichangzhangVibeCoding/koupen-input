@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>即刻对话 TalkNow — 本机对话助手 | 语音转文字 · 帮我对话 · 看屏幕</title>
-  <meta name="description" content="即刻对话是一款 Mac/Windows 本机对话助手。语音转文字、帮你回复消息邮件、看屏幕帮你查价翻译解题。数据不上云，模型你做主。">
+  <title data-i18n="meta.title">即刻对话 TalkNow — AI 时代的语音搭子</title>
+  <meta name="description" data-i18n="meta.desc" content="用豆包、WorkBuddy、Cursor、ChatGPT 的时候，别再打字了。按住说，即刻对话把口语变成 AI 能懂的提示词。">
   <link rel="icon" href="./assets/icon.png" type="image/png">
   <link rel="canonical" href="https://www.talknow.cn/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.talknow.cn/">
-  <meta property="og:title" content="即刻对话 TalkNow — 本机对话助手">
-  <meta property="og:description" content="语音转文字、帮你回消息邮件、看屏幕帮你查价翻译解题。你的本机 AI 对话助手，说一声就来。">
+  <meta property="og:title" content="即刻对话 TalkNow — AI 时代的语音搭子">
+  <meta property="og:description" content="用豆包、WorkBuddy、Cursor、ChatGPT 的时候，别再打字了。按住说，把口语变成 AI 能懂的提示词。">
   <meta property="og:image" content="https://www.talknow.cn/assets/hero-mock.jpg">
   <meta property="og:locale" content="zh_CN">
   <meta property="og:locale:alternate" content="en_US">
@@ -20,8 +20,8 @@
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="即刻对话 TalkNow — 本机对话助手">
-  <meta name="twitter:description" content="语音转文字、帮你回消息邮件、看屏幕帮你查价翻译解题。">
+  <meta name="twitter:title" content="即刻对话 TalkNow — AI 时代的语音搭子">
+  <meta name="twitter:description" content="用豆包、WorkBuddy、Cursor、ChatGPT 的时候，别再打字了。按住说，把口语变成提示词。">
   <meta name="twitter:image" content="https://www.talknow.cn/assets/hero-mock.jpg">
 
   <!-- JSON-LD -->
@@ -32,11 +32,11 @@
     "name": "TalkNow",
     "alternateName": "即刻对话",
     "url": "https://www.talknow.cn/",
-    "description": "Mac/Windows 本机对话助手：语音转文字、帮你回消息邮件、看屏幕帮你查价翻译解题。数据不上云，模型你做主。",
+    "description": "用豆包、WorkBuddy、Cursor、ChatGPT 的时候，别再打字了。按住说，即刻对话把口语变成 AI 能懂的提示词。",
     "operatingSystem": "macOS, Windows",
     "applicationCategory": "UtilitiesApplication",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
-    "featureList": ["语音转文字", "帮我对话", "看屏幕", "看屏幕答题"]
+    "featureList": ["即刻对话", "与AI对话", "帮我对话", "看屏幕"]
   }
   </script>
 
@@ -54,6 +54,7 @@
         <span class="nav-logo-en">TalkNow</span>
       </span>
     </a>
+    <span class="nav-version" data-latest-version>v0.5.11</span>
     <div class="nav-links">
       <a href="./" data-keep-lang data-i18n="nav.home">首页</a>
       <a href="./subscribe/" data-keep-lang data-i18n="nav.subscribe">订阅</a>
@@ -74,14 +75,16 @@
   <div class="hero-bg"></div>
   <div class="hero-content">
     <div class="hero-text">
-      <div class="hero-badge" data-i18n="hero.badge">Mac & Windows · 本机运行 · 数据不出门</div>
-      <h1 class="hero-title" data-i18n="hero.title">说话就能办，看屏幕就能答</h1>
-      <p class="hero-subtitle" data-i18n="hero.subtitle">点按贴原话，按住按屏幕增强提示词；还能帮你回消息、看屏幕查价翻译解题——本机助手，说一声就来。</p>
+      <div class="hero-badge" data-i18n="hero.badge">站在所有智能体前面</div>
+      <h1 class="hero-title" data-i18n="hero.title">AI 时代的语音搭子</h1>
+      <p class="hero-subtitle" data-i18n="hero.subtitle">用豆包、WorkBuddy、Cursor、ChatGPT 的时候，别再打字了——按住说，我帮你把口语变成 AI 能懂的提示词。</p>
+      <p class="hero-hook" data-i18n="hero.hook">你脑子里有一整个方案，打字只能敲出半句。说出来——它帮你变成 AI 能执行的那一整段。</p>
       <div class="hero-cta">
-        <a href="#download" class="btn btn-primary" data-i18n="hero.cta.mac">下载 macOS 版</a>
-        <a href="#download" class="btn btn-secondary" data-i18n="hero.cta.win">下载 Windows 版</a>
+        <a href="#download" class="btn btn-primary" data-dl-platform="win" data-i18n="hero.cta.win">下载 Windows 版</a>
+        <a href="#" class="btn btn-secondary is-soon" data-mac-soon data-i18n="hero.cta.macSoon">macOS 内测中</a>
+        <span class="win-ver-hint" data-latest-version>v0.5.11</span>
       </div>
-      <a href="#scenarios" class="hero-scroll" data-i18n="hero.cta.secondary">查看场景</a>
+      <a href="#why" class="hero-scroll" data-i18n="hero.cta.secondary">看看怎么用</a>
     </div>
 
     <!-- CSS/SVG Desktop Window Mockup -->
@@ -91,7 +94,7 @@
           <span class="mock-dot red"></span>
           <span class="mock-dot yellow"></span>
           <span class="mock-dot green"></span>
-          <span class="mock-title-label" data-i18n="hero.mock.label">语音转文字 · 实时上屏</span>
+          <span class="mock-title-label" data-i18n="hero.mock.label">即刻对话 · 实时上屏</span>
         </div>
         <div class="mock-body">
           <div class="mock-waveform">
@@ -114,6 +117,47 @@
   </div>
 </header>
 
+<!-- ═══════════════ 语音搭子定位 ═══════════════ -->
+<section class="section section-why" id="why">
+  <div class="section-header">
+    <div class="section-eyebrow" data-i18n="why.eyebrow">为什么需要</div>
+    <h2 class="section-title" data-i18n="why.title">为什么 AI 时代需要语音搭子</h2>
+    <p class="section-subtitle" data-i18n="why.subtitle">豆包、WorkBuddy、Cursor、ChatGPT……大家都在用桌面 AI。缺的不是又一个智能体，是更好的语音输入。AI 越来越聪明，但你跟它说话的方式还停在打字时代。你说人话，它帮你变成 AI 话。</p>
+  </div>
+  <article class="why-core">
+    <div class="why-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    <div>
+      <h3 data-i18n="why.pool.name">把口语变成能执行的提示词</h3>
+      <p data-i18n="why.pool.desc">对着屏幕按住说话。你说「帮我把这个改好看一点」，它整理成做网站、做 PPT、修 Bug、写方案那种 AI 能直接动手的任务说明。贴进输入框，不自动发送。</p>
+    </div>
+  </article>
+  <div class="why-aux">
+    <div class="why-card">
+      <div class="why-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </div>
+      <h3 data-i18n="why.voice.name">全平台语音输入</h3>
+      <p data-i18n="why.voice.desc">微信、邮件、任意输入框，点按说话就贴上。</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <h3 data-i18n="why.type.name">说完就是字</h3>
+      <p data-i18n="why.type.desc">去水词、改错别字，你看过再回车。</p>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 18v3"/></svg>
+      </div>
+      <h3 data-i18n="why.screen.name">看屏幕问答</h3>
+      <p data-i18n="why.screen.desc">屏幕上啥都能问，AI 直接给答案。</p>
+    </div>
+  </div>
+</section>
+
 <!-- ═══════════════ 场景导览 ═══════════════ -->
 <section class="section section-scenarios" id="scenarios">
   <div class="section-header">
@@ -122,10 +166,54 @@
     <p class="section-subtitle" data-i18n="scenarios.subtitle">不是冷冰冰的功能列表，是你每天真会遇到的事</p>
   </div>
 
-  <!-- 语音转文字 -->
+  <!-- 与AI对话 -->
   <div class="scenario-group">
     <div class="scenario-group-header">
-      <h3 class="scenario-group-name" data-i18n="scenarios.voice.name">语音转文字</h3>
+      <h3 class="scenario-group-name" data-i18n="scenarios.ai.name">与AI对话</h3>
+      <span class="scenario-chip" data-i18n="scenarios.ai.tag">按住增强提示词</span>
+    </div>
+    <div class="scenario-cards">
+      <div class="scenario-card">
+        <div class="scenario-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </div>
+        <h4 data-i18n="scenarios.ai.s1.title">做网站增强</h4>
+        <p data-i18n="scenarios.ai.s1.desc">对着 WorkBuddy、豆包、Cursor 按住说需求，松手后按屏幕整理成可执行的开发提示词。</p>
+        <div class="scenario-tags"><span class="tag">WorkBuddy</span><span class="tag">豆包</span><span class="tag">Cursor</span></div>
+        <a class="scenario-case-btn" href="https://workbuddy.link/p/zSxPVoy5K3qX59YFPX1gKP" target="_blank" rel="noopener noreferrer" data-i18n="scenarios.ai.s1.case">效果对比</a>
+      </div>
+      <div class="scenario-card">
+        <div class="scenario-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 18v3"/></svg>
+        </div>
+        <h4 data-i18n="scenarios.ai.s2.title">做 PPT 增强</h4>
+        <p data-i18n="scenarios.ai.s2.desc">口述大纲与重点，增强成「按页结构生成幻灯片」的清晰指令。</p>
+        <div class="scenario-tags"><span class="tag">PPT</span><span class="tag">演示</span></div>
+        <a class="scenario-case-btn" href="https://www.workbuddy.link/p/Yi79dXTciM01J2sMTxktjz" target="_blank" rel="noopener noreferrer" data-i18n="scenarios.ai.s2.case">效果对比</a>
+      </div>
+      <div class="scenario-card">
+        <div class="scenario-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <h4 data-i18n="scenarios.ai.s3.title">写代码 / 修 Bug</h4>
+        <p data-i18n="scenarios.ai.s3.desc">口语报错、改哪、期望结果，整理成 AI 能直接动手的调试提示。</p>
+        <div class="scenario-tags"><span class="tag">代码</span><span class="tag">调试</span></div>
+      </div>
+      <div class="scenario-card">
+        <div class="scenario-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h4 data-i18n="scenarios.ai.s4.title">写方案 / 问 ChatGPT</h4>
+        <p data-i18n="scenarios.ai.s4.desc">散乱想法按住说完，改写成带目标、约束、输出格式的完整 brief。</p>
+        <div class="scenario-tags"><span class="tag">ChatGPT</span><span class="tag">方案</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 即刻对话 -->
+  <div class="scenario-group">
+    <div class="scenario-group-header">
+      <h3 class="scenario-group-name" data-i18n="scenarios.voice.name">即刻对话</h3>
       <span class="scenario-chip" data-i18n="scenarios.voice.tag">说比打快</span>
     </div>
     <div class="scenario-cards">
@@ -155,53 +243,11 @@
       </div>
       <div class="scenario-card">
         <div class="scenario-card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17h8v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7z"/></svg>
-        </div>
-        <h4 data-i18n="scenarios.voice.s4.title">随手记灵感</h4>
-        <p data-i18n="scenarios.voice.s4.desc">走路、做饭、通勤时灵感来了，张口说，自动记成文字。</p>
-        <div class="scenario-tags"><span class="tag">灵感</span><span class="tag">通勤</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 与AI对话 -->
-  <div class="scenario-group">
-    <div class="scenario-group-header">
-      <h3 class="scenario-group-name" data-i18n="scenarios.ai.name">与AI对话</h3>
-      <span class="scenario-chip" data-i18n="scenarios.ai.tag">按住增强提示词</span>
-    </div>
-    <div class="scenario-cards">
-      <div class="scenario-card">
-        <div class="scenario-card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-        </div>
-        <h4 data-i18n="scenarios.ai.s1.title">做网站增强</h4>
-        <p data-i18n="scenarios.ai.s1.desc">对着 Cursor / 代码窗按住说需求，松手后按屏幕整理成可执行的开发提示词。</p>
-        <div class="scenario-tags"><span class="tag">Cursor</span><span class="tag">建站</span></div>
-      </div>
-      <div class="scenario-card">
-        <div class="scenario-card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 18v3"/></svg>
-        </div>
-        <h4 data-i18n="scenarios.ai.s2.title">做 PPT 增强</h4>
-        <p data-i18n="scenarios.ai.s2.desc">口述大纲与重点，增强成「按页结构生成幻灯片」的清晰指令。</p>
-        <div class="scenario-tags"><span class="tag">PPT</span><span class="tag">演示</span></div>
-      </div>
-      <div class="scenario-card">
-        <div class="scenario-card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         </div>
-        <h4 data-i18n="scenarios.ai.s3.title">写代码 / 修 Bug</h4>
-        <p data-i18n="scenarios.ai.s3.desc">口语报错、改哪、期望结果，整理成 AI 能直接动手的调试提示。</p>
-        <div class="scenario-tags"><span class="tag">代码</span><span class="tag">调试</span></div>
-      </div>
-      <div class="scenario-card">
-        <div class="scenario-card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </div>
-        <h4 data-i18n="scenarios.ai.s4.title">写方案 / 问 ChatGPT</h4>
-        <p data-i18n="scenarios.ai.s4.desc">散乱想法按住说完，改写成带目标、约束、输出格式的完整 brief。</p>
-        <div class="scenario-tags"><span class="tag">ChatGPT</span><span class="tag">方案</span></div>
+        <h4 data-i18n="scenarios.voice.s4.title">对着 Cursor 说，别敲</h4>
+        <p data-i18n="scenarios.voice.s4.desc">在 Cursor、IDE 输入框里点按说话：注释、想改哪、给 AI 的一句指令，原话贴进去。这是贴原话，不是按住增强。</p>
+        <div class="scenario-tags"><span class="tag">Cursor</span><span class="tag">vibe coding</span></div>
       </div>
     </div>
   </div>
@@ -257,11 +303,11 @@
     <div class="scenario-cards">
       <div class="scenario-card">
         <div class="scenario-card-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 4h6M8 8h8M8 12h5M8 16h4M7 20h10"/></svg>
         </div>
-        <h4 data-i18n="scenarios.screen.s1.title">商品比价</h4>
-        <p data-i18n="scenarios.screen.s1.desc">屏幕上看到某个商品，问一句「这价格咋样」，AI 帮你看一眼。</p>
-        <div class="scenario-tags"><span class="tag">比价</span><span class="tag">购物</span></div>
+        <h4 data-i18n="scenarios.screen.s1.title">看屏幕答题</h4>
+        <p data-i18n="scenarios.screen.s1.desc">触发看屏幕后说「请帮我看这道题选什么」，AI 读题并给出正确答案。</p>
+        <div class="scenario-tags"><span class="tag">答题</span><span class="tag">测验</span></div>
       </div>
       <div class="scenario-card">
         <div class="scenario-card-icon">
@@ -289,18 +335,6 @@
       </div>
     </div>
   </div>
-
-  <!-- 看屏幕答题 (小卡) -->
-  <div class="scenario-group scenario-group-compact">
-    <div class="scenario-group-header">
-      <h3 class="scenario-group-name" data-i18n="scenarios.quiz.name">看屏幕答题</h3>
-      <span class="scenario-chip" data-i18n="scenarios.quiz.tag">看一眼就出答案</span>
-    </div>
-    <div class="scenario-banner">
-      <p data-i18n="scenarios.quiz.desc">网课测验、选择判断、限时抢答——让 AI 看一眼屏幕，直接给你答案。</p>
-      <div class="scenario-tags"><span class="tag">网课</span><span class="tag">测验</span><span class="tag">抢答</span></div>
-    </div>
-  </div>
 </section>
 
 <!-- ═══════════════ 能力详解 ═══════════════ -->
@@ -312,24 +346,46 @@
   </div>
 
   <div class="cap-cards">
-    <!-- 语音转文字 -->
+    <!-- 与AI对话 -->
     <div class="cap-card">
       <div class="cap-card-bar"></div>
       <div class="cap-card-body">
         <div class="cap-card-head">
-          <h3 data-i18n="caps.voice.name">语音转文字</h3>
+          <h3 data-i18n="caps.ai.name">与AI对话</h3>
+        </div>
+        <div class="cap-detail">
+          <div class="cap-detail-label" data-i18n="caps.ai.when">什么时候用</div>
+          <p data-i18n="caps.ai.whenText">对着 WorkBuddy、豆包、Cursor、ChatGPT 的输入框按住说话，想把随口说的话变成 AI 能直接动手的提示词。</p>
+        </div>
+        <div class="cap-detail">
+          <div class="cap-detail-label" data-i18n="caps.ai.result">结果</div>
+          <p data-i18n="caps.ai.resultText">按住同一颗语音键对着屏幕说：口述会整理成提示词，贴进输入框。不会自动发送。</p>
+        </div>
+        <div class="cap-detail">
+          <div class="cap-detail-label" data-i18n="caps.ai.shortcut">快捷键</div>
+          <p data-i18n="caps.ai.shortcutText">和即刻对话同一颗键，按住就行。Mac 右 Command；Windows Alt。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 即刻对话 -->
+    <div class="cap-card">
+      <div class="cap-card-bar"></div>
+      <div class="cap-card-body">
+        <div class="cap-card-head">
+          <h3 data-i18n="caps.voice.name">即刻对话</h3>
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.voice.when">什么时候用</div>
-          <p data-i18n="caps.voice.whenText">聊天、写邮件、写稿子、对 AI 说提示词——只要打字嫌慢的时候。</p>
+          <p data-i18n="caps.voice.whenText">聊天、写邮件、写稿子，或在 Cursor / IDE 里说注释和指令——只要打字嫌慢。</p>
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.voice.result">结果</div>
-          <p data-i18n="caps.voice.resultText">点按：说完再点一下，贴的是原话。按住超过约 0.4 秒再松手：看着整屏把口述改写成提示词再贴入。两种都不会自动发送。</p>
+          <p data-i18n="caps.voice.resultText">点按说话，原话贴进输入框（可去水词/改错别字）。不会自动发送。</p>
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.voice.shortcut">快捷键</div>
-          <p data-i18n="caps.voice.shortcutText">Mac 默认右 Command（可改右 Option / Fn）；Windows 为 Alt。备用 Command+8 / Win+8 只有点按原话。详见帮助页。</p>
+          <p data-i18n="caps.voice.shortcutText">Mac 点按右 Command（可改）；Windows 点按 Alt。贴的是你说的话。</p>
         </div>
       </div>
     </div>
@@ -365,7 +421,7 @@
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.screen.when">什么时候用</div>
-          <p data-i18n="caps.screen.whenText">看商品价格、翻译英文、解读论文、检查作业——屏幕上啥都能问。</p>
+          <p data-i18n="caps.screen.whenText">看屏幕答题、翻译英文、解读论文、检查作业——屏幕上啥都能问。</p>
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.screen.result">结果</div>
@@ -373,70 +429,9 @@
         </div>
         <div class="cap-detail">
           <div class="cap-detail-label" data-i18n="caps.screen.shortcut">快捷键</div>
-          <p data-i18n="caps.screen.shortcutText">呼出助手 → AI 看屏幕 → 提问</p>
+          <p data-i18n="caps.screen.shortcutText">呼出看屏幕 → 说出要干什么（答题可以说「这道题选什么」）</p>
         </div>
       </div>
-    </div>
-
-    <!-- 看屏幕答题 -->
-    <div class="cap-card">
-      <div class="cap-card-bar"></div>
-      <div class="cap-card-body">
-        <div class="cap-card-head">
-          <h3 data-i18n="caps.quiz.name">看屏幕答题</h3>
-        </div>
-        <div class="cap-detail">
-          <div class="cap-detail-label" data-i18n="caps.quiz.when">什么时候用</div>
-          <p data-i18n="caps.quiz.whenText">网课测验、选择判断、限时抢答——时间紧需要快速出答案。</p>
-        </div>
-        <div class="cap-detail">
-          <div class="cap-detail-label" data-i18n="caps.quiz.result">结果</div>
-          <p data-i18n="caps.quiz.resultText">AI 看一眼屏幕，秒出答案，直接告诉你选哪个。</p>
-        </div>
-        <div class="cap-detail">
-          <div class="cap-detail-label" data-i18n="caps.quiz.shortcut">快捷键</div>
-          <p data-i18n="caps.quiz.shortcutText">呼出助手 → AI 看屏幕 → 自动识别题目</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════════════ 信任/隐私 ═══════════════ -->
-<section class="section section-trust" id="trust">
-  <div class="section-header">
-    <div class="section-eyebrow" data-i18n="trust.eyebrow">信任与隐私</div>
-    <h2 class="section-title" data-i18n="trust.title">你的数据，你做主</h2>
-    <p class="section-subtitle" data-i18n="trust.subtitle">不是云端 SaaS，是装在你电脑上的本机工具</p>
-  </div>
-  <div class="trust-grid">
-    <div class="trust-card">
-      <div class="trust-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      </div>
-      <h3 data-i18n="trust.local.name">数据不出门</h3>
-      <p data-i18n="trust.local.desc">所有处理在你本机完成，对话内容不上传任何服务器。</p>
-    </div>
-    <div class="trust-card">
-      <div class="trust-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-      </div>
-      <h3 data-i18n="trust.nosend.name">不代你发送</h3>
-      <p data-i18n="trust.nosend.desc">AI 只帮你写好，不会自动帮你发出去。发不发，你说了算。</p>
-    </div>
-    <div class="trust-card">
-      <div class="trust-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"/></svg>
-      </div>
-      <h3 data-i18n="trust.stop.name">Esc 随时停</h3>
-      <p data-i18n="trust.stop.desc">任何时候按 Esc，AI 立刻停下来。你始终拥有控制权。</p>
-    </div>
-    <div class="trust-card">
-      <div class="trust-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </div>
-      <h3 data-i18n="trust.model.name">模型你做主</h3>
-      <p data-i18n="trust.model.desc">接入你自己的 API Key，用哪个模型、花多少钱，完全由你决定。</p>
     </div>
   </div>
 </section>
@@ -467,7 +462,7 @@
       <p data-i18n="howto.step3.desc">填入你的 API Key（OpenAI / 通义千问 / DeepSeek 等），选好模型就能用了。</p>
     </div>
   </div>
-  <p class="howto-tip" data-i18n="howto.tip">即刻对话：点按贴原话，按住超过约 0.4 秒松手后按屏幕增强提示词。快捷键可在设置里改。</p>
+  <p class="howto-tip" data-i18n="howto.tip">即刻对话点按贴原话；与AI对话按住同一键超过约 0.4 秒增强提示词。快捷键可在设置里改。</p>
 </section>
 
 <!-- ═══════════════ 下载 ═══════════════ -->
@@ -475,7 +470,7 @@
   <div class="section-header">
     <div class="section-eyebrow" data-i18n="download.eyebrow">立即下载</div>
     <h2 class="section-title" data-i18n="download.title">选一个，装上就能用</h2>
-    <p class="section-subtitle" data-i18n="download.subtitle">免费 · 支持 macOS (Apple Silicon & Intel) · Windows 10/11</p>
+    <p class="section-subtitle" data-i18n="download.subtitle">免费 · Windows 10/11 现已提供安装包 · macOS 内测中</p>
   </div>
   <div class="download-cards">
     <div class="download-card">
@@ -483,7 +478,7 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
       </div>
       <h3 data-i18n="download.mac">macOS</h3>
-      <a href="#" class="btn btn-primary download-btn" data-dl-platform="mac" data-i18n="hero.cta.mac">下载 macOS 版</a>
+      <a href="#" class="btn btn-primary download-btn is-soon" data-mac-soon data-i18n="download.macSoon">macOS 内测中</a>
     </div>
     <div class="download-card">
       <div class="download-icon">
@@ -491,6 +486,7 @@
       </div>
       <h3 data-i18n="download.win">Windows</h3>
       <a href="#" class="btn btn-primary download-btn" data-dl-platform="win" data-i18n="hero.cta.win">下载 Windows 版</a>
+      <span class="win-ver-hint" data-latest-version>v0.5.11</span>
     </div>
   </div>
   <div class="download-meta">

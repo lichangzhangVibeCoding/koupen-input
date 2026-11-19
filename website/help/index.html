@@ -4,24 +4,88 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title data-i18n="help.meta.title">帮助 · 即刻对话 TalkNow</title>
-  <meta name="description" data-i18n="help.meta.desc" data-i18n-attr="content" content="即刻对话帮助：点按贴原话、按住增强提示词、安装权限、官方会员与常见问题。">
+  <meta name="description" data-i18n="help.meta.desc" data-i18n-attr="content" content="即刻对话说明书：从安装上手到点按贴原话、按住加成提示词、帮我对话、看屏幕，含案例模拟与排障。">
   <link rel="icon" href="../assets/icon.png" type="image/png">
   <link rel="canonical" href="https://www.talknow.cn/help/">
   <link rel="stylesheet" href="../css/ink-signal.css">
   <style>
-    .help-page { max-width: 760px; margin: 0 auto; padding: 120px 24px 80px; }
-    .help-page h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 0 0 8px; }
-    .help-lead { color: rgba(0,0,0,.6); margin-bottom: 36px; line-height: 1.6; }
-    .help-guide { margin: 0 0 48px; }
-    .help-guide h2 { font-size: 1.35rem; margin: 0 0 8px; }
-    .help-guide-lead { color: rgba(0,0,0,.68); line-height: 1.7; margin: 0 0 20px; }
-    .help-keys { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 22px; font-size: 0.92rem; color: rgba(0,0,0,.72); }
-    .help-keys kbd {
-      display: inline-block; padding: 2px 8px; border-radius: 6px;
-      background: rgba(18,20,26,.08); font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    html { scroll-padding-top: 84px; }
+    .help-page { max-width: 1080px; margin: 0 auto; padding: 104px 24px 80px; }
+    .help-page > .help-hero h1 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 0 0 8px; }
+    .help-lead { color: rgba(0,0,0,.6); margin: 0 0 28px; line-height: 1.65; max-width: 40em; }
+    .help-layout {
+      display: grid;
+      grid-template-columns: 200px minmax(0, 1fr);
+      gap: 36px;
+      align-items: start;
     }
-    .help-pair { display: grid; gap: 16px; margin-bottom: 22px; }
-    @media (min-width: 640px) { .help-pair { grid-template-columns: 1fr 1fr; } }
+    .help-toc {
+      position: sticky;
+      top: 84px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 12px 0;
+    }
+    .help-toc a {
+      font-size: 0.86rem;
+      color: rgba(0,0,0,.55);
+      padding: 6px 10px;
+      border-radius: 8px;
+      line-height: 1.35;
+    }
+    .help-toc a:hover { color: var(--signal-strong); background: var(--signal-soft); }
+    .help-section { margin: 0 0 52px; }
+    .help-section h2 {
+      font-size: 1.45rem;
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    .help-section > .help-sec-lead {
+      color: rgba(0,0,0,.62);
+      line-height: 1.7;
+      margin: 0 0 20px;
+    }
+    .help-section h3 { font-size: 1.12rem; margin: 28px 0 8px; }
+    .help-section p { margin: 0 0 12px; line-height: 1.7; color: rgba(0,0,0,.74); }
+    .help-keys {
+      display: flex; flex-wrap: wrap; gap: 8px 16px;
+      margin: 0 0 18px; font-size: 0.92rem; color: rgba(0,0,0,.72);
+    }
+    .help-keys kbd, .help-inline-kbd {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      background: rgba(18,20,26,.08);
+      font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .help-table-wrap { overflow-x: auto; margin: 0 0 20px; }
+    .help-table {
+      width: 100%; border-collapse: collapse; font-size: 0.92rem;
+      min-width: 560px;
+    }
+    .help-table th, .help-table td {
+      text-align: left; vertical-align: top;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      padding: 10px 12px 10px 0;
+      line-height: 1.55;
+    }
+    .help-table th { color: rgba(0,0,0,.5); font-weight: 650; font-size: 0.8rem; }
+    .help-steps { margin: 0; padding: 0; list-style: none; counter-reset: hs; }
+    .help-steps li {
+      counter-increment: hs;
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 12px;
+      margin: 0 0 16px;
+    }
+    .help-steps li::before {
+      content: counter(hs);
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--signal); color: #fff;
+      font: 700 13px/28px inherit; text-align: center;
+    }
+    .help-steps strong { display: block; margin-bottom: 4px; }
+    .help-pair { display: grid; gap: 16px; margin: 0 0 18px; }
+    @media (min-width: 720px) { .help-pair { grid-template-columns: 1fr 1fr; } }
     .help-card {
       border: 1px solid rgba(0,0,0,.1); border-radius: 14px; padding: 16px 18px;
       background: rgba(255,255,255,.55);
@@ -32,12 +96,51 @@
     .help-card li { margin: 0 0 6px; line-height: 1.55; }
     .help-notes { margin: 0; padding-left: 1.2em; color: rgba(0,0,0,.7); }
     .help-notes li { margin: 0 0 8px; line-height: 1.6; }
-    .help-faq-title { font-size: 1.2rem; margin: 8px 0 4px; }
-    .help-item { border-top: 1px solid rgba(0,0,0,.1); padding: 20px 0; }
-    .help-item:last-child { border-bottom: 1px solid rgba(0,0,0,.1); }
-    .help-item h2 { font-size: 1.1rem; margin: 0 0 8px; }
-    .help-item p { margin: 0; line-height: 1.7; color: rgba(0,0,0,.72); }
-    .help-links { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px; }
+    .help-case {
+      border: 1px solid rgba(0,0,0,.1);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin: 0 0 14px;
+      background: rgba(255,255,255,.5);
+    }
+    .help-case h4 { font-size: 1.02rem; margin: 0 0 8px; }
+    .help-case-grid { display: grid; gap: 12px; }
+    @media (min-width: 640px) { .help-case-grid { grid-template-columns: 1fr 1fr; } }
+    .help-case-box {
+      background: rgba(18,20,26,.035);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .help-case-box .lbl {
+      display: block; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: .04em; color: rgba(0,0,0,.45); margin-bottom: 4px;
+    }
+    .help-case-box p { margin: 0; font-size: 0.92rem; }
+    .help-case .pit {
+      margin: 10px 0 0;
+      font-size: 0.88rem;
+      color: rgba(0,0,0,.58);
+    }
+    .help-faq-item { border-top: 1px solid rgba(0,0,0,.1); padding: 18px 0; }
+    .help-faq-item:last-child { border-bottom: 1px solid rgba(0,0,0,.1); }
+    .help-faq-item h3 { font-size: 1.05rem; margin: 0 0 8px; }
+    .help-faq-item p { margin: 0; }
+    .help-links { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 12px; }
+    .help-ok { color: rgba(0,0,0,.55); font-size: 0.9rem; }
+    @media (max-width: 860px) {
+      .help-layout { grid-template-columns: 1fr; }
+      .help-toc {
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 0 0 20px;
+      }
+      .help-toc a {
+        background: rgba(255,255,255,.7);
+        border: 1px solid rgba(0,0,0,.08);
+      }
+    }
   </style>
 </head>
 <body data-page="help">
@@ -50,13 +153,16 @@
         <span class="nav-logo-en">TalkNow</span>
       </span>
     </a>
+    <span class="nav-version" data-latest-version>v0.5.11</span>
     <div class="nav-links">
       <a href="../" data-keep-lang data-i18n="nav.home">首页</a>
       <a href="../subscribe/" data-keep-lang data-i18n="nav.subscribe">订阅</a>
       <a href="./" data-keep-lang data-i18n="nav.help" aria-current="page">帮助</a>
+      <a href="../#scenarios" data-keep-lang data-i18n="nav.scenarios">场景</a>
+      <a href="../#capabilities" data-keep-lang data-i18n="nav.capabilities">能力</a>
       <a href="#" data-lang-toggle class="nav-lang" data-i18n="nav.lang">English</a>
     </div>
-    <a href="../#download" class="btn btn-primary btn-sm nav-cta" data-i18n="nav.download">下载</a>
+    <a href="../#download" data-keep-lang class="btn btn-primary btn-sm nav-cta" data-i18n="nav.download">下载</a>
     <button class="nav-burger" id="navBurger" aria-label="Menu">
       <span></span><span></span><span></span>
     </button>
@@ -64,83 +170,583 @@
 </nav>
 
 <main class="help-page">
-  <h1 data-i18n="help.title">帮助</h1>
-  <p class="help-lead" data-i18n="help.subtitle">即刻对话怎么用、安装权限、会员与常见问题</p>
+  <header class="help-hero">
+    <h1 data-i18n="help.title">帮助</h1>
+    <p class="help-lead" data-i18n="help.subtitle">从第一次点按，到对着 Cursor 按住说话、微信里让它起草回复。贴进去之后发不发，都由你决定。</p>
+  </header>
 
-  <section class="help-guide" id="voice">
-    <h2 data-i18n="help.guide.title">即刻对话怎么用</h2>
-    <p class="help-guide-lead" data-i18n="help.guide.lead">同一颗键，两种手势：点按贴原话，按住按屏幕增强成提示词。都不会自动发送。</p>
-    <div class="help-keys">
-      <span data-i18n="help.guide.keysMac">Mac 默认右 Command（可在设置改成右 Option / Fn）</span>
-      <span data-i18n="help.guide.keysWin">Windows 为 Alt</span>
-    </div>
-    <div class="help-pair">
-      <div class="help-card">
-        <h3 data-i18n="help.guide.tapTitle">点按：贴原话</h3>
-        <p class="help-card-lead" data-i18n="help.guide.tapLead">微信、备忘录、浏览器——只要嫌打字慢。</p>
-        <ol>
-          <li data-i18n="help.guide.tap1">光标放进输入框</li>
-          <li data-i18n="help.guide.tap2">点一下触发键，开始录音</li>
-          <li data-i18n="help.guide.tap3">说完再点一下结束</li>
-          <li data-i18n="help.guide.tap4">原话贴进去，你自己决定发不发</li>
+  <div class="help-layout">
+    <nav class="help-toc" aria-label="Contents">
+      <a href="#understand" data-i18n="help.toc.understand">30 秒搞懂</a>
+      <a href="#start" data-i18n="help.toc.start">新手上手</a>
+      <a href="#caps" data-i18n="help.toc.caps">四个能力</a>
+      <a href="#cases" data-i18n="help.toc.cases">案例模拟</a>
+      <a href="#setup" data-i18n="help.toc.setup">设置与会员</a>
+      <a href="#fix" data-i18n="help.toc.fix">权限与排障</a>
+      <a href="#data" data-i18n="help.toc.data">数据与不代发</a>
+      <a href="#faq" data-i18n="help.toc.faq">常见问题</a>
+    </nav>
+
+    <div class="help-body">
+
+      <section class="help-section" id="understand">
+        <h2 data-i18n="help.u.title">30 秒搞懂</h2>
+        <p class="help-sec-lead" data-i18n="help.u.lead">即刻对话不是又一个桌面 AI。豆包、WorkBuddy、Cursor、ChatGPT 你继续用；缺的是更好的语音输入。它对着你正在用的输入框说话、把字贴进去，从不自动发送。</p>
+        <div class="help-table-wrap">
+          <table class="help-table">
+            <thead>
+              <tr>
+                <th data-i18n="help.u.th1">你想做什么</th>
+                <th data-i18n="help.u.th2">用哪个</th>
+                <th data-i18n="help.u.th3">怎么按</th>
+                <th data-i18n="help.u.th4">贴出去的是什么</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="help.u.r1a">懒得打字：微信、邮件、Cursor 里敲注释</td>
+                <td data-i18n="help.u.r1b">即刻对话</td>
+                <td data-i18n="help.u.r1c">点按开始，说完再点一下</td>
+                <td data-i18n="help.u.r1d">你说的原话（可去「嗯啊」、改错别字）</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.u.r2a">对着 AI 说需求，但口语太散</td>
+                <td data-i18n="help.u.r2b">与AI对话</td>
+                <td data-i18n="help.u.r2c">按住同一颗键，说完松手</td>
+                <td data-i18n="help.u.r2d">整理过的任务说明（屏幕上的报错、代码会写进去）</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.u.r3a">聊天窗回不过来</td>
+                <td data-i18n="help.u.r3b">帮我对话</td>
+                <td data-i18n="help.u.r3c">快速双击</td>
+                <td data-i18n="help.u.r3d">按人设起草的回复，仍要你自己发</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.u.r4a">屏幕上有字、题、英文，想问一眼</td>
+                <td data-i18n="help.u.r4b">看屏幕</td>
+                <td data-i18n="help.u.r4c">另一套组合键（默认 Command / Win + Shift + 1）</td>
+                <td data-i18n="help.u.r4d">答案出在浮窗和剪贴板，不往别人家输入框里贴提示词</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="help-keys">
+          <span data-i18n="help.u.keysMac">Mac 语音键默认右 Command（设置里可改成右 Option / Fn）</span>
+          <span data-i18n="help.u.keysWin">Windows 语音键是 Alt（不能改）</span>
+          <span data-i18n="help.u.keysEsc">随时按 Esc 立刻停下</span>
+        </div>
+        <p class="help-ok" data-i18n="help.u.note">同一颗语音键：点按是贴原话，按住是加成提示词。帮我对话、看屏幕是另外的手势。App 指挥台顺序是即刻对话 → 与AI对话 → 帮我对话 → 看屏幕；官网场景把与AI对话放前面，只是宣传顺序不同。</p>
+      </section>
+
+      <section class="help-section" id="start">
+        <h2 data-i18n="help.s.title">新手从这里开始</h2>
+        <p class="help-sec-lead" data-i18n="help.s.lead">按这个顺序走一遍。先完成一次点按贴字，再学按住。</p>
+        <ol class="help-steps">
+          <li>
+            <div>
+              <strong data-i18n="help.s.0t">确认系统</strong>
+              <p data-i18n="help.s.0b">Windows 可在首页下载安装包。macOS 目前是内测，官网不提供 dmg，请不要找「选择 macOS 安装包」。官方会员或自配 Key 需要能上网；本地模型可离线，要另配。</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong data-i18n="help.s.1t">安装并打开</strong>
+              <p data-i18n="help.s.1b">Windows 运行安装器，打开后看到指挥台四条能力。托盘里也会留着，关掉窗口不等于退出。</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong data-i18n="help.s.2t">选模型跑法</strong>
+              <p data-i18n="help.s.2b">三选一，到 App「模型」页完成。不想填 Key：登录官方会员（可用体验积分先试语音）。已有豆包 / OpenAI 等 Key：填自己的地址和 Key，不扣本产品积分。要离线：配本地语音和对话模型。</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong data-i18n="help.s.3t">授权权限</strong>
+              <p data-i18n="help.s.3b">Mac 需要麦克风（说话）、屏幕录制（按住加成 / 帮我对话 / 看屏幕；点按贴原话不截屏）、辅助功能（全局快捷键和往别的 App 填字）。首次打开有分步引导。勾完若键没反应：完全退出再打开，不要只关窗口。Windows 先给麦克风；快捷键被占用就去设置改键。</p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong data-i18n="help.s.4t">第一次成功（30 秒）</strong>
+              <p data-i18n="help.s.4b">打开记事本或微信输入框 → 点一下右 Command（Windows 点 Alt）→ 说「你好，这是我的第一句」→ 再点一下。字贴进去、没有发出去，就算成功。下次要对着 Cursor 或豆包说需求，再改用按住。</p>
+            </div>
+          </li>
         </ol>
-      </div>
-      <div class="help-card">
-        <h3 data-i18n="help.guide.holdTitle">按住：增强提示词</h3>
-        <p class="help-card-lead" data-i18n="help.guide.holdLead">对着 ChatGPT、Cursor 等 AI 输入框说话，它会扩写成一份能执行的任务说明；屏幕上有报错或代码时会写进去。</p>
-        <ol>
-          <li data-i18n="help.guide.hold1">光标放进那个输入框，屏幕上留着相关内容</li>
-          <li data-i18n="help.guide.hold2">按住触发键超过约 0.4 秒，底部出现增强提示</li>
-          <li data-i18n="help.guide.hold3">说话，说完松手</li>
-          <li data-i18n="help.guide.hold4">改写后的提示词贴进去，看过再回车</li>
-        </ol>
+      </section>
+
+      <section class="help-section" id="caps">
+        <h2 data-i18n="help.c.title">四个能力怎么用</h2>
+        <p class="help-sec-lead" data-i18n="help.c.lead">每项都是：一句话、什么时候用、怎么按、别和谁搞混。</p>
+
+        <h3 data-i18n="help.c.voice.title">即刻对话：点按贴原话</h3>
+        <p data-i18n="help.c.voice.one">懒得打字时用。贴的是你说的话，不是提示词。</p>
+        <div class="help-pair">
+          <div class="help-card">
+            <h3 data-i18n="help.c.voice.whenT">什么时候用</h3>
+            <p class="help-card-lead" data-i18n="help.c.voice.when">微信、邮件、写稿，以及 Cursor / IDE 里说一句注释或短指令。只要嫌敲字慢。</p>
+            <ol>
+              <li data-i18n="help.c.voice.s1">光标放进输入框</li>
+              <li data-i18n="help.c.voice.s2">点一下触发键，开始录音</li>
+              <li data-i18n="help.c.voice.s3">说完再点一下结束</li>
+              <li data-i18n="help.c.voice.s4">原话贴进去，你自己决定发不发</li>
+            </ol>
+          </div>
+          <div class="help-card">
+            <h3 data-i18n="help.c.voice.noteT">还要知道</h3>
+            <p class="help-card-lead" data-i18n="help.c.voice.note">默认会去掉嗯啊呃，并按上下文改转写错字，设置里可关。只去水词不调模型；改错别字会走文本模型。点按不截屏、不扩写。首页「开始说话」也是点按开关，不是按住。</p>
+          </div>
+        </div>
+
+        <h3 data-i18n="help.c.ai.title">与AI对话：按住，把口语变成能执行的提示词</h3>
+        <p data-i18n="help.c.ai.one">对着 Cursor、豆包、WorkBuddy、ChatGPT 的输入框按住说话。松手后它看一眼当前屏幕，把随口说的话整理成「做网站 / 做 PPT / 修 Bug / 写方案」那种 AI 能直接动手的任务说明，再贴进去。你看过再回车。</p>
+        <div class="help-pair">
+          <div class="help-card">
+            <h3 data-i18n="help.c.ai.whenT">怎么按</h3>
+            <ol>
+              <li data-i18n="help.c.ai.s1">光标放进那个 AI 输入框，屏幕上留着相关内容（代码、报错、对话都可以）</li>
+              <li data-i18n="help.c.ai.s2">按住触发键超过约 0.4 秒，底部出现增强提示</li>
+              <li data-i18n="help.c.ai.s3">说话，说完松手</li>
+              <li data-i18n="help.c.ai.s4">改写后的提示词贴进去，看过再回车</li>
+            </ol>
+          </div>
+          <div class="help-card">
+            <h3 data-i18n="help.c.ai.noteT">还要知道</h3>
+            <p class="help-card-lead" data-i18n="help.c.ai.note">空桌面效果差，先把报错或稿子留在屏幕上。已经在点按录音中，再按只会结束贴原话，不会中途变成加成。首页第二行也可以点按开始、再点结束。做 PPT 时，它整理的是「按页生成」的任务说明，不是直接下一个 PowerPoint 文件。</p>
+          </div>
+        </div>
+
+        <h3 data-i18n="help.c.reply.title">帮我对话：双击起草回复</h3>
+        <p data-i18n="help.c.reply.one">打开微信 / 飞书 / 钉钉 / 邮件窗口，快速双击语音修饰键。它看当前聊天画面，按联系人人设起草回复并贴进输入框。人设和「去 AI 味儿」在设置里。</p>
+        <p data-i18n="help.c.reply.note">输出是回复草稿，不是给 AI 的提示词，也不是浮窗答案。不会自动发送。</p>
+
+        <h3 data-i18n="help.c.screen.title">看屏幕：整屏问答（答题也在这里）</h3>
+        <p data-i18n="help.c.screen.one">默认 Mac 右 Command+Shift+1、Windows Win+Shift+1。截整屏，再用语音说明要干什么；说完再按一次同一快捷键结束。答案在浮窗、剪贴板，并写入 App「对话」列表。</p>
+        <p data-i18n="help.c.screen.note">题目在屏幕上时可以说「请帮我看这道题选什么」。这不是第五个技能。帮我对话裁的是聊天窗、目的是回消息；看屏幕是整屏、目的是回答问题——不会往微信输入框里贴提示词。</p>
+
+        <h3 data-i18n="help.c.notesTitle">手势别搞混</h3>
+        <ul class="help-notes">
+          <li data-i18n="help.c.note1">Mac 备用键右 Command+8、Windows 的 Win+8 只有点按贴原话，按住不会加成。</li>
+          <li data-i18n="help.c.note2">已经在点按录音中，再按只结束并贴原话，不会改成加成。</li>
+          <li data-i18n="help.c.note3">看屏幕正在听你说话时，点按仍是结束提问，不会开加成。</li>
+          <li data-i18n="help.c.note4">按住时又按了别的键（例如复制），这次加成会取消。</li>
+          <li data-i18n="help.c.note5">随时按 Esc 立刻停下。帮我对话是快速双击，看屏幕是另一套组合键。</li>
+        </ul>
+      </section>
+
+      <section class="help-section" id="cases">
+        <h2 data-i18n="help.k.title">案例模拟</h2>
+        <p class="help-sec-lead" data-i18n="help.k.lead">每个案例：打开什么、按哪个手势、可以怎么说、贴出来大概怎样、常见翻车。按住加成不会逐字复述模型原文，下面是「整理方向」。</p>
+
+        <h3 data-i18n="help.k.voiceH">即刻对话</h3>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.v1.t">微信懒得打字</h4>
+          <p data-i18n="help.k.v1.meta">打开微信输入框，点按语音键。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.v1.say">晚上七点老地方，我晚点到十分钟。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.v1.get">几乎就是这句原话（「嗯」「那个」会被去掉）。不会自动发送。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.v1.pit">翻车：光标不在输入框；录音没结束就切走窗口。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.v2.t">口述回邮件</h4>
+          <p data-i18n="help.k.v2.meta">打开邮件正文，点按。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.v2.say">谢谢你发的材料，下周一下午三点可以开会，我先看附件再补充问题。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.v2.get">一整段可发的正文。称谓和署名仍建议你自己改一眼。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.v2.pit">翻车：在主题栏录音，字贴错地方。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.v3.t">边想边说写初稿</h4>
+          <p data-i18n="help.k.v3.meta">备忘录或文档，点按。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.v3.say">方案分三块：先讲现状，再讲我们怎么做会员，最后给两周排期。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.v3.get">一篇能改的初稿，不是给 AI 的指令。要整理成任务说明，改用按住。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.v3.pit">翻车：说太碎又不停顿，去水词也救不了结构，说完自己分段即可。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.v4.t">对着 Cursor 说，别敲（贴原话）</h4>
+          <p data-i18n="help.k.v4.meta">光标在 Cursor / IDE 输入框，点按。这是 vibe coding 的原话路径。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.v4.say">在这个函数里加空值检查，别改别的文件。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.v4.get">就是这句指令。需求很散、屏幕上还有报错时，改用按住，让它加成提示词。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.v4.pit">翻车：以为点按会「看屏幕改提示词」——那是按住。</p>
+        </article>
+
+        <h3 data-i18n="help.k.aiH">与AI对话</h3>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.a1.t">对着 Cursor 做网站</h4>
+          <p data-i18n="help.k.a1.meta">屏幕上留着现有页面或编辑器，按住说话。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.a1.say">就按现在这个风格，加一个产品介绍和联系表单，手机也要能看。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.a1.get">写成「请做一个…网站」的任务，按首页 / 产品 / 联系等模块列清楚，而不是「嗯做一个网站吧」。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.a1.pit">翻车：桌面是空的，它看不到你说的「现在这个风格」。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.a2.t">做 PPT / 课件</h4>
+          <p data-i18n="help.k.a2.meta">对着 AI 输入框按住，口述大纲。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.a2.say">帮我做个十分钟的分享，就讲我们这个功能怎么用，别写成网站。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.a2.get">按页列出标题和要点的任务说明。它要的是按页生成（常见是 HTML 幻灯），不是直接下一个 .pptx 文件。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.a2.pit">翻车：期望立刻得到 PowerPoint 附件；看贴进去的说明再回车。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.a3.t">修 Bug</h4>
+          <p data-i18n="help.k.a3.meta">屏幕上留着红色报错，按住。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.a3.say">就是这个错，登录以后白屏，我刚才改过路由。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.a3.get">把报错、你改过什么、期望结果写成 AI 能动手的调试说明。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.a3.pit">翻车：报错已经滚出屏幕；说得太短，加成也补不出上下文。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.a4.t">对着豆包 / ChatGPT / WorkBuddy 写方案</h4>
+          <p data-i18n="help.k.a4.meta">光标在那个 AI 的输入框，按住。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.a4.say">客户是餐饮店，想做会员，我还没想清楚积分怎么算。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.a4.get">带目标、约束、输出格式的完整 brief，而不是一堆散念头。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.a4.pit">翻车：按住不到 0.4 秒，结果只贴了原话。</p>
+        </article>
+
+        <h3 data-i18n="help.k.replyH">帮我对话</h3>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.r1.t">工作消息秒回</h4>
+          <p data-i18n="help.k.r1.meta">微信 / 飞书 / 钉钉聊天窗在最前，快速双击。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.other">对方大概在说</span>
+              <p data-i18n="help.k.r1.say">进度怎样了，今天下班前能给一版吗？</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.r1.get">一封按人设起草的回复，你改数字和时间再发。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.r1.pit">翻车：窗口被挡住；误以为已经发出去了。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.r2.t">群里不好接的话</h4>
+          <p data-i18n="help.k.r2.meta">QQ 群或同学群窗口在前，双击。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.other">对方大概在说</span>
+              <p data-i18n="help.k.r2.say">你怎么还不回？是不是不想来？</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.r2.get">一份拿捏分寸的草稿。人设不对就去设置里改性格包。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.r2.pit">翻车：双击太慢被识别成两次点按录音。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.r3.t">邮件回复不犯愁</h4>
+          <p data-i18n="help.k.r3.meta">邮件窗口在前，双击。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.doing">你在干嘛</span>
+              <p data-i18n="help.k.r3.say">不用说话。它读当前邮件画面，起草回信贴进输入框。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.get">贴出来大概会怎样</span>
+              <p data-i18n="help.k.r3.get">一封可改的回信。发出去之前看一眼称呼和附件承诺。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.r3.pit">翻车：前台其实是浏览器别的标签，裁到的不是这封邮件。</p>
+        </article>
+
+        <h3 data-i18n="help.k.screenH">看屏幕</h3>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.sc1.t">看屏幕答题</h4>
+          <p data-i18n="help.k.sc1.meta">题目留在屏幕上，按看屏幕快捷键，再说完再按一次结束。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.sc1.say">请帮我看这道题选什么。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.see">你会看到什么</span>
+              <p data-i18n="help.k.sc1.get">浮窗里给出选项和理由，同时进剪贴板。不是第五个技能。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.sc1.pit">翻车：按了语音点按，答案不会出现在浮窗。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.sc2.t">即时翻译</h4>
+          <p data-i18n="help.k.sc2.meta">英文页面在屏幕上，看屏幕快捷键。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.sc2.say">把这一页翻译成中文，保留小标题。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.see">你会看到什么</span>
+              <p data-i18n="help.k.sc2.get">浮窗译文。鼠标放在答案上可多看一会儿。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.sc2.pit">翻车：页面被自己的窗口挡住，截到的不是那段英文。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.sc3.t">论文解读</h4>
+          <p data-i18n="help.k.sc3.meta">论文段落留在屏幕上，看屏幕。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.sc3.say">这段到底在说什么，用大白话讲，并标出前提假设。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.see">你会看到什么</span>
+              <p data-i18n="help.k.sc3.get">解释出现在浮窗，并可在 App「对话」里回看。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.sc3.pit">翻车：字太小且整屏缩略后难认，放大再问一次。</p>
+        </article>
+
+        <article class="help-case">
+          <h4 data-i18n="help.k.sc4.t">作业检查</h4>
+          <p data-i18n="help.k.sc4.meta">作业照片或扫描件铺满屏幕，看屏幕。</p>
+          <div class="help-case-grid">
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.say">你可以怎么说</span>
+              <p data-i18n="help.k.sc4.say">看看哪几题做错了，只指出错的，别直接写完整解答给孩子抄。</p>
+            </div>
+            <div class="help-case-box">
+              <span class="lbl" data-i18n="help.k.see">你会看到什么</span>
+              <p data-i18n="help.k.sc4.get">按题号指出问题。仍建议你自己核对一遍。</p>
+            </div>
+          </div>
+          <p class="pit" data-i18n="help.k.sc4.pit">翻车：照片反光、题目被裁掉。</p>
+        </article>
+      </section>
+
+      <section class="help-section" id="setup">
+        <h2 data-i18n="help.set.title">设置、模型、会员</h2>
+        <p class="help-sec-lead" data-i18n="help.set.lead">快捷键在设置第一项。价格和积分以「订阅」页为准，帮助里不抄价，避免过期。</p>
+        <div class="help-table-wrap">
+          <table class="help-table">
+            <thead>
+              <tr>
+                <th data-i18n="help.set.th1">命令</th>
+                <th data-i18n="help.set.th2">默认怎么按</th>
+                <th data-i18n="help.set.th3">能否改</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="help.set.r1a">即刻对话</td>
+                <td data-i18n="help.set.r1b">Mac 点按右 Command；Windows 点按 Alt</td>
+                <td data-i18n="help.set.r1c">Mac 可改成右 Option / Fn；Windows 的 Alt 固定</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.set.r2a">与AI对话</td>
+                <td data-i18n="help.set.r2b">按住同一颗语音键约 0.4 秒</td>
+                <td data-i18n="help.set.r2c">跟即刻对话同一键，不能单独改</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.set.r3a">帮我对话</td>
+                <td data-i18n="help.set.r3b">快速双击右 Command / Alt</td>
+                <td data-i18n="help.set.r3c">可改成自定义组合，也可恢复推荐双击</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.set.r4a">看屏幕</td>
+                <td data-i18n="help.set.r4b">Command / Win + Shift + 1</td>
+                <td data-i18n="help.set.r4c">可改</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.set.r5a">取消进行中</td>
+                <td>Esc</td>
+                <td data-i18n="help.set.r5c">不可改</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p data-i18n="help.set.more">Fn 在部分外接键盘上可能收不到。去水词、改错别字在能力开关里。帮我对话的性格包在「帮我对话偏好」。</p>
+        <p data-i18n="help.set.pay">官方会员免填第三方 Key，按次扣统一积分（语音按分钟，帮我对话含读屏+生成，看屏幕更贵，答题分步扣）。自配 Key / 本地不扣本产品积分。积分不够可买加量包、升级，或临时改自配 Key。开通：订阅页 Stripe，或 App 个人中心；也可联系客服线下办理。</p>
+      </section>
+
+      <section class="help-section" id="fix">
+        <h2 data-i18n="help.f.title">权限与排障</h2>
+        <p class="help-sec-lead" data-i18n="help.f.lead">先对现象，再动手。Mac 勾过权限仍无效，优先「完全退出再打开」。</p>
+        <div class="help-table-wrap">
+          <table class="help-table">
+            <thead>
+              <tr>
+                <th data-i18n="help.f.th1">现象</th>
+                <th data-i18n="help.f.th2">先查什么</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td data-i18n="help.f.r1a">按键完全没反应</td>
+                <td data-i18n="help.f.r1b">Mac 辅助功能未勾；没完全退出；键被别的软件占用；按了左 Command</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.f.r2a">能录音但不贴字</td>
+                <td data-i18n="help.f.r2b">光标不在输入框；辅助功能；前台不是可输入的 App</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.f.r3a">按住没有加成、只贴原话</td>
+                <td data-i18n="help.f.r3b">没按满约 0.4 秒；用了备用 Command+8 / Win+8；已经在点按录音中</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.f.r4a">帮我对话没反应</td>
+                <td data-i18n="help.f.r4b">双击间隔不够快；热键改过；聊天窗被挡住</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.f.r5a">看屏幕没有浮窗</td>
+                <td data-i18n="help.f.r5b">快捷键冲突；麦克风；视觉模型没配好</td>
+              </tr>
+              <tr>
+                <td data-i18n="help.f.r6a">官方会员失败</td>
+                <td data-i18n="help.f.r6b">登录态、积分、网络；可切自配 Key 判断是不是账号问题</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="help-section" id="data">
+        <h2 data-i18n="help.d.title">数据与不代发</h2>
+        <p data-i18n="help.d.p1">联系人、人设、看屏幕截图写在你电脑上，不会把这些文件上传到即刻对话服务器。Mac：~/Library/Application Support/typenow/ 。Windows：%APPDATA%\typenow\ （一般是 C:\Users\你的用户名\AppData\Roaming\typenow\）。设置「配置与数据」里显示的是当前实际路径，以界面为准。</p>
+        <p data-i18n="help.d.p2">点按、按住加成、帮我对话都只把文字贴进当前输入框，从不自动发送。进行中任务按 Esc 立刻取消。</p>
+        <p data-i18n="help.d.p3">本地模型：推理不出机。自配 Key：内容发往你自己的服务商。官方会员：走薄代理再转发上游，会出网——不要理解成「任何服务器都不碰」。</p>
+      </section>
+
+      <section class="help-section" id="faq">
+        <h2 data-i18n="help.faqTitle">常见问题</h2>
+
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q1">如何下载安装？</h3>
+          <p data-i18n="help.a1">打开官网首页下载区，下载 Windows 安装包（本站直链）。macOS 正在内测，官网暂不提供 dmg。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q2">Mac 需要哪些权限？</h3>
+          <p data-i18n="help.a2">麦克风（语音）、屏幕录制（按住加成 / 帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q7">点按和按住有什么区别？</h3>
+          <p data-i18n="help.a7">点按贴你说的原话；按住超过约 0.4 秒会看一眼整屏，把口述整理成给 AI 的任务说明再贴入。两种都不会自动发送。详见本页「四个能力」。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q8">会不会自动发送？</h3>
+          <p data-i18n="help.a8">不会。贴进输入框之后，回车或发送都由你按。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q9">和豆包、Cursor 是什么关系？</h3>
+          <p data-i18n="help.a9">它们仍是你的 AI。即刻对话站在前面：点按帮你输入原话，按住帮你把口语加成提示词。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q10">答题是不是单独一个功能？</h3>
+          <p data-i18n="help.a10">不是。触发「看屏幕」，题目在屏幕上时口述「请帮我看这道题选什么」即可。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q11">备用键为什么不能按住加成？</h3>
+          <p data-i18n="help.a11">右 Command+8 / Win+8 只做点按贴原话，避免和系统或其他软件抢组合键。要加成请按住主语音键。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q12">Fn 没反应怎么办？</h3>
+          <p data-i18n="help.a12">部分外接键盘发不出 Fn。换回右 Command 或右 Option，并确认辅助功能已勾。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q13">数据存在哪？</h3>
+          <p data-i18n="help.a13">本机 typenow 目录，见上方「数据与不代发」。设置页可打开文件夹。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q3">官方会员和自配 Key 有什么区别？</h3>
+          <p data-i18n="help.a3">官方会员免填第三方 Key，按次扣统一积分；自配 Key / 本地模型不消耗本产品积分，费用按你的服务商账单。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q4">如何开通或更换套餐？</h3>
+          <p data-i18n="help.a4">打开「订阅」页或 App 个人中心，登录后用 Stripe 支付；也可联系客服线下办理。档位与个人中心一致，价格以订阅页为准。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q5">积分不够怎么办？</h3>
+          <p data-i18n="help.a5">可购买加量包，或升级更高档位；也可临时改用自配 Key / 本地模型继续使用。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q6">找不到更新日志？</h3>
+          <p data-i18n="help.a6">页脚有「更新日志」入口；也可在 App 内帮助页查看。</p>
+        </div>
+        <div class="help-faq-item">
+          <h3 data-i18n="help.q14">如何改快捷键？</h3>
+          <p data-i18n="help.a14">App 设置 → 快捷键表，点「修改」后按下新键。与AI对话不能单独改，始终按住即刻对话那一颗键。</p>
+        </div>
+      </section>
+
+      <div class="help-links">
+        <a class="btn btn-primary" href="../subscribe/" data-keep-lang data-i18n="nav.subscribe">订阅</a>
+        <a class="btn btn-secondary" href="../#download" data-keep-lang data-i18n="nav.download">下载</a>
+        <a class="btn btn-secondary" href="../changelog/" data-keep-lang data-i18n="nav.changelog">更新日志</a>
       </div>
     </div>
-    <h3 data-i18n="help.guide.notesTitle">注意</h3>
-    <ul class="help-notes">
-      <li data-i18n="help.guide.note1">Mac 备用键 右 Command+8、Windows 的 Win+8 只有点按贴原话，按住不会增强。</li>
-      <li data-i18n="help.guide.note2">已经在点按录音中，再按只结束并贴原话，不会改成增强。</li>
-      <li data-i18n="help.guide.note3">看屏幕正在听你说话时，点按仍是结束提问，不会开增强。</li>
-      <li data-i18n="help.guide.note4">按住时又按了别的键（例如复制），这次增强会取消。</li>
-      <li data-i18n="help.guide.note5">随时按 Esc 立刻停下。帮我对话是快速双击，看屏幕是另一套组合键。</li>
-    </ul>
-  </section>
-
-  <h2 class="help-faq-title" data-i18n="help.faqTitle">常见问题</h2>
-
-  <div class="help-item">
-    <h2 data-i18n="help.q1">如何下载安装？</h2>
-    <p data-i18n="help.a1">打开官网首页下载区，选择 macOS 或 Windows 安装包。包托管在 GitHub Releases。</p>
-  </div>
-  <div class="help-item">
-    <h2 data-i18n="help.q2">Mac 需要哪些权限？</h2>
-    <p data-i18n="help.a2">麦克风（语音）、屏幕录制（按住增强 / 帮我对话 / 看屏幕）、辅助功能（全局快捷键与填字）。授权后若快捷键无效，请完全退出再打开 App。</p>
-  </div>
-  <div class="help-item">
-    <h2 data-i18n="help.q7">点按和按住有什么区别？</h2>
-    <p data-i18n="help.a7">点按贴你说的原话；按住超过约 0.4 秒会看一眼整屏，把口述扩写成给 AI 的任务说明再贴入。两种都不会自动发送。详见本页上方说明书。</p>
-  </div>
-  <div class="help-item">
-    <h2 data-i18n="help.q3">官方会员和自配 Key 有什么区别？</h2>
-    <p data-i18n="help.a3">官方会员免填第三方 Key，按次扣统一积分；自配 Key / 本地模型不消耗本产品积分，费用按你的服务商账单。</p>
-  </div>
-  <div class="help-item">
-    <h2 data-i18n="help.q4">如何开通或更换套餐？</h2>
-    <p data-i18n="help.a4">下载 App → 个人中心登录 → 选择档位联系客服线下开通。套餐说明见「订阅」页，与个人中心一致。</p>
-  </div>
-  <div class="help-item">
-    <h2 data-i18n="help.q5">积分不够怎么办？</h2>
-    <p data-i18n="help.a5">可购买加量包，或升级更高档位；也可临时改用自配 Key / 本地模型继续使用。</p>
-  </div>
-  <div class="help-item">
-    <h2 data-i18n="help.q6">找不到更新日志？</h2>
-    <p data-i18n="help.a6">页脚有「更新日志」入口；也可在 App 内「更新」页查看。</p>
-  </div>
-
-  <div class="help-links">
-    <a class="btn btn-primary" href="../subscribe/" data-keep-lang data-i18n="nav.subscribe">订阅</a>
-    <a class="btn btn-secondary" href="../#download" data-i18n="nav.download">下载</a>
-    <a class="btn btn-secondary" href="../changelog/" data-keep-lang data-i18n="nav.changelog">更新日志</a>
   </div>
 </main>
 
@@ -163,6 +769,8 @@
 </footer>
 
 <script src="../js/i18n.js"></script>
+<script src="../js/releases-data.js"></script>
+<script src="../js/releases.js"></script>
 <script>
   var burger = document.getElementById('navBurger');
   var links = document.querySelector('.nav-links');

@@ -1286,6 +1286,31 @@ a {
   margin-top: 6px;
 }
 
+.models-cap-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.models-cap-toggle > span:first-child {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.models-cap-toggle > input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
 .models-local-names {
   padding: 0 14px 14px;
   display: flex;
@@ -3198,16 +3223,19 @@ a {
   transition: transform 140ms ease;
 }
 
-.settings-toggle > input:checked + .settings-switch {
+.settings-toggle > input:checked + .settings-switch,
+.models-cap-toggle > input:checked + .settings-switch {
   background: var(--signal);
   border-color: var(--signal-strong);
 }
 
-.settings-toggle > input:checked + .settings-switch::after {
+.settings-toggle > input:checked + .settings-switch::after,
+.models-cap-toggle > input:checked + .settings-switch::after {
   transform: translateX(16px);
 }
 
-.settings-toggle > input:focus-visible + .settings-switch {
+.settings-toggle > input:focus-visible + .settings-switch,
+.models-cap-toggle > input:focus-visible + .settings-switch {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 

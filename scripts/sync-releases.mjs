@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sync docs/releases.json → App shared + TalkNow site releases-data.js
- * Site SoT: lizhenning.com/other/typenow/js/releases-data.js
+ * Sync docs/releases.json → App shared + website/js/releases-data.js
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
@@ -18,16 +17,13 @@ const sharedJson = join(root, 'src/shared/releases.json')
 writeFileSync(sharedJson, raw.endsWith('\n') ? raw : raw + '\n', 'utf8')
 console.log('Wrote', sharedJson)
 
-const mirrorJson = join(root, 'website/releases.json')
-if (existsSync(dirname(mirrorJson))) {
-  writeFileSync(mirrorJson, raw.endsWith('\n') ? raw : raw + '\n', 'utf8')
-  console.log('Wrote', mirrorJson, '(legacy mirror)')
+const siteJson = join(root, 'website/releases.json')
+if (existsSync(dirname(siteJson))) {
+  writeFileSync(siteJson, raw.endsWith('\n') ? raw : raw + '\n', 'utf8')
+  console.log('Wrote', siteJson)
 }
 
-const dests = [
-  join(root, '../../lizhenning.com/other/typenow/js/releases-data.js'),
-  join(root, 'website/js/releases-data.js'),
-]
+const dests = [join(root, 'website/js/releases-data.js')]
 
 let wrote = 0
 for (const dest of dests) {

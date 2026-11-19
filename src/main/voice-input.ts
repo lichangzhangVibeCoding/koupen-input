@@ -1,11 +1,17 @@
 import { BRAND } from '../shared/brand'
 import { formatHoldRecordingHudText, formatRecordingHudText } from '../shared/hotkey'
 import { t } from '../shared/i18n'
-import { captureFullScreen } from './capture'
+import { captureForEnhance } from './capture'
 import { getSettings } from './db'
 import { showHud } from './hud'
-import { cleanVoiceTranscript, enhancePromptForAi } from './llm'
-import { pasteIntoFrontApp } from './paste'
+import {
+  cleanVoiceTranscript,
+  EMPTY_SCREEN_CONTEXT,
+  extractPromptScreenContext,
+  rewriteSpokenAsAiPrompt,
+  stripSpokenFillers
+} from './llm'
+import { pasteIntoFrontApp, replaceLastPastedText } from './paste'
 import {
   isScreenAskBusy,
   isScreenAskListening,
@@ -24,6 +30,7 @@ import {
   abortNetworkWork,
   beginNetworkWork,
   isTaskCancelled,
+  raceDeadline,
   TaskCancelledError
 } from './task-cancel'
 import { notifyActivityChanged } from './activity-notify'
@@ -33,8 +40,11 @@ let recording = false
 let busy = false
 /** 当前录音来自按住增强（点按路径完全不走此标记） */
 let holdMode = false
-let holdImage: { base64: string; mime: string } | null = null
-let holdReady: Promise<void> = Promise.resolve()
+/** 麦已开；松手只等这个，不等截图 */
+let holdMicReady: Promise<void> = Promise.resolve()
+/** 按住期间已开始的读屏；失败/超时则为「无相关上下文」 */
+let holdScreenNotes: Promise<string> | null = null
+let holdVisionAbort: AbortController | null = null
 /** 首页「与AI对话」点按开关（HUD 写再点一次结束，而非松手） */
 let holdFromUi = false
 let tapFromUi = false
@@ -55,8 +65,12 @@ export function isVoiceHoldActive(): boolean {
 
 function resetHoldState(): void {
   holdMode = false
-  holdImage = null
   holdFromUi = false
+  holdScreenNotes = null
+  if (holdVisionAbort && !holdVisionAbort.signal.aborted) {
+    holdVisionAbort.abort()
+  }
+  holdVisionAbort = null
 }
 
 function kickStreamAsr(settings: ReturnType<typeof getSettings>): string {
@@ -66,6 +80,35 @@ function kickStreamAsr(settings: ReturnType<typeof getSettings>): string {
     return t('voice.hud.downloadingAsr')
   }
   return ''
+}
+
+function logEnhance(t0: number, stage: string, extra = ''): void {
+  console.warn(`[enhance] ${stage} +${Date.now() - t0}ms${extra ? ` ${extra}` : ''}`)
+}
+
+function startEnhancePulse(
+  myRun: number,
+  getHud: (sec: number) => {
+    kind: 'transcribing' | 'generating'
+    text: string
+    detail?: string
+    icon?: 'write' | 'look' | 'think'
+  }
+): () => void {
+  const t0 = Date.now()
+  const tick = (): void => {
+    if (myRun !== runId) return
+    const sec = Math.floor((Date.now() - t0) / 1000)
+    const hud = getHud(sec)
+    const wait = sec >= 2 ? t('voice.hud.waitSec', { n: sec }) : ''
+    showHud({
+      ...hud,
+      detail: [hud.detail, wait].filter(Boolean).join(' · ')
+    })
+  }
+  tick()
+  const id = setInterval(tick, 2000)
+  return () => clearInterval(id)
 }
 
 async function flashAsrCorrection(
@@ -94,13 +137,24 @@ function maybeCloudProofread(
   audio: Buffer,
   mime: string,
   usedLocal: boolean,
-  pasted: string
+  pasted: string,
+  firstPaste: 'pasted' | 'clipboard',
+  myRun: number
 ): void {
   if (!settings.voiceCloudProofread || !usedLocal) return
   void transcribeAudio(settings, audio, mime)
     .then(async (cloud) => {
+      if (myRun !== runId) return
       const cleaned = await cleanVoiceTranscript(settings, cloud)
-      if (cleaned && cleaned !== pasted) await pasteIntoFrontApp(cleaned, 'keep-clipboard')
+      if (!cleaned || cleaned === pasted) return
+      if (myRun !== runId) return
+      // 第一次没进输入框就别再 Cmd/Ctrl+V，否则会叠成两段
+      if (firstPaste !== 'pasted') return
+      const result = await replaceLastPastedText(cleaned, 'keep-clipboard')
+      if (myRun !== runId) return
+      if (result === 'pasted') {
+        showHud({ kind: 'done', text: t('voice.hud.cloudProofread') })
+      }
     })
     .catch(() => undefined)
 }
@@ -144,22 +198,31 @@ export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
 
   holdMode = true
   holdFromUi = Boolean(opts?.fromUi)
-  holdImage = null
+  holdScreenNotes = null
+  holdVisionAbort = null
   notifyActivityChanged()
   const myRun = ++runId
-  holdReady = (async () => {
+  if (settings.enhanceScreenCaptureEnabled === true) {
+    holdVisionAbort = new AbortController()
+    const visionAbort = holdVisionAbort
+    holdScreenNotes = captureForEnhance()
+      .then((shot) => {
+        if (myRun !== runId || visionAbort.signal.aborted) return EMPTY_SCREEN_CONTEXT
+        return extractPromptScreenContext(settings, shot.visionImage, visionAbort.signal, {
+          appName: shot.appName,
+          windowTitle: shot.windowTitle
+        })
+      })
+      .catch(() => EMPTY_SCREEN_CONTEXT)
+  } else {
+    holdScreenNotes = Promise.resolve(EMPTY_SCREEN_CONTEXT)
+  }
+  holdMicReady = (async () => {
     try {
       if (!prefersLocalStreamAsr(settings)) {
         resolveSttConfig(settings)
       }
       const asrHint = kickStreamAsr(settings)
-      const shotP = captureFullScreen()
-        .then((shot) => {
-          if (myRun === runId) holdImage = shot.visionImage
-        })
-        .catch(() => {
-          /* 静默失败：仍凭口述增强 */
-        })
       showHud({
         kind: 'recording',
         text: holdFromUi
@@ -177,14 +240,17 @@ export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
           detail: partial
         })
       })
-      requestId = await startMicRecording({ stream: prefersLocalStreamAsr(settings) })
+      requestId = await raceDeadline(
+        startMicRecording({ stream: prefersLocalStreamAsr(settings) }),
+        12_000,
+        '麦克风迟迟没打开，请再试一次'
+      )
       if (myRun !== runId) {
         discardMicRecording()
         return
       }
       recording = true
       notifyActivityChanged()
-      await shotP
     } catch (err) {
       if (myRun !== runId) return
       recording = false
@@ -199,15 +265,26 @@ export function beginVoiceHold(opts?: { fromUi?: boolean }): boolean {
   return true
 }
 
-/** 按住抬起：转写 → 增强 → 粘贴，不发送 */
+/** 按住抬起：立刻停麦；转写与读屏并行 → 写提示词 → 粘贴，不发送 */
 export async function endVoiceHold(): Promise<void> {
   if (!holdMode) return
   const settings = getSettings()
   const myRun = runId
+  const notesP = holdScreenNotes
+  const t0 = Date.now()
   busy = true
   notifyActivityChanged()
+  let stopPulse: (() => void) | null = null
+  let pulsePhase: 'stt' | 'notes' | 'write' = 'stt'
   try {
-    await holdReady
+    showHud({
+      kind: 'transcribing',
+      text: t('voice.hud.stopping'),
+      detail: t('voice.hud.busyDetail'),
+      icon: 'write'
+    })
+    logEnhance(t0, 'end')
+    await raceDeadline(holdMicReady, 12_000, t('screenAsk.errNoAudio'))
     if (myRun !== runId) throw new TaskCancelledError()
     if (!holdMode) return
     recording = false
@@ -215,6 +292,7 @@ export async function endVoiceHold(): Promise<void> {
 
     setVoicePartialTranscriptHandler(null)
     const { buffer, mime, streamedText, liveText } = await stopMicRecording(requestId)
+    logEnhance(t0, 'mic-stopped', `${buffer.length}b`)
     if (myRun !== runId) throw new TaskCancelledError()
     if (!buffer.length) throw new Error(t('screenAsk.errNoAudio'))
 
@@ -228,66 +306,89 @@ export async function endVoiceHold(): Promise<void> {
           : formatHoldRecordingHudText(process.platform, settings.voiceTrigger),
         myRun
       )
-    } else {
-      showHud({
+    }
+
+    stopPulse = startEnhancePulse(myRun, (sec) => {
+      if (pulsePhase === 'notes') {
+        return {
+          kind: 'generating',
+          text: t('voice.hud.enhanceReading'),
+          detail: t('voice.hud.enhanceReadingDetail'),
+          icon: 'look'
+        }
+      }
+      if (pulsePhase === 'write') {
+        return {
+          kind: 'generating',
+          text: t('voice.hud.enhancing'),
+          detail: sec >= 12 ? t('voice.hud.enhancingSlow') : t('voice.hud.enhancingDetail'),
+          icon: 'think'
+        }
+      }
+      return {
         kind: 'transcribing',
         text: t('voice.hud.transcribing'),
         detail: t('voice.hud.busyDetail'),
         icon: 'write'
-      })
-    }
-    const signal = beginNetworkWork()
-    const spokenRaw = await transcribeUtterance(settings, buffer, mime, streamedText, signal)
-    if (myRun !== runId) throw new TaskCancelledError()
-    const needsCleanup =
-      settings.voiceStripFillersEnabled !== false || settings.voiceFixSttTyposEnabled === true
-    if (needsCleanup) {
-      showHud({
-        kind: 'transcribing',
-        text: t('voice.hud.cleaning'),
-        detail: t('voice.hud.cleaningDetail'),
-        icon: 'write'
-      })
-    }
-    const spoken = await cleanVoiceTranscript(settings, spokenRaw, signal)
-    if (myRun !== runId) throw new TaskCancelledError()
-
-    showHud({
-      kind: 'generating',
-      text: t('voice.hud.enhancing'),
-      detail: t('voice.hud.enhancingDetail'),
-      icon: 'think'
+      }
     })
-    const enhanced = await enhancePromptForAi(
+
+    const signal = beginNetworkWork()
+    const notesTracked = (notesP ?? Promise.resolve(EMPTY_SCREEN_CONTEXT)).then(
+      (v) => v || EMPTY_SCREEN_CONTEXT
+    )
+
+    const spokenRaw = await transcribeUtterance(
       settings,
-      holdImage,
-      spoken,
+      buffer,
+      mime,
+      streamedText,
       signal,
-      (phase) => {
-        if (myRun !== runId) return
-        if (phase === 'reading') {
-          showHud({
-            kind: 'generating',
-            text: t('voice.hud.enhanceReading'),
-            detail: t('voice.hud.enhanceReadingDetail'),
-            icon: 'look'
-          })
-          return
-        }
+      prefersLocalStreamAsr(settings) ? { preferLocalFallback: true } : undefined
+    )
+    logEnhance(t0, 'stt', `${spokenRaw.length}c ${spokenRaw.slice(0, 40)}`)
+    if (myRun !== runId) throw new TaskCancelledError()
+    const spoken =
+      settings.voiceStripFillersEnabled !== false ? stripSpokenFillers(spokenRaw) || spokenRaw : spokenRaw
+
+    let notes = EMPTY_SCREEN_CONTEXT
+    if (settings.enhanceScreenCaptureEnabled === true) {
+      pulsePhase = 'notes'
+      try {
+        notes = await raceDeadline(notesTracked, 1600, 'VISION_WAIT')
+        logEnhance(t0, 'notes-ready', notes.slice(0, 40))
+      } catch {
+        logEnhance(t0, 'notes-skip')
         showHud({
           kind: 'generating',
-          text: t('voice.hud.enhancing'),
-          detail: t('voice.hud.enhancingDetail'),
-          icon: 'think'
+          text: t('voice.hud.enhanceReading'),
+          detail: t('voice.hud.enhanceReadingSlow'),
+          icon: 'look'
         })
+        notes = EMPTY_SCREEN_CONTEXT
       }
-    )
+    } else {
+      logEnhance(t0, 'notes-off')
+    }
+
+    if (holdVisionAbort && !holdVisionAbort.signal.aborted) {
+      holdVisionAbort.abort()
+    }
+    if (myRun !== runId) throw new TaskCancelledError()
+    pulsePhase = 'write'
+    const rewritten = await rewriteSpokenAsAiPrompt(settings, spoken, notes, signal)
+    logEnhance(t0, 'rewritten', `${rewritten.length}c`)
     if (myRun !== runId) throw new TaskCancelledError()
 
-    const result = await pasteIntoFrontApp(enhanced, 'keep-clipboard')
+    stopPulse()
+    stopPulse = null
+    const result = await pasteIntoFrontApp(rewritten, 'keep-clipboard')
     if (myRun !== runId) throw new TaskCancelledError()
     if (result === 'pasted') {
-      showHud({ kind: 'done', text: t('voice.hud.enhancedPasted') })
+      showHud({
+        kind: 'done',
+        text: t('voice.hud.enhancedPasted')
+      })
     } else {
       showHud({ kind: 'done', text: t('voice.hud.pasteFail') })
     }
@@ -296,9 +397,11 @@ export async function endVoiceHold(): Promise<void> {
     if (isTaskCancelled(err) || myRun !== runId) {
       return
     }
+    logEnhance(t0, 'error', err instanceof Error ? err.message : String(err))
     const message = err instanceof Error ? err.message : String(err)
     showHud({ kind: 'error', text: message.slice(0, 80) })
   } finally {
+    stopPulse?.()
     if (myRun === runId) {
       recording = false
       busy = false
@@ -406,7 +509,11 @@ export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<voi
           detail: partial
         })
       })
-      requestId = await startMicRecording({ stream: prefersLocalStreamAsr(settings) })
+      requestId = await raceDeadline(
+        startMicRecording({ stream: prefersLocalStreamAsr(settings) }),
+        12_000,
+        '麦克风迟迟没打开，请再试一次'
+      )
       recording = true
       notifyActivityChanged()
     } catch (err) {
@@ -467,7 +574,7 @@ export async function toggleVoiceInput(opts?: { fromUi?: boolean }): Promise<voi
     } else {
       showHud({ kind: 'done', text: t('voice.hud.pasteFail') })
     }
-    maybeCloudProofread(settings, buffer, mime, usedLocal, text)
+    maybeCloudProofread(settings, buffer, mime, usedLocal, text, result, myRun)
     if (!tapFromUi) notifySkillGuideStep('voice', true)
   } catch (err) {
     if (isTaskCancelled(err) || myRun !== runId) {

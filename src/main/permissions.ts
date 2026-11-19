@@ -1,5 +1,4 @@
 import { app, shell, systemPreferences } from 'electron'
-import { t } from '../shared/i18n'
 
 export type MacPermissionSnapshot = {
   screen: string
@@ -25,21 +24,25 @@ export function hasMacAccessibility(): boolean {
   return systemPreferences.isTrustedAccessibilityClient(false)
 }
 
+/** 实际截到过图则视为已授权（macOS 26 上 getMediaAccessStatus('screen') 常误报 denied）。 */
+let screenCaptureVerified = false
+
+export function markMacScreenCaptureVerified(): void {
+  screenCaptureVerified = true
+}
+
 export function getMacPermissionSnapshot(): MacPermissionSnapshot {
+  const api = systemPreferences.getMediaAccessStatus('screen')
   return {
-    screen: systemPreferences.getMediaAccessStatus('screen'),
+    screen: screenCaptureVerified ? 'granted' : api,
     microphone: systemPreferences.getMediaAccessStatus('microphone'),
-    // 展示用：系统是否勾选；不等于我们会去调 AX API
     accessibility: hasMacAccessibility()
   }
 }
 
+/** 已不再拦截；保留给看屏幕等旧调用。 */
 export function assertMacScreenCaptureAllowed(): void {
-  if (process.platform !== 'darwin') return
-  const status = systemPreferences.getMediaAccessStatus('screen')
-  if (status === 'denied' || status === 'restricted') {
-    throw new Error(t('error.screenCapture', { name: t('brand.name') }))
-  }
+  return
 }
 
 export async function openMacPrivacyPane(

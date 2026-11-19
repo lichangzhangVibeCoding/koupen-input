@@ -56,7 +56,8 @@ export function matchPromptScene(spoken: string, screenNotes: string): PromptSce
 }
 
 export function formatPromptSceneBlock(pack: PromptScenePack): string {
-  return `【本轮场景：${pack.name}（${pack.id}）】
+  return `【本轮代理：${pack.name}（${pack.id}）】
+${pack.agentInstruction}
 输出骨架：${pack.outputSkeleton}
 允许补全：${pack.allowFill}
 禁止：${pack.forbid}`

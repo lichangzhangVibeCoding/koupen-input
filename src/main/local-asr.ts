@@ -102,38 +102,33 @@ export async function wavToCompactOpus(
   writeFileSync(inPath, wav)
   try {
     try {
-      await execFileAsync(ffmpeg, [
-        '-y',
-        '-i',
-        inPath,
-        '-ar',
-        '16000',
-        '-ac',
-        '1',
-        '-c:a',
-        'libopus',
-        '-b:a',
-        '16k',
-        outPath
-      ])
+      await execFileAsync(
+        ffmpeg,
+        ['-y', '-i', inPath, '-ar', '16000', '-ac', '1', '-c:a', 'libopus', '-b:a', '16k', outPath],
+        { timeout: 8000 }
+      )
       return { buffer: readFileSync(outPath), mime: 'audio/ogg', filename: 'speech.ogg' }
     } catch {
       const mp3Path = join(tmpdir(), `vip-asr-up-${id}.mp3`)
       try {
-        await execFileAsync(ffmpeg, [
-          '-y',
-          '-i',
-          inPath,
-          '-ar',
-          '16000',
-          '-ac',
-          '1',
-          '-codec:a',
-          'libmp3lame',
-          '-b:a',
-          '24k',
-          mp3Path
-        ])
+        await execFileAsync(
+          ffmpeg,
+          [
+            '-y',
+            '-i',
+            inPath,
+            '-ar',
+            '16000',
+            '-ac',
+            '1',
+            '-codec:a',
+            'libmp3lame',
+            '-b:a',
+            '24k',
+            mp3Path
+          ],
+          { timeout: 8000 }
+        )
         return { buffer: readFileSync(mp3Path), mime: 'audio/mpeg', filename: 'speech.mp3' }
       } finally {
         try {

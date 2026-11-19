@@ -279,6 +279,9 @@ export async function testSlot(slot: SlotId): Promise<string> {
       await ensureLocalAsr()
       return '本地语音模型可用'
     }
+    if (usesMembershipCloud(settings)) {
+      return '官方语音可用（录完转写，按分钟扣积分）'
+    }
     if (!settings.sttApiKey.trim()) throw new Error('请先填写语音 API Key')
     // lightweight: just check tags/models endpoint or a tiny fake — use transcriptions with empty fails
     // Instead hit GET models if available

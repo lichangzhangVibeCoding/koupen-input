@@ -25,7 +25,7 @@ export const SLOT_META: Record<
 > = {
   asr: {
     label: '语音识别',
-    hint: '即刻对话：默认本机中英流式听写（免积分）'
+    hint: '即刻对话：默认云端语音；官方会员 / 自配 Key 可在语音卡打开「本机语音」'
   },
   vision: {
     label: '视觉理解',

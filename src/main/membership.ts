@@ -237,6 +237,10 @@ function membershipErrorText(j: {
 }
 
 export function formatMembershipHttpError(status: number, body: string): string {
+  // 会员站前置 OpenResty 约 60s 拿不到正文就回 504 HTML。说清是网关掐断，别让用户以为模型坏了。
+  if ((status === 504 || status === 502) && /<html|openresty|nginx|gateway time-?out/i.test(body)) {
+    return `会员服务网关超时 (${status})：服务器约 60 秒还没拿到模型结果就断开了，请把话说短一些再试`
+  }
   try {
     const j = JSON.parse(body) as {
       error?: string | { message?: string }
@@ -252,6 +256,10 @@ export function formatMembershipHttpError(status: number, body: string): string 
     // PHP/Node wrap empty upstream bodies as { error: "upstream" } — not a claim that SiliconFlow is down.
     if (/^upstream$/i.test(errText) || (status >= 500 && errText === 'empty response')) {
       const detail = typeof j.detail === 'string' ? j.detail.trim() : ''
+      // 服务端 50s 主动放弃上游（早于 60s 网关），文案要说慢而不是说坏
+      if (/timed?\s?out/i.test(detail)) {
+        return '官方模型这次太慢（约 50 秒没写完）。请把话说短一些再试，或改回「自配 Key」'
+      }
       const extra =
         detail && !/^upstream$/i.test(detail) && detail !== 'empty response'
           ? `：${detail.slice(0, 120)}`

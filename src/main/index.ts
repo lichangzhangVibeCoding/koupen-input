@@ -91,6 +91,19 @@ import { applyDevDockBadge } from './dev-dock'
 import { warmupCosyVoice } from './speak'
 import { destroyTray, navigateMainWindow, refreshTray, setupTray } from './tray'
 
+// macOS 15+ / 26：Electron 默认走 ScreenCaptureKit，截图常为空，还会反复弹「请退出 Electron」。
+// 必须在 app.ready 之前关掉，才能回到以前能用的截屏路径。
+if (process.platform === 'darwin') {
+  app.commandLine.appendSwitch(
+    'disable-features',
+    [
+      'ThumbnailCapturerMac:capture_mode/sc_screenshot_manager',
+      'ScreenCaptureKitPickerScreen',
+      'ScreenCaptureKitStreamPickerSonoma'
+    ].join(',')
+  )
+}
+
 const isDevBuild = !app.isPackaged
 
 function syncAppLocale(settings?: AppSettings): void {

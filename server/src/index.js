@@ -378,7 +378,9 @@ function requireAdmin(req, res, next) {
 app.post('/v1/admin/login', (req, res) => {
   const user = String(req.body?.username || '')
   const pass = String(req.body?.password || '')
-  if (user !== (process.env.ADMIN_USER || 'admin') || pass !== (process.env.ADMIN_PASS || 'Lizhenning@521')) {
+  const adminUser = process.env.ADMIN_USER || 'admin'
+  const adminPass = process.env.ADMIN_PASS || ''
+  if (!adminPass || user !== adminUser || pass !== adminPass) {
     return res.status(401).json({ error: '用户名或密码错误' })
   }
   const raw = newToken()

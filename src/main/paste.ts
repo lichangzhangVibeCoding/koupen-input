@@ -36,6 +36,43 @@ export async function pasteIntoFrontApp(
   }
 }
 
+/**
+ * 撤掉上一次粘贴再贴新稿。失败只回 clipboard、不再 Cmd/Ctrl+V，
+ * 避免「原文 + 校对稿」叠成两段。
+ */
+export async function replaceLastPastedText(
+  text: string,
+  mode: PasteMode = 'restore-clipboard'
+): Promise<'pasted' | 'clipboard'> {
+  try {
+    await undoLastEdit()
+    await new Promise<void>((resolve) => setTimeout(resolve, 80))
+  } catch {
+    return 'clipboard'
+  }
+  return pasteIntoFrontApp(text, mode)
+}
+
+async function undoLastEdit(): Promise<void> {
+  if (process.platform === 'win32') {
+    await execFileAsync('powershell.exe', [
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('^z')"
+    ])
+    return
+  }
+  if (!macAccessibilityApisAllowed() || !hasMacAccessibility()) {
+    throw new Error('accessibility required')
+  }
+  await execFileAsync('osascript', [
+    '-e',
+    'tell application "System Events" to keystroke "z" using command down'
+  ])
+}
+
 async function pasteMac(): Promise<void> {
   // 未签名包即使勾了辅助功能，System Events 也会反复弹窗 → 只用剪贴板兜底
   if (!macAccessibilityApisAllowed() || !hasMacAccessibility()) {

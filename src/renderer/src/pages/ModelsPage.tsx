@@ -310,14 +310,20 @@ export default function ModelsPage() {
     }
   }
 
-  async function onDownloadStreamAsr() {
+  async function onDownloadStreamAsr(preferOn?: boolean) {
     setBusy('asr-stream')
     setPageStatus(null)
     setProgress('正在下载中英流式语音…')
     try {
       await window.vipChat.ensureStreamAsr()
       await refresh()
-      setPageStatus({ type: 'ok', text: '本机中英流式语音已就绪 · 听写免积分' })
+      const usingLocal = preferOn ?? form.voiceAsrMode !== 'cloud'
+      setPageStatus({
+        type: 'ok',
+        text: usingLocal
+          ? '本机语音已就绪，听写走本机（免积分）'
+          : '本机语音已就绪。打开语音卡「本机语音」后才会改用本机。'
+      })
       setProgress('')
     } catch (e) {
       setPageStatus({
@@ -326,6 +332,33 @@ export default function ModelsPage() {
       })
     } finally {
       setBusy('')
+    }
+  }
+
+  async function onPreferLocalAsr(checked: boolean) {
+    const next: AppSettings = {
+      ...form,
+      voiceAsrMode: checked ? 'local-stream' : 'cloud'
+    }
+    try {
+      await window.vipChat.saveSettings(next)
+      setForm(next)
+      await refresh()
+      setSlotFeedback((prev) => ({
+        ...prev,
+        asr: {
+          type: 'ok',
+          text: checked ? '已改用本机语音（免积分）' : '已改回官方语音（录完再转）'
+        }
+      }))
+      if (checked && !dash?.streamAsr.installed) {
+        await onDownloadStreamAsr(true)
+      }
+    } catch (e) {
+      setSlotFeedback((prev) => ({
+        ...prev,
+        asr: { type: 'err', text: e instanceof Error ? e.message : String(e) }
+      }))
     }
   }
 
@@ -400,18 +433,24 @@ export default function ModelsPage() {
   const scheme = deriveScheme(form)
   const switching = busy === 'scheme'
 
+  const preferLocalAsr = form.voiceAsrMode !== 'cloud'
+  const localAsrReady = Boolean(dash?.streamAsr?.installed)
   const schemeHint =
     scheme === 'official'
-      ? '听写本机流式（免积分）· 视觉/回复官方优化模型 · 按次扣积分'
-      : scheme === 'local'
+      ? preferLocalAsr && localAsrReady
+        ? '听写本机流式（免积分）· 视觉/回复官方优化模型 · 按次扣积分'
+        : '听写官方语音（录完再转、扣积分）· 视觉/回复官方优化模型'
+        : scheme === 'local'
         ? '本地模型 · 数据不出机 · 本地不费钱（不扣积分）'
-        : '自配 Key · 不消耗积分 · 模型费用自理'
+        : preferLocalAsr && localAsrReady
+          ? '听写本机流式 · 视觉/回复自配 Key · 不消耗积分'
+          : '自配 Key · 不消耗积分 · 模型费用自理'
 
   return (
     <section className="models-page">
       <h2 className="page-title">模型</h2>
       <p className="page-desc models-desc">
-        默认官方会员：听写走本机流式（免积分）。视觉 / 回复走官方优化模型。也可改自配 Key 或本地。
+        默认官方会员：三槽走官方优化模型。官方会员和自配 Key 都可以在语音卡打开「本机语音」。也可改本地套件。
       </p>
 
       {/* ① 方案三选一 */}
@@ -482,8 +521,8 @@ export default function ModelsPage() {
             </p>
             <p className="status">
               {loggedIn
-                ? '听写默认本机流式（免积分）。视觉 / 回复走官方优化模型，按次扣积分。不消耗你自己的第三方额度。'
-                : '注册即开体验积分。听写默认本机流式。视觉 / 回复免填 Key、按次扣积分。也可改用自配 Key 或本地模型。'}
+                ? '语音 / 视觉 / 回复默认走官方优化模型，按次扣积分。不消耗你自己的第三方额度。听写要改本机，到下方语音卡打开开关。'
+                : '注册即开体验积分。语音 / 视觉 / 回复免填 Key、按次扣积分。也可改用自配 Key 或本地模型。'}
             </p>
             <div className="row models-panel-actions">
               {loggedIn ? (
@@ -504,7 +543,7 @@ export default function ModelsPage() {
             <p className="models-panel-lead">
               自配 Key · 不消耗本产品积分 · 模型费用按你的服务商账单自理。
             </p>
-            <p className="status">填一个硅基流动 Key，可一键同步三槽推荐模型；也可在高级里改别家。</p>
+            <p className="status">填一个硅基流动 Key，可一键同步三槽推荐模型；也可在高级里改别家。听写要改本机，到下方语音卡打开开关。</p>
             <div className="models-byok-form">
               <input
                 type="password"
@@ -573,7 +612,7 @@ export default function ModelsPage() {
           {slotsOrder.map((id) => {
             const ready = slotReady(id)
             const detail =
-              id === 'asr' && dash?.streamAsr
+              id === 'asr' && preferLocalAsr && dash?.streamAsr
                 ? dash.streamAsr.detail
                 : scheme === 'official' && ready
                 ? '官方优化模型'
@@ -590,6 +629,24 @@ export default function ModelsPage() {
                   </span>
                 </div>
                 <p className="models-cap-detail">{detail}</p>
+                {id === 'asr' && scheme !== 'local' ? (
+                  <label className="models-cap-toggle">
+                    <span>
+                      {localAsrReady
+                        ? scheme === 'official'
+                          ? '本机语音 · 边说边出字、不扣积分'
+                          : '本机语音 · 边说边出字、不走云端 Key'
+                        : '本机语音 · 打开会先下载（约 200MB）'}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={preferLocalAsr}
+                      disabled={Boolean(busy)}
+                      onChange={(e) => void onPreferLocalAsr(e.target.checked)}
+                    />
+                    <span className="settings-switch" aria-hidden />
+                  </label>
+                ) : null}
                 {id === 'asr' && dash?.streamAsr && !dash.streamAsr.installed ? (
                   <button
                     type="button"
@@ -601,6 +658,9 @@ export default function ModelsPage() {
                       ? '下载中…'
                       : '下载本机语音'}
                   </button>
+                ) : null}
+                {progress && id === 'asr' && busy === 'asr-stream' ? (
+                  <p className="status">{progress}</p>
                 ) : null}
                 {scheme !== 'official' || id === 'asr' ? (
                   <button

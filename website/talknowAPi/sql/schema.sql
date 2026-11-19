@@ -1,4 +1,4 @@
--- TalkNow membership tables (prefix tn_) for shared DB sq_wele
+-- TalkNow membership tables (prefix tn_). 模型路由的 Key 只存在库里，不要 dump 进仓库。
 SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS tn_users (
@@ -137,6 +137,61 @@ CREATE TABLE IF NOT EXISTS tn_roadmap_items (
   detail TEXT NOT NULL,
   status VARCHAR(32) NOT NULL DEFAULT 'pending',
   sort_order INT NOT NULL DEFAULT 0,
+  source_requirement_id INT UNSIGNED NOT NULL DEFAULT 0,
   updated_at VARCHAR(40) NOT NULL,
   created_at VARCHAR(40) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tn_competitors (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  slug VARCHAR(128) NOT NULL UNIQUE,
+  name VARCHAR(256) NOT NULL,
+  type VARCHAR(32) NOT NULL DEFAULT 'commercial',
+  website_url VARCHAR(512) NOT NULL DEFAULT '',
+  repo_url VARCHAR(512) NOT NULL DEFAULT '',
+  docs_url VARCHAR(512) NOT NULL DEFAULT '',
+  overlap_score TINYINT NOT NULL DEFAULT 3,
+  threat_level VARCHAR(32) NOT NULL DEFAULT 'watch',
+  status VARCHAR(32) NOT NULL DEFAULT 'active',
+  review_cadence_days INT NOT NULL DEFAULT 30,
+  last_reviewed_at VARCHAR(40) NOT NULL DEFAULT '',
+  next_review_at VARCHAR(40) NOT NULL DEFAULT '',
+  summary TEXT NOT NULL,
+  body_md MEDIUMTEXT NOT NULL,
+  tags_json TEXT NOT NULL,
+  created_at VARCHAR(40) NOT NULL,
+  updated_at VARCHAR(40) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tn_competitor_reports (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  competitor_id INT UNSIGNED NOT NULL,
+  report_type VARCHAR(32) NOT NULL DEFAULT 'periodic',
+  title VARCHAR(256) NOT NULL,
+  body_md MEDIUMTEXT NOT NULL,
+  source_urls_json TEXT NOT NULL,
+  key_findings_json TEXT NOT NULL,
+  reviewed_at VARCHAR(40) NOT NULL,
+  created_at VARCHAR(40) NOT NULL,
+  INDEX (competitor_id),
+  FOREIGN KEY (competitor_id) REFERENCES tn_competitors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS tn_product_requirements (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(256) NOT NULL,
+  detail_md MEDIUMTEXT NOT NULL,
+  priority VARCHAR(8) NOT NULL DEFAULT 'P2',
+  status VARCHAR(32) NOT NULL DEFAULT 'backlog',
+  source_type VARCHAR(32) NOT NULL DEFAULT 'manual',
+  source_competitor_id INT UNSIGNED NOT NULL DEFAULT 0,
+  source_report_id INT UNSIGNED NOT NULL DEFAULT 0,
+  roadmap_item_id INT UNSIGNED NOT NULL DEFAULT 0,
+  tags_json TEXT NOT NULL,
+  acceptance_md TEXT NOT NULL,
+  sort_order INT NOT NULL DEFAULT 100,
+  created_at VARCHAR(40) NOT NULL,
+  updated_at VARCHAR(40) NOT NULL,
+  INDEX (status),
+  INDEX (source_competitor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

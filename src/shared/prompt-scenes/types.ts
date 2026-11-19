@@ -12,6 +12,8 @@ export type PromptScenePack = {
   excludeTriggers?: string[]
   priority: number
   weight: number
+  /** 注入线上模型的角色：本轮只扮演这一类任务代理 */
+  agentInstruction: string
   /** 注入文字模型的场景约定 */
   outputSkeleton: string
   allowFill: string

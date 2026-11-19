@@ -20,7 +20,8 @@ PHP 5.2 + MySQL，部署目录：`website/talknowAPi/` → FTP
 
 1. 复制 `config.example.php` → `config.php`（已 gitignore）
 2. 填数据库与管理员密码；可选填上游 `api_key`
-3. Stripe 测试结算：填 `stripe_secret_key`、`stripe_webhook_secret`（Dashboard 端点 `…/index.php/v1/stripe/webhook`），`stripe_prices` 已有沙盒 Price id
-4. 部署：`FTP_PASS=… python3 deploy-ftp.py`
+3. Stripe 测试结算：填 `stripe_secret_key`、`stripe_webhook_secret`（Dashboard 端点 `…/index.php/v1/stripe/webhook`）和 `stripe_prices`
+4. 上游模型名与 API Key 只写在本机 `config.php` / 后台「模型路由」，不要提交 dump 或把线上模型写进 example
+5. 部署：`FTP_PASS=… python3 deploy-ftp.py`
 
 主机约束：IIS 7 + PHP 5.2.6；勿用短数组 / `??` / `__DIR__` / 函数返回值直接 `[]` 取值。

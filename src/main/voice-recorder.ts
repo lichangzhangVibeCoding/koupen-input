@@ -162,6 +162,17 @@ async function start(id) {
   window.recBridge.started({ requestId: requestId })
 }
 
+function int16ToBase64(i16) {
+  var u8 = new Uint8Array(i16.buffer, i16.byteOffset, i16.byteLength)
+  var CHUNK = 0x8000
+  var s = ''
+  for (var i = 0; i < u8.length; i += CHUNK) {
+    var sub = u8.subarray(i, Math.min(i + CHUNK, u8.length))
+    s += String.fromCharCode.apply(null, sub)
+  }
+  return btoa(s)
+}
+
 function stop() {
   flushTick()
   if (!pcmChunks.length) {
@@ -170,14 +181,13 @@ function stop() {
     return
   }
   var i16 = concatInt16(pcmChunks)
-  var bytes = Array.from(new Uint8Array(i16.buffer, i16.byteOffset, i16.byteLength))
   cleanupGraph()
   pcmChunks = []
   tickBuf = []
   window.recBridge.result({
     requestId: requestId,
     ok: true,
-    bytes: bytes,
+    pcmB64: int16ToBase64(i16),
     mime: 'audio/pcm'
   })
 }
@@ -213,12 +223,12 @@ function ensureIpc(): void {
     'voice:recorder-result',
     (
       _e,
-      payload: { requestId: string; ok: boolean; bytes?: number[]; mime?: string; error?: string }
+      payload: { requestId: string; ok: boolean; bytes?: number[]; pcmB64?: string; mime?: string; error?: string }
     ) => {
       if (!pending || pending.requestId !== payload.requestId) return
       const { resolve, reject } = pending
       pending = null
-      if (!payload.ok || !payload.bytes) {
+      if (!payload.ok || (!payload.pcmB64 && !payload.bytes)) {
         resetPcmSession()
         if (payload.error === 'CANCELLED') {
           reject(new TaskCancelledError())
@@ -227,7 +237,9 @@ function ensureIpc(): void {
         }
         return
       }
-      const raw = Buffer.from(payload.bytes)
+      const raw = payload.pcmB64
+        ? Buffer.from(payload.pcmB64, 'base64')
+        : Buffer.from(payload.bytes || [])
       const mime = payload.mime || 'audio/pcm'
       const wav = /wav/i.test(mime) ? raw : encodeWav16kMono(raw)
       const liveText = streamActive ? peekStreamPartial() : ''
@@ -330,7 +342,7 @@ export async function stopMicRecording(
         pending = null
         reject(new Error('录音超时，请重试'))
       }
-    }, 600000)
+    }, 8000)
   })
 }
 

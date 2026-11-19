@@ -13,7 +13,7 @@ export type InferenceMode = 'local' | 'cloud'
 /** 云端模型路由：自配 Key，或走官方会员薄代理 */
 export type ModelRoutingMode = 'byok' | 'membership'
 
-/** 即刻对话听写：默认本机流式；cloud = 硅基/会员文件 ASR */
+/** 即刻对话听写：默认官方/自配云端文件 ASR；local-stream = 本机 Zipformer */
 export type VoiceAsrMode = 'local-stream' | 'cloud'
 
 export type { PersonaPackId }
@@ -46,7 +46,13 @@ export interface AppSettings {
    */
   voiceFixSttTyposEnabled: boolean
   /**
-   * 听写引擎。默认本机 Zipformer 流式；cloud = 录完再走官方/自配文件 ASR
+   * 与AI对话（按住增强）：是否截当前激活窗口并按窗口内容整理提示词。
+   * 默认关；看屏幕问答仍截整屏。
+   */
+  enhanceScreenCaptureEnabled: boolean
+  /**
+   * 听写引擎。默认 cloud = 录完再走官方/自配文件 ASR；
+   * local-stream = 本机 Zipformer（模型页语音卡「本机语音」打开后）
    */
   voiceAsrMode: VoiceAsrMode
   /**
@@ -342,7 +348,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   voiceInputEnabled: true,
   voiceStripFillersEnabled: true,
   voiceFixSttTyposEnabled: false,
-  voiceAsrMode: 'local-stream',
+  enhanceScreenCaptureEnabled: false,
+  voiceAsrMode: 'cloud',
   voiceCloudProofread: false,
   voiceTrigger: 'rightCommand',
   deAiToneEnabled: true,

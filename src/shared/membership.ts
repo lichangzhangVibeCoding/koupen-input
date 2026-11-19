@@ -8,6 +8,8 @@ export type MembershipCapability =
   | 'screen_ask'
   | 'screen_quiz'
   | 'chat'
+  /** 与AI对话写提示词：与 reply 同价，但服务端会关掉模型思考 */
+  | 'enhance'
 
 export type MembershipUsage = {
   /** 本周期套餐基础额度 */

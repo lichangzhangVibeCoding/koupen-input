@@ -6,6 +6,7 @@ release
 *.log
 .env
 .env.*
+!.env.example
 # 用户数据（勿提交 / 勿打进安装包）
 **/vip-chat.sqlite
 **/vip-chat.sqlite-*
@@ -14,4 +15,14 @@ release
 *.sqlite-wal
 *.sqlite-shm
 
+# 本机编译残留与编辑器
+.cursor/
+*.tsbuildinfo
+src/**/*.js
+src/**/*.d.ts
+!src/preload/index.d.ts
+
+# 会员后台：真实 config、模型路由密钥、下载包都不进仓库
 website/talknowAPi/config.php
+website/dl/
+server/data/

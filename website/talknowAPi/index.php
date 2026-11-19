@@ -341,6 +341,40 @@ function tn_admin_route($method, $path, $body) {
     foreach ($pdo->query('SELECT status, COUNT(*) AS c FROM tn_roadmap_items GROUP BY status')->fetchAll() as $row) {
       if (isset($rm[$row['status']])) $rm[$row['status']] = (int)$row['c'];
     }
+    tn_ensure_competitor_tables();
+    $today = gmdate('Y-m-d');
+    $competitorsOverdue = array();
+    $stOv = $pdo->query("SELECT * FROM tn_competitors WHERE status='active' ORDER BY next_review_at ASC, id ASC");
+    foreach ($stOv->fetchAll() as $crow) {
+      if (tn_is_competitor_overdue($crow)) {
+        $competitorsOverdue[] = tn_competitor_public($crow, true);
+      }
+    }
+    $requirementsPending = array();
+    $reqSt = $pdo->query(
+      "SELECT r.*, c.name AS competitor_name FROM tn_product_requirements r
+       LEFT JOIN tn_competitors c ON c.id=r.source_competitor_id
+       WHERE r.status='backlog'
+       ORDER BY FIELD(r.priority,'P0','P1','P2','P3'), r.sort_order, r.id
+       LIMIT 20"
+    );
+    foreach ($reqSt->fetchAll() as $rrow) {
+      $requirementsPending[] = tn_requirement_public($rrow, isset($rrow['competitor_name']) ? $rrow['competitor_name'] : '');
+    }
+    $recentReports = array();
+    $rpSt = $pdo->query(
+      "SELECT rep.*, c.name AS competitor_name, c.slug AS competitor_slug
+       FROM tn_competitor_reports rep
+       INNER JOIN tn_competitors c ON c.id=rep.competitor_id
+       ORDER BY rep.reviewed_at DESC, rep.id DESC LIMIT 5"
+    );
+    foreach ($rpSt->fetchAll() as $rprow) {
+      $pub = tn_report_public($rprow);
+      $pub['competitorName'] = $rprow['competitor_name'];
+      $pub['competitorSlug'] = $rprow['competitor_slug'];
+      $recentReports[] = $pub;
+    }
+    $competitorCount = (int)$pdo->query("SELECT COUNT(*) FROM tn_competitors WHERE status='active'")->fetchColumn();
     tn_json(array(
       'users' => $users,
       'pendingOrders' => $pending,
@@ -349,6 +383,10 @@ function tn_admin_route($method, $path, $body) {
       'routesConfigured' => $routeOk,
       'routesTotal' => count($routes),
       'roadmap' => $rm,
+      'competitorCount' => $competitorCount,
+      'competitorsOverdue' => $competitorsOverdue,
+      'requirementsPending' => $requirementsPending,
+      'recentReports' => $recentReports,
     ));
   }
   // 开通 / 变更按月会员（不与流量包混用）
@@ -591,7 +629,7 @@ function tn_admin_route($method, $path, $body) {
     }
     tn_json(array(
       'articles' => $st->fetchAll(),
-      'categories' => array('凭证账号', '核心架构', '踩坑记录', '功能教程', '运维部署', '其它')
+      'categories' => array('凭证账号', '核心架构', '踩坑记录', '功能教程', '运维部署', '竞品调研', '其它')
     ));
   }
   if ($method === 'POST' && $path === '/v1/admin/kb') {
@@ -672,6 +710,279 @@ function tn_admin_route($method, $path, $body) {
     $pdo->prepare('DELETE FROM tn_roadmap_items WHERE id=?')->execute(array($rid));
     tn_json(array('ok' => true, 'id' => $rid));
   }
+  if ($method === 'GET' && $path === '/v1/admin/competitors') {
+    tn_ensure_competitor_tables();
+    $rows = $pdo->query('SELECT * FROM tn_competitors ORDER BY name ASC, id ASC')->fetchAll();
+    $out = array();
+    foreach ($rows as $row) {
+      $out[] = tn_competitor_public($row, tn_is_competitor_overdue($row));
+    }
+    tn_json(array('competitors' => $out));
+  }
+  if ($method === 'GET' && preg_match('#^/v1/admin/competitors/(\d+)$#', $path, $m)) {
+    tn_ensure_competitor_tables();
+    $cid = (int)$m[1];
+    $st = $pdo->prepare('SELECT * FROM tn_competitors WHERE id=?');
+    $st->execute(array($cid));
+    $row = $st->fetch();
+    if (!$row) tn_json(array('error' => 'not found'), 404);
+    $repSt = $pdo->prepare('SELECT * FROM tn_competitor_reports WHERE competitor_id=? ORDER BY reviewed_at DESC, id DESC');
+    $repSt->execute(array($cid));
+    $reports = array();
+    foreach ($repSt->fetchAll() as $r) $reports[] = tn_report_public($r);
+    $reqSt = $pdo->prepare(
+      'SELECT r.*, c.name AS competitor_name FROM tn_product_requirements r
+       LEFT JOIN tn_competitors c ON c.id=r.source_competitor_id
+       WHERE r.source_competitor_id=? ORDER BY FIELD(r.priority,\'P0\',\'P1\',\'P2\',\'P3\'), r.sort_order, r.id'
+    );
+    $reqSt->execute(array($cid));
+    $reqs = array();
+    foreach ($reqSt->fetchAll() as $r) {
+      $reqs[] = tn_requirement_public($r, isset($r['competitor_name']) ? $r['competitor_name'] : '');
+    }
+    tn_json(array(
+      'competitor' => tn_competitor_public($row, tn_is_competitor_overdue($row)),
+      'reports' => $reports,
+      'requirements' => $reqs,
+    ));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/competitor-save') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    $slug = trim(isset($body['slug']) ? $body['slug'] : '');
+    $name = trim(isset($body['name']) ? $body['name'] : '');
+    if ($name === '') tn_json(array('error' => 'name required'), 400);
+    if ($slug === '') $slug = 'comp-' . substr(tn_token(), 0, 8);
+    $t = tn_now();
+    $tags = isset($body['tags']) && is_array($body['tags']) ? $body['tags'] : array();
+    $cadence = isset($body['reviewCadenceDays']) ? (int)$body['reviewCadenceDays'] : 30;
+    if ($cadence < 1) $cadence = 30;
+    if ($id) {
+      $st = $pdo->prepare('SELECT * FROM tn_competitors WHERE id=?');
+      $st->execute(array($id));
+      $ex = $st->fetch();
+      if (!$ex) tn_json(array('error' => 'not found'), 404);
+      $pdo->prepare(
+        'UPDATE tn_competitors SET slug=?, name=?, type=?, website_url=?, repo_url=?, docs_url=?, overlap_score=?, threat_level=?, status=?, review_cadence_days=?, summary=?, body_md=?, tags_json=?, updated_at=? WHERE id=?'
+      )->execute(array(
+        isset($body['slug']) ? $body['slug'] : $ex['slug'],
+        $name,
+        isset($body['type']) ? $body['type'] : $ex['type'],
+        isset($body['websiteUrl']) ? $body['websiteUrl'] : $ex['website_url'],
+        isset($body['repoUrl']) ? $body['repoUrl'] : $ex['repo_url'],
+        isset($body['docsUrl']) ? $body['docsUrl'] : $ex['docs_url'],
+        isset($body['overlapScore']) ? (int)$body['overlapScore'] : (int)$ex['overlap_score'],
+        isset($body['threatLevel']) ? $body['threatLevel'] : $ex['threat_level'],
+        isset($body['status']) ? $body['status'] : $ex['status'],
+        $cadence,
+        isset($body['summary']) ? $body['summary'] : $ex['summary'],
+        isset($body['bodyMd']) ? $body['bodyMd'] : $ex['body_md'],
+        tn_encode_json($tags),
+        $t, $id
+      ));
+      tn_json(array('ok' => true, 'id' => $id));
+    }
+    $next = gmdate('Y-m-d\TH:i:s', time() + ($cadence * 86400)) . '.000Z';
+    $pdo->prepare(
+      'INSERT INTO tn_competitors (slug,name,type,website_url,repo_url,docs_url,overlap_score,threat_level,status,review_cadence_days,last_reviewed_at,next_review_at,summary,body_md,tags_json,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+    )->execute(array(
+      $slug, $name,
+      isset($body['type']) ? $body['type'] : 'commercial',
+      isset($body['websiteUrl']) ? $body['websiteUrl'] : '',
+      isset($body['repoUrl']) ? $body['repoUrl'] : '',
+      isset($body['docsUrl']) ? $body['docsUrl'] : '',
+      isset($body['overlapScore']) ? (int)$body['overlapScore'] : 3,
+      isset($body['threatLevel']) ? $body['threatLevel'] : 'watch',
+      isset($body['status']) ? $body['status'] : 'active',
+      $cadence, '', $next,
+      isset($body['summary']) ? $body['summary'] : '',
+      isset($body['bodyMd']) ? $body['bodyMd'] : '',
+      tn_encode_json($tags), $t, $t
+    ));
+    tn_json(array('ok' => true, 'id' => (int)$pdo->lastInsertId()));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/competitor-delete') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    if (!$id) tn_json(array('error' => 'id required'), 400);
+    $pdo->prepare('UPDATE tn_product_requirements SET source_competitor_id=0, source_report_id=0 WHERE source_competitor_id=?')->execute(array($id));
+    $pdo->prepare('DELETE FROM tn_competitors WHERE id=?')->execute(array($id));
+    tn_json(array('ok' => true, 'id' => $id));
+  }
+  if ($method === 'GET' && $path === '/v1/admin/competitor-reports') {
+    tn_ensure_competitor_tables();
+    $cid = isset($_GET['competitor_id']) ? (int)$_GET['competitor_id'] : 0;
+    if (!$cid) tn_json(array('error' => 'competitor_id required'), 400);
+    $st = $pdo->prepare('SELECT * FROM tn_competitor_reports WHERE competitor_id=? ORDER BY reviewed_at DESC, id DESC');
+    $st->execute(array($cid));
+    $out = array();
+    foreach ($st->fetchAll() as $r) $out[] = tn_report_public($r);
+    tn_json(array('reports' => $out));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/competitor-report-save') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    $cid = isset($body['competitorId']) ? (int)$body['competitorId'] : 0;
+    $title = trim(isset($body['title']) ? $body['title'] : '');
+    if (!$cid) tn_json(array('error' => 'competitorId required'), 400);
+    if ($title === '') tn_json(array('error' => 'title required'), 400);
+    $reviewedAt = trim(isset($body['reviewedAt']) ? $body['reviewedAt'] : '');
+    if ($reviewedAt === '') $reviewedAt = tn_now();
+    $sources = isset($body['sourceUrls']) && is_array($body['sourceUrls']) ? $body['sourceUrls'] : array();
+    $findings = isset($body['keyFindings']) && is_array($body['keyFindings']) ? $body['keyFindings'] : array();
+    $t = tn_now();
+    if ($id) {
+      $st = $pdo->prepare('SELECT * FROM tn_competitor_reports WHERE id=?');
+      $st->execute(array($id));
+      $ex = $st->fetch();
+      if (!$ex) tn_json(array('error' => 'not found'), 404);
+      $cid = (int)$ex['competitor_id'];
+      $pdo->prepare(
+        'UPDATE tn_competitor_reports SET report_type=?, title=?, body_md=?, source_urls_json=?, key_findings_json=?, reviewed_at=? WHERE id=?'
+      )->execute(array(
+        isset($body['reportType']) ? $body['reportType'] : $ex['report_type'],
+        $title,
+        isset($body['bodyMd']) ? $body['bodyMd'] : $ex['body_md'],
+        tn_encode_json($sources),
+        tn_encode_json($findings),
+        $reviewedAt, $id
+      ));
+    } else {
+      $pdo->prepare(
+        'INSERT INTO tn_competitor_reports (competitor_id,report_type,title,body_md,source_urls_json,key_findings_json,reviewed_at,created_at) VALUES (?,?,?,?,?,?,?,?)'
+      )->execute(array(
+        $cid,
+        isset($body['reportType']) ? $body['reportType'] : 'periodic',
+        $title,
+        isset($body['bodyMd']) ? $body['bodyMd'] : '',
+        tn_encode_json($sources),
+        tn_encode_json($findings),
+        $reviewedAt, $t
+      ));
+      $id = (int)$pdo->lastInsertId();
+    }
+    tn_bump_competitor_review($cid, $reviewedAt);
+    tn_json(array('ok' => true, 'id' => $id));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/competitor-report-delete') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    if (!$id) tn_json(array('error' => 'id required'), 400);
+    $pdo->prepare('UPDATE tn_product_requirements SET source_report_id=0 WHERE source_report_id=?')->execute(array($id));
+    $pdo->prepare('DELETE FROM tn_competitor_reports WHERE id=?')->execute(array($id));
+    tn_json(array('ok' => true, 'id' => $id));
+  }
+  if ($method === 'GET' && $path === '/v1/admin/requirements') {
+    tn_ensure_competitor_tables();
+    $where = '1=1';
+    $params = array();
+    if (isset($_GET['status']) && trim($_GET['status']) !== '') {
+      $where .= ' AND r.status=?';
+      $params[] = trim($_GET['status']);
+    }
+    if (isset($_GET['priority']) && trim($_GET['priority']) !== '') {
+      $where .= ' AND r.priority=?';
+      $params[] = trim($_GET['priority']);
+    }
+    if (isset($_GET['competitor_id']) && (int)$_GET['competitor_id'] > 0) {
+      $where .= ' AND r.source_competitor_id=?';
+      $params[] = (int)$_GET['competitor_id'];
+    }
+    $sql = "SELECT r.*, c.name AS competitor_name FROM tn_product_requirements r
+            LEFT JOIN tn_competitors c ON c.id=r.source_competitor_id
+            WHERE $where ORDER BY FIELD(r.priority,'P0','P1','P2','P3'), r.sort_order, r.id";
+    $st = $pdo->prepare($sql);
+    $st->execute($params);
+    $out = array();
+    $summary = array('backlog' => 0, 'accepted' => 0, 'in_progress' => 0, 'done' => 0, 'wont_do' => 0);
+    foreach ($st->fetchAll() as $row) {
+      if (isset($summary[$row['status']])) $summary[$row['status']]++;
+      $out[] = tn_requirement_public($row, isset($row['competitor_name']) ? $row['competitor_name'] : '');
+    }
+    tn_json(array('requirements' => $out, 'summary' => $summary));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/requirement-save') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    $title = trim(isset($body['title']) ? $body['title'] : '');
+    if ($title === '') tn_json(array('error' => 'title required'), 400);
+    $t = tn_now();
+    $tags = isset($body['tags']) && is_array($body['tags']) ? $body['tags'] : array();
+    if ($id) {
+      $st = $pdo->prepare('SELECT * FROM tn_product_requirements WHERE id=?');
+      $st->execute(array($id));
+      $ex = $st->fetch();
+      if (!$ex) tn_json(array('error' => 'not found'), 404);
+      $pdo->prepare(
+        'UPDATE tn_product_requirements SET title=?, detail_md=?, priority=?, status=?, source_type=?, source_competitor_id=?, source_report_id=?, tags_json=?, acceptance_md=?, sort_order=?, updated_at=? WHERE id=?'
+      )->execute(array(
+        $title,
+        isset($body['detailMd']) ? $body['detailMd'] : $ex['detail_md'],
+        isset($body['priority']) ? $body['priority'] : $ex['priority'],
+        isset($body['status']) ? $body['status'] : $ex['status'],
+        isset($body['sourceType']) ? $body['sourceType'] : $ex['source_type'],
+        isset($body['sourceCompetitorId']) ? (int)$body['sourceCompetitorId'] : (int)$ex['source_competitor_id'],
+        isset($body['sourceReportId']) ? (int)$body['sourceReportId'] : (int)$ex['source_report_id'],
+        tn_encode_json($tags),
+        isset($body['acceptanceMd']) ? $body['acceptanceMd'] : $ex['acceptance_md'],
+        isset($body['sortOrder']) ? (int)$body['sortOrder'] : (int)$ex['sort_order'],
+        $t, $id
+      ));
+      tn_json(array('ok' => true, 'id' => $id));
+    }
+    $pdo->prepare(
+      'INSERT INTO tn_product_requirements (title,detail_md,priority,status,source_type,source_competitor_id,source_report_id,roadmap_item_id,tags_json,acceptance_md,sort_order,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+    )->execute(array(
+      $title,
+      isset($body['detailMd']) ? $body['detailMd'] : '',
+      isset($body['priority']) ? $body['priority'] : 'P2',
+      isset($body['status']) ? $body['status'] : 'backlog',
+      isset($body['sourceType']) ? $body['sourceType'] : 'manual',
+      isset($body['sourceCompetitorId']) ? (int)$body['sourceCompetitorId'] : 0,
+      isset($body['sourceReportId']) ? (int)$body['sourceReportId'] : 0,
+      0,
+      tn_encode_json($tags),
+      isset($body['acceptanceMd']) ? $body['acceptanceMd'] : '',
+      isset($body['sortOrder']) ? (int)$body['sortOrder'] : 100,
+      $t, $t
+    ));
+    tn_json(array('ok' => true, 'id' => (int)$pdo->lastInsertId()));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/requirement-delete') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    if (!$id) tn_json(array('error' => 'id required'), 400);
+    $pdo->prepare('DELETE FROM tn_product_requirements WHERE id=?')->execute(array($id));
+    tn_json(array('ok' => true, 'id' => $id));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/requirement-promote') {
+    tn_ensure_competitor_tables();
+    $id = isset($body['id']) ? (int)$body['id'] : 0;
+    if (!$id) tn_json(array('error' => 'id required'), 400);
+    $st = $pdo->prepare('SELECT * FROM tn_product_requirements WHERE id=?');
+    $st->execute(array($id));
+    $req = $st->fetch();
+    if (!$req) tn_json(array('error' => 'not found'), 404);
+    if ((int)$req['roadmap_item_id'] > 0) {
+      tn_json(array('ok' => true, 'roadmapItemId' => (int)$req['roadmap_item_id'], 'already' => true));
+    }
+    $phase = trim(isset($body['phase']) ? $body['phase'] : '产品');
+    $t = tn_now();
+    $detail = $req['detail_md'];
+    if ($req['acceptance_md'] !== '') {
+      $detail = ($detail !== '' ? $detail . "\n\n" : '') . '验收：' . $req['acceptance_md'];
+    }
+    $pdo->prepare('INSERT INTO tn_roadmap_items (phase,title,detail,status,sort_order,source_requirement_id,updated_at,created_at) VALUES (?,?,?,?,?,?,?,?)')
+      ->execute(array($phase, $req['title'], $detail, 'pending', (int)$req['sort_order'], $id, $t, $t));
+    $rmId = (int)$pdo->lastInsertId();
+    $pdo->prepare('UPDATE tn_product_requirements SET status=?, roadmap_item_id=?, updated_at=? WHERE id=?')
+      ->execute(array('accepted', $rmId, $t, $id));
+    tn_json(array('ok' => true, 'roadmapItemId' => $rmId, 'requirementId' => $id));
+  }
+  if ($method === 'POST' && $path === '/v1/admin/competitor-sync-catalog') {
+    $force = !empty($body['force']);
+    tn_json(tn_sync_competitor_catalog($force));
+  }
   tn_json(array('error' => 'not found', 'path' => $path), 404);
 }
 
@@ -715,7 +1026,9 @@ function tn_proxy_asr() {
   curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
   curl_setopt($ch, CURLOPT_HTTPHEADER, array('Authorization: Bearer ' . $route['api_key']));
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+  // 前置 OpenResty 约 60s 就回 504 HTML，且本机 IIS 会缓冲输出、心跳无效（已实测）。
+  // 主动早于网关放弃，客户端才能拿到可读的 JSON 错误而不是网关错误页。
+  curl_setopt($ch, CURLOPT_TIMEOUT, 50);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
   curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
   curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -755,6 +1068,7 @@ function tn_proxy_chat() {
     'screen_ask' => isset($prices['screenAskCredits']) ? (int)$prices['screenAskCredits'] : 25,
     'screen_quiz' => isset($prices['screenQuizCredits']) ? (int)$prices['screenQuizCredits'] : 15,
     'chat' => isset($prices['replyCredits']) ? (int)$prices['replyCredits'] : 10,
+    'enhance' => isset($prices['replyCredits']) ? (int)$prices['replyCredits'] : 10,
   );
   $cost = isset($costMap[$capability]) ? $costMap[$capability] : $costMap['reply'];
   $pdo = tn_db();
@@ -776,6 +1090,8 @@ function tn_proxy_chat() {
   if (!is_array($payload)) $payload = array();
   // 官方代理一律用后台路由模型，忽略客户端自配 model（否则硅基报 Model does not exist → 会员服务失败）
   $payload['model'] = $route['model_id'];
+  // 写提示词是格式化改写，思考只会把耗时推过前面 60s 网关。看屏幕/答题仍保留思考。
+  if ($capability === 'enhance') $payload['enable_thinking'] = false;
   $requestId = substr(tn_token(), 0, 16);
   $ch = curl_init(rtrim($route['base_url'], '/') . '/chat/completions');
   curl_setopt($ch, CURLOPT_POST, true);
@@ -785,7 +1101,8 @@ function tn_proxy_chat() {
     'Content-Type: application/json',
   ));
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($ch, CURLOPT_TIMEOUT, 180);
+  // 同上：宁可 50s 自己超时回 JSON，也不要让 60s 网关回 504 HTML
+  curl_setopt($ch, CURLOPT_TIMEOUT, 50);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
   curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
   curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);

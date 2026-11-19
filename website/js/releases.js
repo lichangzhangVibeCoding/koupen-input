@@ -1,18 +1,18 @@
 ;(function () {
   var REPO = 'https://github.com/lichangzhangVibeCoding/koupen-input'
   var LATEST = REPO + '/releases/latest'
-  /** Filenames served from site ./dl/ (virtual host). Others → GitHub Releases.
+  /** Only latest Win installer on ./dl/; older versions → GitHub Releases.
    *  Host WAF: /downloads/ path 404; .dmg blocked; .exe/.zip OK. */
-  var SITE_HOSTED = {
-    'TalkNow-0.5.10-x64.exe': true,
-    'TalkNow-0.5.9-x64.exe': true,
-    'TalkNow-0.5.8-x64.exe': true
+  function siteHostedSet(catalog) {
+    var latest = (catalog && catalog.releases && catalog.releases[0]) || null
+    var win = latest && latest.downloads && latest.downloads.winX64
+    return win ? { [win]: true } : {}
   }
   var SITE_DL_DIR = 'dl/'
 
-  function downloadUrl(version, filename) {
+  function downloadUrl(version, filename, catalog) {
     if (!filename) return LATEST
-    if (SITE_HOSTED[filename]) {
+    if (siteHostedSet(catalog)[filename]) {
       var base = document.body && document.body.getAttribute('data-page') === 'changelog' ? '../' + SITE_DL_DIR : './' + SITE_DL_DIR
       return base + encodeURIComponent(filename)
     }
@@ -80,6 +80,37 @@
     throw new Error('releases catalog unavailable')
   }
 
+  function showMacSoonToast() {
+    var el = document.getElementById('tnToast')
+    if (!el) {
+      el = document.createElement('div')
+      el.id = 'tnToast'
+      el.className = 'tn-toast'
+      el.setAttribute('role', 'status')
+      document.body.appendChild(el)
+    }
+    el.textContent = t('download.macSoonToast')
+    el.classList.add('is-on')
+    clearTimeout(showMacSoonToast._timer)
+    showMacSoonToast._timer = setTimeout(function () {
+      el.classList.remove('is-on')
+    }, 2200)
+  }
+
+  function bindMacComingSoon() {
+    document.querySelectorAll('[data-mac-soon], [data-dl-platform="mac"], [data-dl="macArm64"], [data-dl="macX64"]').forEach(function (el) {
+      el.setAttribute('href', '#download')
+      el.classList.add('is-soon')
+      el.setAttribute('aria-disabled', 'true')
+      if (el.getAttribute('data-mac-bound') === '1') return
+      el.setAttribute('data-mac-bound', '1')
+      el.addEventListener('click', function (e) {
+        e.preventDefault()
+        showMacSoonToast()
+      })
+    })
+  }
+
   function bindDownloadButtons(data) {
     var latest = (data.releases && data.releases[0]) || null
     var dl = latest ? latest.downloads : null
@@ -87,30 +118,28 @@
     // data-dl (legacy: macArm64 / macX64 / winX64 / latest)
     document.querySelectorAll('[data-dl]').forEach(function (el) {
       var kind = el.getAttribute('data-dl')
+      if (kind === 'macArm64' || kind === 'macX64') return
       if (kind === 'latest' || !latest) {
         el.setAttribute('href', data.latestUrl || LATEST)
         return
       }
       var file = dl && dl[kind]
-      el.setAttribute('href', file ? downloadUrl(latest.version, file) : data.latestUrl || LATEST)
+      el.setAttribute('href', file ? downloadUrl(latest.version, file, data) : data.latestUrl || LATEST)
     })
 
-    // data-dl-platform (new: mac / win)
+    // data-dl-platform (new: mac / win) — mac is coming soon, never a dmg
     document.querySelectorAll('[data-dl-platform]').forEach(function (el) {
       var platform = el.getAttribute('data-dl-platform')
+      if (platform === 'mac') return
       if (!latest) {
         el.setAttribute('href', data.latestUrl || LATEST)
         return
       }
-      var file
-      if (platform === 'mac') {
-        // Default to Apple Silicon (arm64); fall back to x64
-        file = (dl && dl.macArm64) || (dl && dl.macX64)
-      } else if (platform === 'win') {
-        file = dl && dl.winX64
-      }
-      el.setAttribute('href', file ? downloadUrl(latest.version, file) : data.latestUrl || LATEST)
+      var file = platform === 'win' ? (dl && dl.winX64) : null
+      el.setAttribute('href', file ? downloadUrl(latest.version, file, data) : data.latestUrl || LATEST)
     })
+
+    bindMacComingSoon()
 
     // version display
     if (latest && latest.version) {
@@ -169,7 +198,12 @@
     .catch(function (err) {
       console.error(err)
       document.querySelectorAll('[data-dl], [data-dl-platform]').forEach(function (el) {
+        var kind = el.getAttribute('data-dl') || el.getAttribute('data-dl-platform')
+        if (kind === 'mac' || kind === 'macArm64' || kind === 'macX64') return
         el.setAttribute('href', LATEST)
       })
+      bindMacComingSoon()
     })
+
+  bindMacComingSoon()
 })()

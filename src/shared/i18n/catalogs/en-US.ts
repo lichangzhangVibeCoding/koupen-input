@@ -450,8 +450,8 @@ const enUS: Record<MessageKey, string> = {
   'hotkey.recordingMacNamed': 'Listening… tap {key} again when you’re done',
   'hotkey.tapBind': 'Tap {key}',
   'hotkey.holdBind': 'Hold {key}',
-  'hotkey.holdRecordingWin': 'Release to enhance the prompt from the screen',
-  'hotkey.holdRecordingMacNamed': 'Release to enhance the prompt from the screen',
+  'hotkey.holdRecordingWin': 'Release to enhance the prompt',
+  'hotkey.holdRecordingMacNamed': 'Release to enhance the prompt',
   'hotkey.holdRecordingUi': 'Listening… tap again when done to enhance the prompt',
   'hotkey.doubleHardwareReplyMac': 'Press right Command+0 twice (within ~0.65s)',
   'hotkey.doubleHardwareReplyWin': 'Press Win+0 twice (within ~0.65s)',
@@ -497,7 +497,7 @@ const enUS: Record<MessageKey, string> = {
   'settings.voiceTriggerNote': 'Tap = verbatim; hold = enhance. {trigger}',
   'settings.voiceTrigger.title': 'Trigger key',
   'settings.voiceTrigger.hint':
-    'Tap the chosen key to start/stop and paste verbatim. Hold ≥0.4s, then release to enhance a prompt from the screen (won’t send). Reply Assist double-tap (right Command) and Screen Ask chords stay the same. Fn may not work on some external keyboards.',
+    'Tap the chosen key to start/stop and paste verbatim. Hold ≥0.4s, then release to enhance a prompt (won’t send). Screen capture is off by default; turn it on under Capabilities. Reply Assist double-tap (right Command) and Screen Ask chords stay the same. Fn may not work on some external keyboards.',
   'settings.voiceTrigger.fnHint':
     'Fn (Globe) needs Accessibility; if nothing happens, switch back to right Command or Option.',
   'settings.voiceTrigger.defaultSuffix': ' (default)',
@@ -508,12 +508,12 @@ const enUS: Record<MessageKey, string> = {
   'settings.voiceFixTypos': 'Fix STT typos',
   'settings.voiceFixTyposHint':
     'Correct recognition errors from context (including Chinese/English mix-ups). No new content. Off by default (adds a reply-model round). Official membership uses the existing reply credit.',
-  'settings.voiceAsrLocal': 'On-device streaming dictation',
-  'settings.voiceAsrLocalHint':
-    'Words appear as you speak (Chinese and English mixed). Release to paste. No SiliconFlow hop, no voice credits. First use downloads a ~200MB bilingual model. Turn off to wait for cloud file ASR.',
+  'settings.enhanceScreen': 'Look at the active window when enhancing ({name})',
+  'settings.enhanceScreenHint':
+    'Off by default. When on, hold-to-enhance captures only the front window (Cursor / Doubao / ChatGPT / WorkBuddy, etc.), not the whole desktop. Screen Ask still uses the full screen.',
   'settings.voiceCloudProofread': 'Cloud proofread after paste',
   'settings.voiceCloudProofreadHint':
-    'Paste locally first, then re-run official ASR in the background (does not block the first paste). Uses voice credits. Off by default.',
+    'Only after “On-device voice” is on in the Models voice card: paste locally first; if the official ASR result differs, undo that paste and put the proofread text in its place (no second copy). Uses voice credits. Off by default.',
   'settings.save': 'Save settings',
   'settings.saving': 'Saving…',
   'settings.saved': 'Saved',
@@ -629,7 +629,7 @@ const enUS: Record<MessageKey, string> = {
   'export.filenamePrefix': 'TalkNow-settings',
 
   'error.screenCapture':
-    'Screen Recording is not granted. Open System Settings → Privacy & Security → Screen Recording, check “{name}”, then quit and reopen the app.',
+    'Screen Recording is not granted. Dev builds: check Electron (installed app: “{name}”). If macOS asks to quit, choose Later, then ⌘Q and run npm run dev again.',
   'error.microphone':
     'Microphone is not granted. Open System Settings → Privacy & Security → Microphone, check “{name}” (or Electron for Dev builds), then try again.',
   'error.accessibility':
@@ -670,18 +670,23 @@ const enUS: Record<MessageKey, string> = {
   'voice.hud.busy': 'Still finishing the last bit — one sec…',
   'voice.hud.busyDetail': 'Transcription in progress — try again when it’s done',
   'voice.hud.transcribing': 'Got it, writing that down…',
+  'voice.hud.stopping': 'Wrapping up the recording…',
+  'voice.hud.waitSec': '{n}s so far',
   'voice.hud.cleaning': 'Cleaning up what you said…',
   'voice.hud.cleaningDetail': 'Fillers and typos only — meaning stays',
   'voice.hud.pasted': 'Filled in what you said',
   'voice.hud.pasteFail': 'Couldn’t paste — but it’s copied',
   'voice.hud.enhancing': 'Writing a task brief for the AI…',
   'voice.hud.enhancingDetail': 'Fills in modules and checks — won’t send',
-  'voice.hud.enhanceReading': 'Glancing at the screen…',
+  'voice.hud.enhancingSlow': 'Still writing — waiting for a complete prompt',
+  'voice.hud.enhanceReading': 'Glancing at the window…',
   'voice.hud.enhanceReadingDetail': 'If nothing useful, we’ll expand what you said',
+  'voice.hud.enhanceReadingSlow': 'Window is slow; writing from what you said',
   'voice.hud.enhancedPasted': 'Enhanced prompt is in the field',
   'voice.hud.holdCancelled': 'Prompt enhance cancelled',
   'voice.hud.downloadingAsr': 'Downloading bilingual ASR… using cloud this time',
   'voice.hud.corrected': 'Fixed a slip',
+  'voice.hud.cloudProofread': 'Replaced with the cloud proofread',
   'screenAsk.errLocalNotReady': 'Local models not ready — install/start them in Settings',
   'screenAsk.errLocalVision': 'Install the local vision model first',
   'screenAsk.errApiKey': 'Add an API key, or switch to free local models',

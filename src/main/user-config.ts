@@ -87,8 +87,11 @@ export function normalizeSettings(raw: Partial<AppSettings> | AppSettings): AppS
   if (typeof merged.voiceFixSttTyposEnabled !== 'boolean') {
     merged.voiceFixSttTyposEnabled = false
   }
+  if (typeof merged.enhanceScreenCaptureEnabled !== 'boolean') {
+    merged.enhanceScreenCaptureEnabled = false
+  }
   if (merged.voiceAsrMode !== 'cloud' && merged.voiceAsrMode !== 'local-stream') {
-    merged.voiceAsrMode = 'local-stream'
+    merged.voiceAsrMode = 'cloud'
   }
   if (typeof merged.voiceCloudProofread !== 'boolean') {
     merged.voiceCloudProofread = false
@@ -157,7 +160,11 @@ export function getSettings(): AppSettings {
   if (!existsSync(path)) return platformDefaultSettings()
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<AppSettings>
-    return normalizeSettings(parsed)
+    const next = normalizeSettings(parsed)
+    if (typeof parsed.enhanceScreenCaptureEnabled !== 'boolean') {
+      writeFileSync(path, JSON.stringify(next, null, 2), 'utf8')
+    }
+    return next
   } catch {
     return platformDefaultSettings()
   }
